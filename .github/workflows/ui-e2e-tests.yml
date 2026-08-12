@@ -120,7 +120,7 @@ jobs:
         WANAKU_HTTP_AUTH=none java -jar apps/wanaku-router-backend/target/quarkus-app/quarkus-run.jar &
         echo "Waiting for backend to be ready..."
         for i in $(seq 1 60); do
-          if curl -sf http://localhost:8080/q/health/ready > /dev/null 2>&1; then
+          if curl -sf http://localhost:8180/q/health/ready > /dev/null 2>&1; then
             echo "Backend ready after ${i}s"
             break
           fi
@@ -134,6 +134,8 @@ jobs:
     - name: Run Playwright Tests
       working-directory: tests/e2e/ui
       run: npx playwright test
+      env:
+        WANAKU_ROUTER_URL: http://localhost:8180
 
     - name: Upload Playwright Report
       if: ${{ !cancelled() }}

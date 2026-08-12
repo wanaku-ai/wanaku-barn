@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { DashboardPage } from '../pages/dashboard.page';
 
-const routerUrl = process.env.WANAKU_ROUTER_URL ?? 'http://localhost:8080';
+const routerUrl = process.env.WANAKU_ROUTER_URL ?? 'http://localhost:8180';
 
 test.describe('Dashboard', () => {
   let dashboard: DashboardPage;
