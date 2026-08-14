@@ -343,351 +343,7 @@ echo "PASS: label test namespace cleanup done"
 
 ---
 
-## Phase 4: Namespace Isolation
-
-### Test 4.1: Register a tool in namespace ns-0
-
-```bash
-OUTPUT=$(wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name ns0-tool \
-  --namespace ns-0 \
-  --description "Tool in namespace ns-0 for isolation testing" \
-  --uri "https://example.com/ns0" \
-  --type http \
-  --property "input:string,An input parameter" \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: could not register ns0-tool (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: ns0-tool registered in namespace ns-0"
-```
-
-### Test 4.2: Register a tool in namespace ns-1
-
-```bash
-OUTPUT=$(wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name ns1-tool \
-  --namespace ns-1 \
-  --description "Tool in namespace ns-1 for isolation testing" \
-  --uri "https://example.com/ns1" \
-  --type http \
-  --property "input:string,An input parameter" \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: could not register ns1-tool (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: ns1-tool registered in namespace ns-1"
-```
-
-### Test 4.3: Verify both tools are visible in the global tool list
-
-```bash
-TOOLS_OUTPUT=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
-
-echo "${TOOLS_OUTPUT}" | grep -q "ns0-tool" \
-  && echo "PASS: ns0-tool visible in global list" \
-  || echo "FAIL: ns0-tool not found in global list"
-
-echo "${TOOLS_OUTPUT}" | grep -q "ns1-tool" \
-  && echo "PASS: ns1-tool visible in global list" \
-  || echo "FAIL: ns1-tool not found in global list"
-```
-
-### Test 4.4: Verify tools show correct namespace assignment
-
-```bash
-TOOLS_OUTPUT=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
-
-echo "${TOOLS_OUTPUT}" | grep "ns0-tool" | grep -q "ns-0" \
-  && echo "PASS: ns0-tool shows namespace ns-0" \
-  || echo "FAIL: ns0-tool does not show namespace ns-0"
-
-echo "${TOOLS_OUTPUT}" | grep "ns1-tool" | grep -q "ns-1" \
-  && echo "PASS: ns1-tool shows namespace ns-1" \
-  || echo "FAIL: ns1-tool does not show namespace ns-1"
-```
-
-### Test 4.5: Verify tool details include namespace
-
-```bash
-OUTPUT=$(wanaku tools show --host "${WANAKU_ROUTER_URL}" ns0-tool --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools show for ns0-tool failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "${OUTPUT}" | grep -q "ns-0" \
-  && echo "PASS: ns0-tool detail shows namespace ns-0" \
-  || echo "FAIL: ns0-tool detail does not show namespace ns-0"
-```
-
----
-
-## Phase 5: Label Expression Routing
-
-### Test 5.1: Register tool-a with labels env=prod and tier=frontend
-
-```bash
-OUTPUT=$(wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name tool-a \
-  --namespace public \
-  --description "Label test tool A" \
-  --uri "https://example.com/tool-a" \
-  --type http \
-  --property "input:string,An input" \
-  --label env=prod \
-  --label tier=frontend \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: could not register tool-a (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: tool-a registered with labels env=prod, tier=frontend"
-```
-
-### Test 5.2: Register tool-b with labels env=prod and tier=backend
-
-```bash
-OUTPUT=$(wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name tool-b \
-  --namespace public \
-  --description "Label test tool B" \
-  --uri "https://example.com/tool-b" \
-  --type http \
-  --property "input:string,An input" \
-  --label env=prod \
-  --label tier=backend \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: could not register tool-b (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: tool-b registered with labels env=prod, tier=backend"
-```
-
-### Test 5.3: Register tool-c with labels env=staging and tier=frontend
-
-```bash
-OUTPUT=$(wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name tool-c \
-  --namespace public \
-  --description "Label test tool C" \
-  --uri "https://example.com/tool-c" \
-  --type http \
-  --property "input:string,An input" \
-  --label env=staging \
-  --label tier=frontend \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: could not register tool-c (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: tool-c registered with labels env=staging, tier=frontend"
-```
-
-### Test 5.4: Filter tools by env=prod
-
-```bash
-OUTPUT=$(wanaku tools list \
-  --host "${WANAKU_ROUTER_URL}" \
-  -e "env=prod" \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools list with label expression failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "${OUTPUT}" | grep -q "tool-a" \
-  && echo "PASS: tool-a returned for env=prod" \
-  || echo "FAIL: tool-a not returned for env=prod"
-
-echo "${OUTPUT}" | grep -q "tool-b" \
-  && echo "PASS: tool-b returned for env=prod" \
-  || echo "FAIL: tool-b not returned for env=prod"
-
-echo "${OUTPUT}" | grep -q "tool-c" \
-  && echo "FAIL: tool-c should NOT be returned for env=prod" \
-  || echo "PASS: tool-c correctly excluded from env=prod"
-```
-
-### Test 5.5: Filter tools by tier=frontend
-
-```bash
-OUTPUT=$(wanaku tools list \
-  --host "${WANAKU_ROUTER_URL}" \
-  -e "tier=frontend" \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools list with tier=frontend failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "${OUTPUT}" | grep -q "tool-a" \
-  && echo "PASS: tool-a returned for tier=frontend" \
-  || echo "FAIL: tool-a not returned for tier=frontend"
-
-echo "${OUTPUT}" | grep -q "tool-c" \
-  && echo "PASS: tool-c returned for tier=frontend" \
-  || echo "FAIL: tool-c not returned for tier=frontend"
-
-echo "${OUTPUT}" | grep -q "tool-b" \
-  && echo "FAIL: tool-b should NOT be returned for tier=frontend" \
-  || echo "PASS: tool-b correctly excluded from tier=frontend"
-```
-
-### Test 5.6: Filter tools by compound expression (env=prod AND tier=frontend)
-
-**Description:** Verify that AND logic in label expressions correctly narrows results. See `wanaku man label-expression` for supported syntax.
-
-```bash
-OUTPUT=$(wanaku tools list \
-  --host "${WANAKU_ROUTER_URL}" \
-  -e "env=prod AND tier=frontend" \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools list with compound expression failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "${OUTPUT}" | grep -q "tool-a" \
-  && echo "PASS: tool-a returned for compound expression" \
-  || echo "FAIL: tool-a not returned for compound expression"
-
-echo "${OUTPUT}" | grep -q "tool-b" \
-  && echo "FAIL: tool-b should NOT match (tier=backend, not frontend)" \
-  || echo "PASS: tool-b correctly excluded"
-
-echo "${OUTPUT}" | grep -q "tool-c" \
-  && echo "FAIL: tool-c should NOT match (env=staging, not prod)" \
-  || echo "PASS: tool-c correctly excluded"
-```
-
-### Test 5.7: Add labels to a tool post-registration
-
-```bash
-OUTPUT=$(wanaku tools label add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name tool-c \
-  --label priority=low \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools label add failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: label 'priority=low' added to tool-c"
-
-VERIFY=$(wanaku tools show --host "${WANAKU_ROUTER_URL}" tool-c --plain 2>&1)
-echo "${VERIFY}" | grep -q "priority" \
-  && echo "PASS: label 'priority' visible on tool-c" \
-  || echo "FAIL: label 'priority' not found on tool-c"
-```
-
-### Test 5.8: Remove a label from a tool
-
-```bash
-OUTPUT=$(wanaku tools label remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name tool-c \
-  --label priority \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools label remove failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: label 'priority' removed from tool-c"
-
-VERIFY=$(wanaku tools show --host "${WANAKU_ROUTER_URL}" tool-c --plain 2>&1)
-echo "${VERIFY}" | grep -q "priority" \
-  && echo "FAIL: label 'priority' still present after removal" \
-  || echo "PASS: label 'priority' confirmed removed"
-```
-
-### Test 5.9: Batch remove tools by label expression
-
-**Description:** Remove all tools matching `env=staging` and verify only tool-c is removed.
-
-```bash
-OUTPUT=$(wanaku tools remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  -e "env=staging" \
-  -y \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools remove by label expression failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "PASS: batch remove by label expression completed"
-
-# Verify tool-c is gone, tool-a and tool-b remain
-VERIFY=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
-
-echo "${VERIFY}" | grep -q "tool-c" \
-  && echo "FAIL: tool-c should have been removed" \
-  || echo "PASS: tool-c removed as expected"
-
-echo "${VERIFY}" | grep -q "tool-a" \
-  && echo "PASS: tool-a still present (not affected)" \
-  || echo "FAIL: tool-a was incorrectly removed"
-
-echo "${VERIFY}" | grep -q "tool-b" \
-  && echo "PASS: tool-b still present (not affected)" \
-  || echo "FAIL: tool-b was incorrectly removed"
-```
-
----
-
-## Phase 6: Namespace Cleanup
+## Phase 4: Namespace Cleanup
 
 ### Test 6.1: Run namespace cleanup (dry run)
 
@@ -750,9 +406,9 @@ fi
 
 ---
 
-## Phase 7: Negative Tests
+## Phase 5: Negative Tests
 
-### Test 7.1: Delete a non-existent namespace
+### Test 5.1: Delete a non-existent namespace
 
 ```bash
 OUTPUT=$(wanaku namespaces delete \
@@ -768,7 +424,7 @@ else
 fi
 ```
 
-### Test 7.2: Show a non-existent namespace
+### Test 5.2: Show a non-existent namespace
 
 ```bash
 OUTPUT=$(wanaku namespaces show \
@@ -784,7 +440,7 @@ else
 fi
 ```
 
-### Test 7.3: Update a non-existent namespace
+### Test 5.3: Update a non-existent namespace
 
 ```bash
 OUTPUT=$(wanaku namespaces update \
@@ -801,7 +457,7 @@ else
 fi
 ```
 
-### Test 7.4: Add label to a non-existent namespace
+### Test 5.4: Add label to a non-existent namespace
 
 ```bash
 OUTPUT=$(wanaku namespaces label add \
@@ -818,7 +474,7 @@ else
 fi
 ```
 
-### Test 7.5: Remove label from a non-existent namespace
+### Test 5.5: Remove label from a non-existent namespace
 
 ```bash
 OUTPUT=$(wanaku namespaces label remove \
@@ -835,7 +491,7 @@ else
 fi
 ```
 
-### Test 7.6: Create namespace without required --path option
+### Test 5.6: Create namespace without required --path option
 
 ```bash
 OUTPUT=$(wanaku namespaces create \
@@ -851,7 +507,7 @@ else
 fi
 ```
 
-### Test 7.7: Update namespace with no update fields
+### Test 5.7: Update namespace with no update fields
 
 ```bash
 # First create a temporary namespace for this test
@@ -884,7 +540,7 @@ else
 fi
 ```
 
-### Test 7.8: Namespace label add with both --id and --label-expression (mutual exclusion)
+### Test 5.8: Namespace label add with both --id and --label-expression (mutual exclusion)
 
 ```bash
 OUTPUT=$(wanaku namespaces label add \
@@ -902,68 +558,11 @@ else
 fi
 ```
 
-### Test 7.9: Tools remove with both --name and --label-expression (mutual exclusion)
-
-```bash
-OUTPUT=$(wanaku tools remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name "some-tool" \
-  --label-expression "env=test" \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "PASS: specifying both --name and --label-expression rejected (exit code ${EXIT_CODE})"
-else
-  echo "FAIL: specifying both --name and --label-expression should have been rejected"
-fi
-```
-
-### Test 7.10: Add label to a non-existent tool
-
-```bash
-OUTPUT=$(wanaku tools label add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name "non-existent-tool-12345" \
-  --label env=test \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "PASS: adding label to non-existent tool failed gracefully (exit code ${EXIT_CODE})"
-else
-  echo "FAIL: adding label to non-existent tool should have failed"
-fi
-```
-
 ---
 
-## Phase 8: Cleanup
+## Phase 6: Cleanup
 
-### Step 8.1: Remove test tools
-
-```bash
-wanaku tools remove --host "${WANAKU_ROUTER_URL}" --name ns0-tool 2>/dev/null || true
-wanaku tools remove --host "${WANAKU_ROUTER_URL}" --name ns1-tool 2>/dev/null || true
-wanaku tools remove --host "${WANAKU_ROUTER_URL}" --name tool-a 2>/dev/null || true
-wanaku tools remove --host "${WANAKU_ROUTER_URL}" --name tool-b 2>/dev/null || true
-wanaku tools remove --host "${WANAKU_ROUTER_URL}" --name tool-c 2>/dev/null || true
-echo "PASS: test tools removed"
-```
-
-### Step 8.2: Verify tools are cleaned up
-
-```bash
-REMAINING=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
-
-for TOOL in ns0-tool ns1-tool tool-a tool-b tool-c; do
-  echo "${REMAINING}" | grep -q "${TOOL}" \
-    && echo "WARN: ${TOOL} still present after cleanup" \
-    || echo "PASS: ${TOOL} confirmed removed"
-done
-```
-
-### Step 8.3: Stop the Wanaku process
+### Step 6.1: Stop the Wanaku process
 
 ```bash
 if [ -n "${WANAKU_PID}" ]; then
@@ -995,30 +594,14 @@ fi
 | 3 | 3.4 | Remove label from namespace | Critical |
 | 3 | 3.5 | Filter namespaces by label expression | High |
 | 3 | 3.6 | Clean up label test namespace | Medium |
-| 4 | 4.1 | Register tool in namespace ns-0 | Critical |
-| 4 | 4.2 | Register tool in namespace ns-1 | Critical |
-| 4 | 4.3 | Verify both tools in global list | Critical |
-| 4 | 4.4 | Verify namespace assignment in list | High |
-| 4 | 4.5 | Verify tool details include namespace | High |
-| 5 | 5.1 | Register tool-a (env=prod, tier=frontend) | Critical |
-| 5 | 5.2 | Register tool-b (env=prod, tier=backend) | Critical |
-| 5 | 5.3 | Register tool-c (env=staging, tier=frontend) | Critical |
-| 5 | 5.4 | Filter tools by env=prod | Critical |
-| 5 | 5.5 | Filter tools by tier=frontend | Critical |
-| 5 | 5.6 | Filter tools by compound AND expression | Critical |
-| 5 | 5.7 | Add label to tool post-registration | High |
-| 5 | 5.8 | Remove label from tool | High |
-| 5 | 5.9 | Batch remove tools by label expression | Critical |
-| 6 | 6.1 | Run namespace cleanup | High |
-| 6 | 6.2 | Pre-allocated namespace cleanup | High |
-| 7 | 7.1 | Delete non-existent namespace | High |
-| 7 | 7.2 | Show non-existent namespace | High |
-| 7 | 7.3 | Update non-existent namespace | High |
-| 7 | 7.4 | Add label to non-existent namespace | High |
-| 7 | 7.5 | Remove label from non-existent namespace | High |
-| 7 | 7.6 | Create namespace without required path | High |
-| 7 | 7.7 | Update namespace with no fields | Medium |
-| 7 | 7.8 | Namespace label add mutual exclusion (--id + --label-expression) | High |
-| 7 | 7.9 | Tools remove mutual exclusion (--name + --label-expression) | High |
-| 7 | 7.10 | Add label to non-existent tool | High |
-| 8 | 8.1-8.3 | Cleanup (tools, namespaces, process) | Critical |
+| 4 | 4.1 | Run namespace cleanup | High |
+| 4 | 4.2 | Pre-allocated namespace cleanup | High |
+| 5 | 5.1 | Delete non-existent namespace | High |
+| 5 | 5.2 | Show non-existent namespace | High |
+| 5 | 5.3 | Update non-existent namespace | High |
+| 5 | 5.4 | Add label to non-existent namespace | High |
+| 5 | 5.5 | Remove label from non-existent namespace | High |
+| 5 | 5.6 | Create namespace without required path | High |
+| 5 | 5.7 | Update namespace with no fields | Medium |
+| 5 | 5.8 | Namespace label add mutual exclusion (--id + --label-expression) | High |
+| 6 | 6.1 | Cleanup (process) | Critical |

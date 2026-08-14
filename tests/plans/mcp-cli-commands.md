@@ -583,55 +583,11 @@ Follow [common/oidc-login-verification.md](common/oidc-login-verification.md) to
 
 ---
 
-## Phase 9: Register Real HTTP Tools
+## Phase 9: Verify Tools from MCP Servers
 
-### Test 9.1: Register the currency conversion tool
+Tools are provided by MCP servers registered with the router. Ensure the HTTP capability is running and has registered tools (e.g., currency conversion, cat facts) before proceeding.
 
-```bash
-${WANAKU_CLI:-wanaku} tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --name free-currency-conversion-api \
-  --namespace public \
-  --description "Free currency conversion API" \
-  --uri "https://economia.awesomeapi.com.br/last/{firstCurrency}-{secondCurrency}" \
-  --type http \
-  --property "firstCurrency:string,The first currency (3 letter code, e.g.: USD, EUR)" \
-  --property "secondCurrency:string,The second currency (3 letter code, e.g.: BRL, CZK)" \
-  --required firstCurrency \
-  --required secondCurrency
-
-if [ $? -eq 0 ]; then
-  echo "PASS: currency conversion tool registered"
-else
-  echo "FAIL: could not register currency conversion tool"
-  exit 1
-fi
-```
-
-### Test 9.2: Register the cat facts tool
-
-```bash
-${WANAKU_CLI:-wanaku} tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --name meow-facts \
-  --namespace public \
-  --description "Retrieve random facts about cats" \
-  --uri "https://meowfacts.herokuapp.com?count={count}" \
-  --type http \
-  --property "count:int,The number of facts to retrieve" \
-  --required count
-
-if [ $? -eq 0 ]; then
-  echo "PASS: meow-facts tool registered"
-else
-  echo "FAIL: could not register meow-facts tool"
-  exit 1
-fi
-```
-
-### Test 9.3: Verify tools are listed via CLI
+### Test 9.1: Verify tools are listed via CLI
 
 ```bash
 TOOLS_OUTPUT=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --no-auth --plain 2>&1)
@@ -780,32 +736,11 @@ fi
 
 ---
 
-## Phase 12: Register and Read Resources via MCP CLI
+## Phase 12: Read Resources via MCP CLI
 
-### Test 12.1: Register a resource backed by the static file provider
+Resources are provided by MCP servers registered with the router. Ensure the appropriate resource provider capability is running before proceeding.
 
-**Description:** Expose a resource via the CLI that is backed by the `performancestaticfile` provider type. The static file provider returns the fixed content `1234567890`.
-
-```bash
-${WANAKU_CLI:-wanaku} resources expose \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --location "performancestaticfile://test-file.txt" \
-  --type performancestaticfile \
-  --name "test-static-resource" \
-  --namespace public \
-  --description "A static file resource for MCP CLI testing" \
-  --mimeType "text/plain"
-
-if [ $? -eq 0 ]; then
-  echo "PASS: static file resource registered"
-else
-  echo "FAIL: could not register static file resource"
-  exit 1
-fi
-```
-
-### Test 12.2: Verify resource is listed via CLI
+### Test 12.1: Verify resource is listed via CLI
 
 ```bash
 RESOURCES_OUTPUT=$(wanaku resources list --host "${WANAKU_ROUTER_URL}" --no-auth --plain 2>&1)
@@ -899,28 +834,7 @@ fi
 
 ## Phase 14: Cleanup
 
-### Step 14.1: Remove registered tools and resources
-
-```bash
-${WANAKU_CLI:-wanaku} tools remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --name free-currency-conversion-api 2>/dev/null || true
-
-${WANAKU_CLI:-wanaku} tools remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --name meow-facts 2>/dev/null || true
-
-${WANAKU_CLI:-wanaku} resources remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --name test-static-resource 2>/dev/null || true
-
-echo "PASS: tools and resources removed"
-```
-
-### Step 14.2: Delete capability and router CRs
+### Step 14.1: Delete capability and router CRs
 
 ```bash
 oc delete wanakucapability wanaku-mcp-test-capabilities -n "${WANAKU_NAMESPACE}" --ignore-not-found=true

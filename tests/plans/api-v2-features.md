@@ -100,26 +100,17 @@ else
 fi
 ```
 
-### Test 1.2: Register a test tool for generating history
+### Test 1.2: Verify a test tool is available
 
-Register an HTTP tool so that tool calls can generate history records.
+Ensure the HTTP capability is running and has tools available (e.g., via an MCP server) so that tool calls can generate history records.
 
 ```bash
-wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name api-v2-test-tool \
-  --namespace public \
-  --description "Temporary tool for v2 API testing" \
-  --uri "https://meowfacts.herokuapp.com?count={count}" \
-  --type http \
-  --property "count:int,Number of facts to retrieve" \
-  --required count
-
+TOOLS_OUTPUT=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
 EXIT_CODE=$?
-if [ "${EXIT_CODE}" -eq 0 ]; then
-  echo "PASS: test tool registered"
+if [ "${EXIT_CODE}" -eq 0 ] && [ -n "${TOOLS_OUTPUT}" ]; then
+  echo "PASS: tools available for testing"
 else
-  echo "FAIL: could not register test tool (exit code ${EXIT_CODE})"
+  echo "FAIL: no tools available (exit code ${EXIT_CODE})"
   exit 1
 fi
 ```
@@ -598,17 +589,7 @@ fi
 
 ## Phase 7: Cleanup
 
-### Step 7.1: Remove test tool
-
-```bash
-wanaku tools remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name api-v2-test-tool 2>/dev/null || true
-
-echo "PASS: test tool removed"
-```
-
-### Step 7.2: Clear any remaining history
+### Step 7.1: Clear any remaining history
 
 ```bash
 curl -s -X DELETE "${V2_BASE}/tool-calls/history" > /dev/null 2>&1 || true

@@ -321,29 +321,9 @@ echo "${OUTPUT}" | grep -q "e2etesttool" \
 
 ## Phase 5: Invoke the Tool via MCP
 
-### Test 5.1: Register a tool backed by the new capability type
+### Test 5.1: Verify a tool from the capability is listed
 
-The generated capability's service name is `e2etesttool`. Register a tool that uses this type. The default archetype creates a capability that accepts a URI but does not perform real work -- this test verifies the routing path, not the tool output.
-
-```bash
-wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name e2e-lifecycle-tool \
-  --namespace public \
-  --description "E2E lifecycle test tool" \
-  --uri "e2etesttool://test" \
-  --type e2etesttool \
-  --property "input:string,Test input parameter" \
-  --required input
-
-EXIT_CODE=$?
-if [ "${EXIT_CODE}" -eq 0 ]; then
-  echo "PASS: tool registered"
-else
-  echo "FAIL: tool registration failed (exit code ${EXIT_CODE})"
-  exit 1
-fi
-```
+Tools are provided by MCP servers registered with the router. The generated capability should expose tools automatically once running.
 
 ### Test 5.2: Verify the tool is listed
 
@@ -619,40 +599,11 @@ else
 fi
 ```
 
-### Test 9.2: Register a tool with a non-existent capability type should fail
-
-```bash
-OUTPUT=$(wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name nonexistent-type-tool \
-  --namespace public \
-  --description "Tool with invalid type" \
-  --uri "nonexistent://test" \
-  --type nonexistent-type-that-does-not-exist \
-  --property "x:string,test" 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "PASS: registering tool with non-existent capability type failed (exit code ${EXIT_CODE})"
-else
-  echo "FAIL: registering tool with non-existent capability type should have failed"
-fi
-```
-
 ---
 
 ## Phase 10: Cleanup
 
-### Step 10.1: Remove the registered tool
-
-```bash
-wanaku tools remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name e2e-lifecycle-tool 2>/dev/null || true
-echo "PASS: test tool removed (or was already absent)"
-```
-
-### Step 10.2: Stop the tool capability process
+### Step 10.1: Stop the tool capability process
 
 ```bash
 if [ -n "${TOOL_CAPABILITY_PID}" ]; then

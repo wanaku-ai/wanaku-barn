@@ -1,10 +1,6 @@
 package ai.wanaku.core.services.api;
 
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -15,80 +11,19 @@ import java.util.List;
 import ai.wanaku.capabilities.sdk.api.types.ResourceReference;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 
-/**
- * JAX-RS service interface for managing resource capabilities in the Wanaku system.
- * <p>
- * This service provides REST endpoints for exposing, listing, and removing resource
- * capabilities. Resources are data sources or content that can be accessed by AI agents,
- * such as files, databases, or external data sources.
- * <p>
- * All endpoints are available under the {@code /api/v1/resources} base path.
- */
 @Path("/api/v1/resources")
 public interface ResourcesService {
 
-    /**
-     * Exposes a new resource capability in the system.
-     *
-     * @param resourceReference the resource reference containing resource metadata
-     * @return a {@link WanakuResponse} containing the exposed resource reference
-     */
-    @POST
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<ResourceReference> expose(ResourceReference resourceReference);
-
-    /**
-     * Lists all exposed resource capabilities.
-     *
-     * @param labelFilter optional label expression to filter resources by labels
-     * @return a {@link WanakuResponse} containing a list of all resource references
-     */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     WanakuResponse<List<ResourceReference>> list(@QueryParam("labelFilter") String labelFilter);
 
-    /**
-     * Lists all exposed resource capabilities without filtering.
-     *
-     * @return a {@link WanakuResponse} containing a list of all resource references
-     */
     default WanakuResponse<List<ResourceReference>> list() {
         return list(null);
     }
 
-    /**
-     * Removes a resource capability from the system.
-     *
-     * @param name the name of the resource to remove
-     * @return a {@link WanakuResponse} indicating the result of the removal operation
-     */
-    @Path("/{name}")
-    @DELETE
-    @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<Void> remove(@PathParam("name") String name);
-
-    /**
-     * Retrieves a resource capability by its name.
-     *
-     * @param name the name of the resource to retrieve
-     * @return a {@link WanakuResponse} containing the resource reference
-     */
     @Path("/{name}")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     WanakuResponse<ResourceReference> getByName(@PathParam("name") String name);
-
-    /**
-     * Updates an existing resource capability.
-     *
-     * @param name the name of the resource to update
-     * @param resource the updated resource reference
-     * @return a {@link WanakuResponse} indicating the result of the update operation
-     */
-    @Path("/{name}")
-    @PUT
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<Void> update(@PathParam("name") String name, ResourceReference resource);
 }

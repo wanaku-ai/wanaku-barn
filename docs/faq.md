@@ -97,27 +97,11 @@ See the [Installing the CLI](usage.md#installing-the-command-line-interface-cli)
 
 ## Usage and Configuration
 
-### How do I add a new tool to Wanaku?
+### How do I add tools and resources to Wanaku?
 
-```shell
-# First ensure the capability service providing the tool is running
-wanaku capabilities list
-
-# Then add the tool
-wanaku tools add --uri <tool-uri> --service <service-name>
-```
+Tools and resources are managed through MCP servers added to the router. Register an MCP server with the router and its tools and resources become available automatically.
 
 See the [Usage Guide](usage.md#managing-mcp-tools) for detailed instructions.
-
-### How do I add a new resource?
-
-```shell
-# Ensure the resource provider service is running
-wanaku capabilities list
-
-# Add the resource
-wanaku resources expose --uri <resource-uri> --service <service-name>
-```
 
 ### What are namespaces and when should I use them?
 

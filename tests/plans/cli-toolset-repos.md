@@ -4,7 +4,7 @@
 
 This test plan verifies the `wanaku toolset repo` CLI commands for managing toolset repositories
 against a locally running Wanaku instance (no authentication). It covers adding, listing, browsing,
-and removing toolset repositories, as well as importing tools from a toolset file via `wanaku tools import`.
+and removing toolset repositories.
 
 Every step is fully automatable.
 
@@ -278,59 +278,9 @@ echo "${OUTPUT}" | grep -q "${TOOLSET_REPO_NAME}" \
 
 ---
 
-## Phase 7: Tools Import from Toolset
+## Phase 7: Negative Tests
 
-### Test 7.1: Import tools from a remote toolset URL
-
-```bash
-wanaku tools import --host "${WANAKU_ROUTER_URL}" "${TOOLSET_IMPORT_URL}" --plain 2>&1
-EXIT_CODE=$?
-if [ "${EXIT_CODE}" -eq 0 ]; then
-  echo "PASS: toolset imported from URL"
-else
-  echo "FAIL: toolset import failed (exit code ${EXIT_CODE})"
-fi
-```
-
-### Test 7.2: Verify imported tools appear in tools list
-
-```bash
-OUTPUT=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
-EXIT_CODE=$?
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools list failed (exit code ${EXIT_CODE})"
-else
-  # The currency toolset should contain at least one tool
-  if [ -n "${OUTPUT}" ]; then
-    echo "PASS: tools list returned data after import"
-    echo "${OUTPUT}"
-  else
-    echo "FAIL: tools list is empty after import"
-  fi
-fi
-```
-
-### Test 7.3: Import with a default namespace
-
-```bash
-wanaku tools import \
-  --host "${WANAKU_ROUTER_URL}" \
-  --namespace "test-ns" \
-  "${TOOLSET_IMPORT_URL}" \
-  --plain 2>&1
-EXIT_CODE=$?
-if [ "${EXIT_CODE}" -eq 0 ]; then
-  echo "PASS: toolset imported with namespace override"
-else
-  echo "FAIL: toolset import with namespace failed (exit code ${EXIT_CODE})"
-fi
-```
-
----
-
-## Phase 8: Negative Tests
-
-### Test 8.1: Add repo without required --name should fail
+### Test 7.1: Add repo without required --name should fail
 
 ```bash
 wanaku toolset repo add \
@@ -345,7 +295,7 @@ else
 fi
 ```
 
-### Test 8.2: Add repo without required --url should fail
+### Test 7.2: Add repo without required --url should fail
 
 ```bash
 wanaku toolset repo add \
@@ -360,7 +310,7 @@ else
 fi
 ```
 
-### Test 8.3: Browse a non-existent repository should fail
+### Test 7.3: Browse a non-existent repository should fail
 
 ```bash
 OUTPUT=$(wanaku toolset repo browse --host "${WANAKU_ROUTER_URL}" "non-existent-repo-12345" --plain 2>&1)
@@ -372,7 +322,7 @@ else
 fi
 ```
 
-### Test 8.4: Remove a non-existent repository should fail gracefully
+### Test 7.4: Remove a non-existent repository should fail gracefully
 
 ```bash
 OUTPUT=$(wanaku toolset repo remove --host "${WANAKU_ROUTER_URL}" "non-existent-repo-12345" --plain 2>&1)
@@ -387,19 +337,7 @@ else
 fi
 ```
 
-### Test 8.5: Import from an invalid URL should fail
-
-```bash
-OUTPUT=$(wanaku tools import --host "${WANAKU_ROUTER_URL}" "https://invalid.example.com/does-not-exist.json" --plain 2>&1)
-EXIT_CODE=$?
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "PASS: import from invalid URL failed as expected (exit code ${EXIT_CODE})"
-else
-  echo "FAIL: import from invalid URL should have failed"
-fi
-```
-
-### Test 8.6: Connecting to a non-existent host should fail gracefully
+### Test 7.5: Connecting to a non-existent host should fail gracefully
 
 ```bash
 OUTPUT=$(wanaku toolset repo list --host "http://localhost:59999" --plain 2>&1)
@@ -413,9 +351,9 @@ fi
 
 ---
 
-## Phase 9: Cleanup
+## Phase 8: Cleanup
 
-### Step 9.1: Remove any remaining test repositories
+### Step 8.1: Remove any remaining test repositories
 
 ```bash
 wanaku toolset repo remove --host "${WANAKU_ROUTER_URL}" "${TOOLSET_REPO_NAME}" --plain 2>/dev/null || true
@@ -423,18 +361,7 @@ wanaku toolset repo remove --host "${WANAKU_ROUTER_URL}" "test-repo-branch" --pl
 echo "PASS: test repositories cleaned up"
 ```
 
-### Step 9.2: Remove any imported tools
-
-```bash
-# List and remove tools that were imported during this test
-TOOLS_OUTPUT=$(wanaku tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
-# Remove tools by name if they were imported from the currency toolset
-# This is best-effort; specific tool names depend on the toolset contents
-echo "INFO: review tools list for any test artifacts to remove manually"
-echo "${TOOLS_OUTPUT}"
-```
-
-### Step 9.3: Stop the local Wanaku process
+### Step 8.2: Stop the local Wanaku process
 
 ```bash
 if [ -n "${WANAKU_PID}" ]; then
@@ -457,6 +384,5 @@ fi
 | 4 | 4.1-4.2 | List toolset repositories | Critical |
 | 5 | 5.1-5.2 | Browse toolset repository catalog | Critical |
 | 6 | 6.1-6.4 | Remove toolset repositories | Critical |
-| 7 | 7.1-7.3 | Import tools from toolset URL | High |
-| 8 | 8.1-8.6 | Negative tests (missing args, non-existent repos, bad URLs) | High |
-| 9 | 9.1-9.3 | Cleanup | Critical |
+| 7 | 7.1-7.5 | Negative tests (missing args, non-existent repos, bad URLs) | High |
+| 8 | 8.1-8.2 | Cleanup | Critical |

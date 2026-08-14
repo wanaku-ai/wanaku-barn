@@ -138,161 +138,20 @@ curl -sf "${WANAKU_ROUTER_URL}/q/health/ready" > /dev/null && echo "PASS [1.0]: 
 
 ## Phase 2: Tools -- Error Cases
 
-### Test 2.1: Add tool with no name
-
-The `--name` option is required by `tools add`.
+### Test 2.1: Show non-existent tool
 
 ```bash
-assert_failure "2.1" "tools add with no name rejected" \
-  wanaku tools add \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --namespace public \
-    --description "test tool" \
-    --uri "http://example.com" \
-    --type http
-```
-
-### Test 2.2: Add tool with no URI
-
-The `--uri` option is required by `tools add`.
-
-```bash
-assert_failure "2.2" "tools add with no URI rejected" \
-  wanaku tools add \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "neg-test-no-uri" \
-    --namespace public \
-    --description "test tool" \
-    --type http
-```
-
-### Test 2.3: Add tool with no type
-
-The `--type` option is required by `tools add`.
-
-```bash
-assert_failure "2.3" "tools add with no type rejected" \
-  wanaku tools add \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "neg-test-no-type" \
-    --namespace public \
-    --description "test tool" \
-    --uri "http://example.com"
-```
-
-### Test 2.4: Add tool with invalid type
-
-A type that has no registered downstream service should be rejected.
-
-```bash
-assert_failure "2.4" "tools add with invalid type rejected" \
-  wanaku tools add \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "neg-test-bad-type" \
-    --namespace public \
-    --description "test tool" \
-    --uri "http://example.com" \
-    --type "nonexistent-type-12345"
-```
-
-### Test 2.5: Add duplicate tool name
-
-First register a tool, then try to add another with the same name.
-
-```bash
-# Setup: register a tool
-wanaku tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --name "neg-test-duplicate" \
-  --namespace public \
-  --description "first tool" \
-  --uri "http://example.com/first" \
-  --type http 2>&1
-SETUP_EXIT=$?
-
-if [ "${SETUP_EXIT}" -ne 0 ]; then
-  echo "SKIP [2.5]: could not register setup tool (no http capability?)"
-else
-  # Attempt to add duplicate
-  OUTPUT=$(wanaku tools add \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "neg-test-duplicate" \
-    --namespace public \
-    --description "second tool" \
-    --uri "http://example.com/second" \
-    --type http 2>&1)
-  EXIT_CODE=$?
-
-  if [ "${EXIT_CODE}" -ne 0 ]; then
-    echo "PASS [2.5]: duplicate tool name rejected (exit code ${EXIT_CODE})"
-  else
-    echo "WARN [2.5]: duplicate tool was accepted -- server may allow overwrite"
-  fi
-
-  # Cleanup
-  wanaku tools remove --host "${WANAKU_ROUTER_URL}" --no-auth --name "neg-test-duplicate" 2>/dev/null || true
-fi
-```
-
-### Test 2.6: Show non-existent tool
-
-The `tools show` command takes the tool name as a positional parameter.
-
-```bash
-assert_failure "2.6" "show non-existent tool rejected" \
+assert_failure "2.1" "show non-existent tool rejected" \
   wanaku tools show \
     --host "${WANAKU_ROUTER_URL}" \
     --no-auth \
     "nonexistent-tool-12345"
 ```
 
-### Test 2.7: Edit non-existent tool
-
-The `tools edit` command takes the tool name as a positional parameter.
+### Test 2.2: Generate from non-existent OpenAPI file
 
 ```bash
-assert_failure "2.7" "edit non-existent tool rejected" \
-  wanaku tools edit \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    "nonexistent-tool-12345"
-```
-
-### Test 2.8: Remove non-existent tool
-
-```bash
-assert_graceful "2.8" "remove non-existent tool handled gracefully" \
-  wanaku tools remove \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "nonexistent-tool-12345"
-```
-
-### Test 2.9: Label add on non-existent tool
-
-The `tools label add` command requires `--name` and `--label`.
-
-```bash
-assert_failure "2.9" "label add on non-existent tool rejected" \
-  wanaku tools label add \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "nonexistent-tool-12345" \
-    --label "env=test"
-```
-
-### Test 2.10: Generate from non-existent OpenAPI file
-
-The `tools generate` command takes the spec location as a positional parameter.
-
-```bash
-assert_failure "2.10" "generate from non-existent file rejected" \
+assert_failure "2.2" "generate from non-existent file rejected" \
   wanaku tools generate /tmp/nonexistent-openapi-spec-12345.yaml
 ```
 
@@ -300,111 +159,14 @@ assert_failure "2.10" "generate from non-existent file rejected" \
 
 ## Phase 3: Resources -- Error Cases
 
-### Test 3.1: Expose resource with no name
-
-The `--name` option is required by `resources expose`.
+### Test 3.1: Show non-existent resource
 
 ```bash
-assert_failure "3.1" "resources expose with no name rejected" \
-  wanaku resources expose \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --namespace public \
-    --description "test resource" \
-    --location "http://example.com/data" \
-    --type http
-```
-
-### Test 3.2: Expose resource with no location
-
-The `--location` option is required by `resources expose`.
-
-```bash
-assert_failure "3.2" "resources expose with no location rejected" \
-  wanaku resources expose \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "neg-test-no-location" \
-    --namespace public \
-    --description "test resource" \
-    --type http
-```
-
-### Test 3.3: Expose resource with no type
-
-The `--type` option is required by `resources expose`.
-
-```bash
-assert_failure "3.3" "resources expose with no type rejected" \
-  wanaku resources expose \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "neg-test-no-type" \
-    --namespace public \
-    --description "test resource" \
-    --location "http://example.com/data"
-```
-
-### Test 3.4: Expose resource with duplicate name
-
-First register a resource, then try to add another with the same name.
-
-```bash
-# Setup: register a resource (type must match a running provider)
-wanaku resources expose \
-  --host "${WANAKU_ROUTER_URL}" \
-  --no-auth \
-  --name "neg-test-dup-resource" \
-  --namespace public \
-  --description "first resource" \
-  --location "http://example.com/data" \
-  --type http 2>&1
-SETUP_EXIT=$?
-
-if [ "${SETUP_EXIT}" -ne 0 ]; then
-  echo "SKIP [3.4]: could not register setup resource (no matching provider?)"
-else
-  OUTPUT=$(wanaku resources expose \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "neg-test-dup-resource" \
-    --namespace public \
-    --description "second resource" \
-    --location "http://example.com/other" \
-    --type http 2>&1)
-  EXIT_CODE=$?
-
-  if [ "${EXIT_CODE}" -ne 0 ]; then
-    echo "PASS [3.4]: duplicate resource name rejected (exit code ${EXIT_CODE})"
-  else
-    echo "WARN [3.4]: duplicate resource was accepted -- server may allow overwrite"
-  fi
-
-  # Cleanup
-  wanaku resources remove --host "${WANAKU_ROUTER_URL}" --no-auth --name "neg-test-dup-resource" 2>/dev/null || true
-fi
-```
-
-### Test 3.5: Show non-existent resource
-
-The `resources show` command takes the resource name as a positional parameter.
-
-```bash
-assert_failure "3.5" "show non-existent resource rejected" \
+assert_failure "3.1" "show non-existent resource rejected" \
   wanaku resources show \
     --host "${WANAKU_ROUTER_URL}" \
     --no-auth \
     "nonexistent-resource-12345"
-```
-
-### Test 3.6: Remove non-existent resource
-
-```bash
-assert_graceful "3.6" "remove non-existent resource handled gracefully" \
-  wanaku resources remove \
-    --host "${WANAKU_ROUTER_URL}" \
-    --no-auth \
-    --name "nonexistent-resource-12345"
 ```
 
 ---
@@ -803,18 +565,14 @@ assert_failure "9.6" "namespaces list with unreachable host fails gracefully" \
     --plain
 ```
 
-### Test 9.7: Tools add with unreachable host
+### Test 9.7: Tools list with unreachable host
 
 ```bash
-assert_failure "9.7" "tools add with unreachable host fails gracefully" \
-  wanaku tools add \
+assert_failure "9.7" "tools list with unreachable host fails gracefully" \
+  wanaku tools list \
     --host "${WANAKU_UNREACHABLE_HOST}" \
     --no-auth \
-    --name "neg-test-unreachable" \
-    --namespace public \
-    --description "test" \
-    --uri "http://example.com" \
-    --type http
+    --plain
 ```
 
 ---
@@ -824,14 +582,6 @@ assert_failure "9.7" "tools add with unreachable host fails gracefully" \
 ### Step 10.1: Remove any leftover test data
 
 ```bash
-for TOOL_NAME in neg-test-duplicate neg-test-no-uri neg-test-no-type neg-test-bad-type neg-test-unreachable; do
-  wanaku tools remove --host "${WANAKU_ROUTER_URL}" --no-auth --name "${TOOL_NAME}" 2>/dev/null || true
-done
-
-for RESOURCE_NAME in neg-test-dup-resource neg-test-no-location neg-test-no-type; do
-  wanaku resources remove --host "${WANAKU_ROUTER_URL}" --no-auth --name "${RESOURCE_NAME}" 2>/dev/null || true
-done
-
 wanaku forwards remove --host "${WANAKU_ROUTER_URL}" --no-auth --name "neg-test-dup-forward" 2>/dev/null || true
 
 echo "PASS [10.1]: test data cleaned up"
@@ -857,22 +607,9 @@ fi
 |-------|---------|-----------|----------|----------|
 | 0 | 0.1-0.2 | Prerequisites verification | Critical | Setup |
 | 1 | 1.0 | Router health check | Critical | Setup |
-| 2 | 2.1 | Tool add: missing --name | High | Validation |
-| 2 | 2.2 | Tool add: missing --uri | High | Validation |
-| 2 | 2.3 | Tool add: missing --type | High | Validation |
-| 2 | 2.4 | Tool add: invalid type | High | Validation |
-| 2 | 2.5 | Tool add: duplicate name | Medium | Validation |
-| 2 | 2.6 | Tool show: non-existent | High | Error handling |
-| 2 | 2.7 | Tool edit: non-existent | High | Error handling |
-| 2 | 2.8 | Tool remove: non-existent | Medium | Error handling |
-| 2 | 2.9 | Tool label add: non-existent | High | Error handling |
-| 2 | 2.10 | Tool generate: non-existent OpenAPI | High | Error handling |
-| 3 | 3.1 | Resource expose: missing --name | High | Validation |
-| 3 | 3.2 | Resource expose: missing --location | High | Validation |
-| 3 | 3.3 | Resource expose: missing --type | High | Validation |
-| 3 | 3.4 | Resource expose: duplicate name | Medium | Validation |
-| 3 | 3.5 | Resource show: non-existent | High | Error handling |
-| 3 | 3.6 | Resource remove: non-existent | Medium | Error handling |
+| 2 | 2.1 | Tool show: non-existent | High | Error handling |
+| 2 | 2.2 | Tool generate: non-existent OpenAPI | High | Error handling |
+| 3 | 3.1 | Resource show: non-existent | High | Error handling |
 | 4 | 4.1 | Prompt add: missing --name | High | Validation |
 | 4 | 4.2 | Prompt add: missing --description | High | Validation |
 | 4 | 4.3 | Prompt edit: non-existent | High | Error handling |

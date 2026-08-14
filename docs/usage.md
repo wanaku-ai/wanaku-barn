@@ -33,23 +33,13 @@ and introduces how it works.
 
 ## Using Wanaku
 
-Using Wanaku MCP Router involves three key actions:
+Using Wanaku MCP Router involves two key actions:
 
-1. Adding tools or resources to the MCP router
-2. Forwarding other MCP servers via the MCP forwarder
-3. Adding new capabilities via downstream services
+1. Forwarding other MCP servers via the MCP forwarder
+2. Adding new capabilities via downstream services
 
-### Adding tools or resources that use those capabilities
-
-Adding tools and resources to the Wanaku MCP Router expands the functionality available to agents using Wanaku.
-
-- MCP tools equip an agent with capabilities not inherently present in its native models.
-- MCP resources, on the other hand, allow an AI agent to consume data—such as files or records—and inject additional information into its context.
-
-Both tools and resources depend on capabilities that can be dynamically added to or removed from the Wanaku MCP Router.
-Once these capabilities are integrated, either through downstream services or by connecting to other MCP servers, users can then
-incorporate new tools and resources into Wanaku.
-These additions can then leverage the newly integrated capabilities to interact with enterprise systems and cloud services.
+Tools and resources are provided by MCP servers registered with the router. When you add an MCP server,
+its tools and resources become automatically available to agents using Wanaku.
 
 ### Forwarding other MCP servers via the MCP forwarder
 
@@ -528,8 +518,8 @@ When accessing the Web UI for the first time, you will be redirected to the Keyc
 and define a password.
 
 > [!IMPORTANT]
-> Wanaku does not yet support fine-grained control over its exposed resources. All users have admin access to the
-> tools and resources exposed. Expect this to change in future versions.
+> Wanaku does not yet support fine-grained access control. All authenticated users have admin access to
+> tools and resources. Expect this to change in future versions.
 
 ## Installing and Running Capabilities
 
@@ -1222,157 +1212,8 @@ Each tool is uniquely identified by a name and defined with an input schema that
 Essentially, MCP tools act as a standardized interface through which an AI agent can request information or execute specific
 tasks from external systems, like APIs or databases.
 
-When adding a tool to Wanaku, there are two key considerations:
-
-1. Capability: determine which capability will handle the request and process the input data.
-2. Tool/Service Arguments: Identify any arguments (also known as properties) that the tool and/or service accept.
-
-A capability service is required to be available at the moment when a new tool is being added to Wanaku MCP Router.
-
-### Adding Tools Using the CLI
-
-To add a new tool to a Wanaku MCP Router Backend instance running locally on <http://localhost:8080>, use the following command:
-
-```shell
-wanaku tools add -n "meow-facts" --description "Retrieve random facts about cats" --uri "https://meowfacts.herokuapp.com?count={parameter.valueOrElse('count', 1)}" --type http --property "count:int,The count of facts to retrieve" --required count
-```
-
-The command `wanaku tools add` is used to register a new tool with the Wanaku MCP Router. Let's break down each part of the command:
-
-- `-n "meow-facts"`: This flag sets the name of the tool to "meow-facts". This is a unique, human-readable identifier for the tool.
-- `--description "Retrieve random facts about cats"`: This provides a description of what the tool does, making it clear for users and LLMs.
-- `--uri "https://meowfacts.herokuapp.com?count={parameter.valueOrElse('count', 1)}"`: This specifies the URI (Uniform Resource Identifier) that the tool will interact with. In this case, it's an HTTP endpoint that provides cat facts. The {parameter.valueOrElse('count', 1)} part indicates that the count parameter from the tool's input will be used in the URI. If count is not provided, it will default to 1. This demonstrates how Wanaku can dynamically build URIs with parameters.
-- `--type http`:  This defines the type of the tool's underlying service, which in this case is `http`. This tells Wanaku that it should use its HTTP service handling capabilities for this tool.
-- `--property "count:int,The count of facts to retrieve"`: This defines an input property for the tool named count. It specifies that count is an integer (int) and provides a description of what it represents: `"The count of facts to retrieve"`.
-- `--required count`: This flag indicates that the count property is a required input for this tool.
-
-#### Adding Labels to Tools
-
-You can organize and categorize your tools using labels. Labels are key-value pairs that help you filter and manage tools more effectively:
-
-```shell
-wanaku tools add -n "weather-api" --description "Get weather forecast" --uri "https://api.weather.com/forecast" --type http --label category=weather --label environment=production --label region=us-east
-```
-
-Labels can be used for:
-
-- **Categorization**: Group tools by function (e.g., `category=weather`, `category=finance`)
-- **Environment tracking**: Identify deployment environments (e.g., `environment=production`, `environment=staging`)
-- **Access control**: Tag tools by team or department (e.g., `team=engineering`, `team=sales`)
-- **Lifecycle management**: Mark tools for deprecation or testing (e.g., `status=deprecated`, `status=beta`)
-
-You can add multiple labels by repeating the `--label` flag, using the format `--label key=value`.
-
-#### Managing Labels on Existing Tools
-
-After creating tools, you can add or remove labels without modifying the tool definition:
-
-**Adding labels to an existing tool:**
-
-```shell
-# Add labels to a specific tool
-wanaku tools label add --name "weather-api" --label priority=high --label reviewed=true
-
-# Add labels to multiple tools using label expressions (-e is short for --label-expression)
-wanaku tools label add -e 'category=weather' --label migrated=true
-```
-
-**Removing labels from an existing tool:**
-
-```shell
-# Remove labels from a specific tool
-wanaku tools label remove --name "weather-api" --label temporary --label draft
-
-# Remove labels from multiple tools using label expressions (-e is short for --label-expression)
-wanaku tools label remove -e 'status=deprecated' --label legacy
-```
-
-**Note:** When adding a label with a key that already exists, the value will be updated. When removing a non-existent label, it will be silently ignored.
-
-> [!NOTE]
-> For remote instances, you can use the parameter `--host` to point to the location of the instance.
-
-<!-- -->
-
-> [!IMPORTANT]
-> The meaning of the `uri` and how to actually compose it, depends on the type of capability being used. Each capability describes
-> exactly the meaning of the URI, so make sure to check the capability service for details. Additionally, this is covered in more
-> details in the Creating URIs section below.
-
-### Adding Tools Using the UI
-
-It is also possible to add new tools using the UI, by accessing the Tools page and filling the form.
-
-![Wanaku Console](https://github.com/user-attachments/assets/4da352f8-719c-4ffb-b3d5-d831a295672f)
-
-### Importing a ToolSet
-
-Wanaku ToolSets are collections of tools that can be easily shared and imported into your Wanaku router.
-This feature allows for convenient distribution of pre-configured tools among users.
-
-Wanaku provides a [selection of ready-to-use ToolSets](https://github.com/wanaku-ai/wanaku-toolsets) that you can import to
-quickly get started and explore its functionalities.
-
-To import a ToolSet directly into your router from a URL, use the following command:
-
-```shell
-wanaku tools import https://raw.githubusercontent.com/wanaku-ai/wanaku-toolsets/refs/heads/main/toolsets/currency.json
-```
-
-If you have a ToolSet definition file already stored on your local machine, you can import it using its file path:
-
-```shell
-wanaku tools import /path/to/the/toolsets/currency.json
-```
-
-### Viewing Tools
-
-You can check what tools are available in a Wanaku MCP Router instance by running:
-
-```shell
-wanaku tools list
-```
-
-### Editing Tools
-
-The `wanaku tools edit` command enables you to modify the existing definition of a tool that is registered with your Wanaku MCP
-Router.
-This command provides a convenient way to update a tool's JSON definition directly within your terminal using the `nano` text editor.
-
-```shell
-wanaku tools edit [options] [toolName]
-```
-
-In this command:
-
-- `toolName` : (Optional) Specifies the exact name of the tool you wish to modify. If this argument is omitted,
-  the command will present you with an interactive, scrollable list of all currently registered tools,
-  allowing for easy selection.
-
-If you know the precise name of the tool you want to edit, you can specify it directly.
-
-For example, to edit a tool named "my-custom-tool":
-
-```shell
-wanaku tools edit my-custom-tool
-```
-
-Upon executing this command, Wanaku will fetch the JSON definition of `"my-custom-tool"` and open it in the nano editor within
-your terminal.
-After making your desired changes, save them (usually by pressing `Ctrl+S`) and then exit nano (`Ctrl+X`).
-Wanaku will then ask for your confirmation before applying the updates to the tool's definition.
-
-When you're unsure of the exact tool name or want to browse available tools, run the edit command without specifying a toolName:
-
-```shell
-wanaku tools edit
-```
-
-This will present an interactive, scrollable list of all your registered tools.
-
-Use your keyboard's arrow keys to navigate and highlight the tool you wish to edit, then press Enter.
-
-The selected tool's JSON definition will then open in nano for you to make your modifications.
+Tools and resources are managed through MCP servers added to the router. When you register an MCP server,
+its tools become available automatically. The CLI provides read-only commands for inspecting tools.
 
 ### Listing Tools
 
@@ -1434,85 +1275,6 @@ count  int    The count of facts to retrieve yes
 
 ```shell
 wanaku tools show --host http://api.example.com:8080 meow-facts
-```
-
-### Removing Tools
-
-Tools can be removed from the UI by clicking on the Trash icon, or via the CLI using the `wanaku tools remove` command.
-
-#### Removing a Single Tool by Name
-
-To remove a specific tool by name:
-
-```shell
-wanaku tools remove --name "meow-facts"
-```
-
-#### Batch Removal Using Label Expressions
-
-You can remove multiple tools at once using label expressions. This is particularly useful for cleaning up tools by category, environment, or other criteria:
-
-```shell
-wanaku tools remove -e 'category=weather'
-```
-
-This command will:
-
-1. Find all tools with the label `category=weather`
-2. Display a preview table showing which tools will be removed
-3. Prompt for confirmation before removal
-4. Report the number of tools removed
-
-**Advanced Label Expression Examples:**
-
-Remove all non-production tools:
-
-```shell
-wanaku tools remove -e 'environment!=production'
-```
-
-Remove deprecated weather tools:
-
-```shell
-wanaku tools remove -e 'category=weather & status=deprecated'
-```
-
-Remove tools from either development or staging environments:
-
-```shell
-wanaku tools remove -e 'environment=development | environment=staging'
-```
-
-Remove deprecated tools in multiple categories:
-
-```shell
-wanaku tools remove -e '(category=weather | category=news) & status=deprecated'
-```
-
-**Label Expression Syntax:**
-
-- `key=value` - Equals
-- `key!=value` - Not equals
-- `expr1 & expr2` - Logical AND
-- `expr1 | expr2` - Logical OR
-- `!expr` - Logical NOT
-- `(expr)` - Grouping
-
-**Skipping Confirmation:**
-
-For automated scripts, you can skip the confirmation prompt using the `--assume-yes` or `-y` flag:
-
-```shell
-wanaku tools remove -e 'status=deprecated' -y
-```
-
-> [!WARNING]
-> Batch removal operations cannot be undone. Always review the preview table carefully before confirming removal.
-
-For detailed information about label expression syntax, see:
-
-```shell
-wanaku man label-expression
 ```
 
 ### Generating Tools
@@ -1660,84 +1422,9 @@ a warning message.
 If the specified file already exists, the command will return an error without overwriting the file.
 The parent directory of the specified file must exist and be writable by the current user.
 
-If the `--import` (or `-I`) option is set, the generated toolset is automatically imported into the router, equivalent
-to running the generate command followed by the import command.
-
 ## Managing MCP Resources
 
-### Exposing Resource
-
-The wanaku resources expose command allows you to make an existing resource available via your Wanaku MCP Router instance.
-
-Just like tools, it also requires a capability that can access the system storing and providing access to the resource (i.e.: FTP,
-AWS S3, NFS, etc.).
-
-For example, suppose you have a file named `test-mcp-2.txt` on your home directory on host that has the `file` capability running,
-and you want to expose it.
-
-This is how you can do it:
-
-```shell
-wanaku resources expose --location=$HOME/test-mcp-2.txt --mimeType=text/plain --description="Sample resource added via CLI" --name="test mcp via CLI" --type=file
-```
-
-In this example:
-
-- `--location=$HOME/test-mcp-2.txt`: Specifies the local path to the resource you want to expose.
-- `--mimeType=text/plain`: Defines the MIME type of the resource, indicating its content format.
-- `--description="Sample resource added via CLI"`: Provides a descriptive text for the resource.
-- `--name="test mcp via CLI"`: Assigns a human-readable name to the exposed resource.
-- `--type=file`: Indicates that the exposed resource is a file.
-
-#### Adding Labels to Resources
-
-Just like tools, you can organize resources using labels:
-
-```shell
-wanaku resources expose --location=$HOME/documents/report.pdf --mimeType=application/pdf --description="Q4 Financial Report" --name="q4-report" --type=file --label category=finance --label year=2024 --label department=accounting
-```
-
-Labels help you:
-
-- Organize resources by category, department, or project
-- Track resource lifecycles and versions
-- Filter and manage resources more effectively
-- Implement batch operations on groups of resources
-
-> [!IMPORTANT]
-> It's important to note that this location refers to a location that the capability (downstream service) is able to access.
-> The exact meaning of "location" depends on the type of the capability. For example:
->
-> - For a `file` type, it means the capability needs direct access to the file, implying it's likely running on a host with direct physical access to the file.
-> - For an `ftp` type, it means the capability needs access to the FTP server storing the file.
->
-> Always check the documentation for the capability provider that you are using for additional details about the location specifier.
-
-#### Managing Labels on Existing Resources
-
-After creating resources, you can add or remove labels without modifying the resource definition:
-
-**Adding labels to an existing resource:**
-
-```shell
-# Add labels to a specific resource
-wanaku resources label add --name "q4-report" --label archived=true --label reviewed=yes
-
-# Add labels to multiple resources using label expressions (-e is short for --label-expression)
-wanaku resources label add -e 'category=finance' --label migrated=true
-```
-
-**Removing labels from an existing resource:**
-
-```shell
-# Remove labels from a specific resource
-wanaku resources label remove --name "q4-report" --label temporary --label draft
-
-# Remove labels from multiple resources using label expressions (-e is short for --label-expression)
-wanaku resources label remove -e 'status=archived' --label legacy
-```
-
-**Note:** When adding a label with a key that already exists, the value will be updated. When removing a non-existent label, it will be silently ignored.
+Resources are managed through MCP servers added to the router. The CLI provides read-only commands for inspecting resources.
 
 ### Listing Resources
 
@@ -2020,62 +1707,6 @@ Remove a prompt by name:
 ```shell
 wanaku prompts remove --name "code-review"
 ```
-
-### Removing Resources
-
-Resources can be removed from the UI or via the CLI using the `wanaku resources remove` command.
-
-#### Removing a Single Resource by Name
-
-To remove a specific resource by name:
-
-```shell
-wanaku resources remove --name "q4-report"
-```
-
-#### Batch Removal Using Label Expressions
-
-Similar to tools, you can remove multiple resources at once using label expressions:
-
-```shell
-wanaku resources remove -e 'year=2023'
-```
-
-This command will:
-
-1. Find all resources with the label `year=2023`
-2. Display a preview table showing which resources will be removed
-3. Prompt for confirmation before removal
-4. Report the number of resources removed
-
-**Examples:**
-
-Remove all draft documents:
-
-```shell
-wanaku resources remove -e 'status=draft'
-```
-
-Remove archived resources from a specific department:
-
-```shell
-wanaku resources remove -e 'department=sales & status=archived'
-```
-
-Remove resources that are not marked as important:
-
-```shell
-wanaku resources remove -e '!priority=high'
-```
-
-For automated scripts, skip the confirmation prompt:
-
-```shell
-wanaku resources remove -e 'year=2022' -y
-```
-
-> [!WARNING]
-> Resource removal operations cannot be undone. Always review the preview table before confirming removal.
 
 ## Managing Shared Data
 
@@ -2444,16 +2075,9 @@ which is used if none is specified and a special `public` namespace that can be 
 
 ### Using Namespaces
 
-To associate a tool or resource with a specific namespace, use the `--namespace` option when adding it:
+Tools and resources are associated with namespaces through the MCP servers that provide them.
 
-```shell
-wanaku tools add -n "meow-facts-3" --description "Retrieve random facts about cats" --uri "https://meowfacts.herokuapp.com?count={count or 1}" --type http --property "count:int,The count of facts to retrieve" --namespace test --required count
-```
-
-In the example above, the *`meow-facts-3`* tool will be associated with the first freely available namespace.
-
-When you provide a namespace name like *`test`*, Wanaku automatically associates it with an available numerical slot from ns-0
-to ns-9.
+Wanaku automatically associates namespace names with available numerical slots from ns-0 to ns-9.
 
 All commands that accept `--namespace` (`-N`) also support `--namespace-id` for passing the namespace UUID directly. These options are mutually exclusive. Use `--namespace-id` when scripting with known UUIDs.
 
@@ -2717,8 +2341,8 @@ wanaku namespaces <TAB>
 # Shows: label, list
 
 # Tab-complete options
-wanaku tools add --<TAB>
-# Shows: --description, --help, --name, --namespace, --plain, --property, --required, --type, --uri, --verbose
+wanaku tools list --<TAB>
+# Shows: --help, --host, --plain, --verbose
 
 # Tab-complete after partial input
 wanaku name<TAB>

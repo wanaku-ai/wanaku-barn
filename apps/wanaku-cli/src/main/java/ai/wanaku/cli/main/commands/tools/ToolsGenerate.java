@@ -14,7 +14,6 @@ import ai.wanaku.cli.main.support.ToolsGenerateHelper;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import picocli.CommandLine;
 
-import static ai.wanaku.cli.main.support.ToolHelper.importToolset;
 import static ai.wanaku.cli.main.support.ToolsGenerateHelper.determineBaseUrl;
 import static ai.wanaku.cli.main.support.ToolsGenerateHelper.generateToolReferences;
 import static ai.wanaku.cli.main.support.ToolsGenerateHelper.loadAndResolveOpenAPI;
@@ -57,19 +56,6 @@ public class ToolsGenerate extends BaseCommand {
             arity = "0..*")
     private Map<String, String> labels = new HashMap<>();
 
-    @CommandLine.Option(
-            names = {"--import", "-I"},
-            arity = "0",
-            description = "Import the generated toolset in the registry")
-    private boolean importToolset;
-
-    @CommandLine.Option(
-            names = {"--import-service-host", "-H"},
-            description = "The API host used to import the generated toolset ",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
-
     @CommandLine.Parameters(
             description = "location to the OpenAPI spec definition, can be a local path or an URL",
             arity = "1..1",
@@ -79,7 +65,6 @@ public class ToolsGenerate extends BaseCommand {
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {
         try {
-            // Load and resolve OpenAPI Spec
             OpenAPI openAPI = loadAndResolveOpenAPI(specLocation.toString());
 
             if (openAPI == null
@@ -88,22 +73,9 @@ public class ToolsGenerate extends BaseCommand {
                 LOG.warn("No paths found in the OpenAPI specification");
                 return EXIT_ERROR;
             }
-            // Determine base URL to use
             String baseUrl = determineBaseUrl(openAPI, serverUrl, serverIndex, serverVariables);
-            // Generate tool references
             List<ToolReference> toolReferences = generateToolReferences(openAPI, baseUrl, labels);
-            // Write output
             ToolsGenerateHelper.writeOutput(toolReferences, outputFile);
-
-            if (importToolset) {
-                System.err.print("\n\nImporting toolset...");
-                int failures = importToolset(toolReferences, host);
-                if (failures > 0) {
-                    printer.printErrorMessage(String.format("Import completed with %d failure(s)", failures));
-                    return EXIT_ERROR;
-                }
-                System.err.print("Done.");
-            }
         } catch (Exception e) {
             System.err.println("Error processing OpenAPI specification: " + e.getMessage());
             return EXIT_ERROR;

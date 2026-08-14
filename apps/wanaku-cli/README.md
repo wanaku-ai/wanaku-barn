@@ -62,8 +62,8 @@ wanaku auth login \
 # List available tools
 wanaku tools list
 
-# Add a new tool
-wanaku tools add --uri http://example.com/api --service http
+# Show tool details
+wanaku tools show meow-facts
 
 # List resources
 wanaku resources list

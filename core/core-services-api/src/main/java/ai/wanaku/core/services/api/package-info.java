@@ -7,8 +7,8 @@
  * <p>
  * All service endpoints are available under the {@code /api/v1} base path and include:
  * <ul>
- *   <li>{@link ai.wanaku.core.services.api.ToolsService} - Tool management endpoints ({@code /api/v1/tools})</li>
- *   <li>{@link ai.wanaku.core.services.api.ResourcesService} - Resource management endpoints ({@code /api/v1/resources})</li>
+ *   <li>{@link ai.wanaku.core.services.api.ToolsService} - Tool listing endpoints ({@code /api/v1/tools})</li>
+ *   <li>{@link ai.wanaku.core.services.api.ResourcesService} - Resource listing endpoints ({@code /api/v1/resources})</li>
  *   <li>{@link ai.wanaku.core.services.api.NamespacesService} - Namespace management endpoints ({@code /api/v1/namespaces})</li>
  *   <li>{@link ai.wanaku.core.services.api.ForwardsService} - Forward management endpoints ({@code /api/v1/forwards})</li>
  *   <li>{@link ai.wanaku.core.services.api.CapabilitiesService} - Capability discovery and monitoring endpoints ({@code /api/v1/capabilities})</li>

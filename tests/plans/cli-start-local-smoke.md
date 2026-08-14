@@ -150,29 +150,9 @@ fi
 
 ## Phase 2: Smoke Test -- Tools
 
-### Test 2.1: Register an HTTP tool
+Tools are provided by MCP servers registered with the router. This phase verifies the read-only CLI commands work correctly.
 
-```bash
-java -jar ${CLI_JAR} tools add \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name smoke-test-tool \
-  --namespace public \
-  --description "Smoke test tool for local validation" \
-  --uri "https://httpbin.org/get?param={value}" \
-  --type http \
-  --property "value:string,A test value" \
-  --required value
-
-EXIT_CODE=$?
-if [ "${EXIT_CODE}" -eq 0 ]; then
-  echo "PASS: smoke-test-tool registered"
-else
-  echo "FAIL: could not register smoke-test-tool (exit code ${EXIT_CODE})"
-  exit 1
-fi
-```
-
-### Test 2.2: List tools and verify smoke-test-tool appears
+### Test 2.1: List tools returns successfully
 
 ```bash
 OUTPUT=$(java -jar ${CLI_JAR} tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
@@ -184,58 +164,10 @@ if [ "${EXIT_CODE}" -ne 0 ]; then
   exit 1
 fi
 
-echo "${OUTPUT}" | grep -q "smoke-test-tool" \
-  && echo "PASS: smoke-test-tool is listed" \
-  || echo "FAIL: smoke-test-tool not found in tools list"
+echo "PASS: tools list returned successfully"
 ```
 
-### Test 2.3: Show tool details
-
-```bash
-OUTPUT=$(java -jar ${CLI_JAR} tools show --host "${WANAKU_ROUTER_URL}" --plain smoke-test-tool 2>&1)
-EXIT_CODE=$?
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: tools show command failed (exit code ${EXIT_CODE})"
-  echo "${OUTPUT}"
-  exit 1
-fi
-
-echo "${OUTPUT}" | grep -q "smoke-test-tool" \
-  && echo "PASS: tool details contain tool name" \
-  || echo "FAIL: tool details do not contain tool name"
-
-echo "${OUTPUT}" | grep -q "httpbin" \
-  && echo "PASS: tool details contain URI" \
-  || echo "FAIL: tool details do not contain URI"
-```
-
-### Test 2.4: Call the tool via MCP
-
-```bash
-OUTPUT=$(java -jar ${CLI_JAR} mcp tool \
-  --uri "${MCP_SERVER_URI}" \
-  --name smoke-test-tool \
-  --param value=hello \
-  --plain 2>&1)
-EXIT_CODE=$?
-
-echo "Exit code: ${EXIT_CODE}"
-echo "Output: ${OUTPUT}"
-
-if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: MCP tool call failed (exit code ${EXIT_CODE})"
-  exit 1
-fi
-
-if [ -n "${OUTPUT}" ]; then
-  echo "PASS: MCP tool call returned non-empty response"
-else
-  echo "FAIL: MCP tool call returned empty response"
-fi
-```
-
-### Test 2.5: List tools via MCP and verify smoke-test-tool appears
+### Test 2.2: List tools via MCP returns successfully
 
 ```bash
 OUTPUT=$(java -jar ${CLI_JAR} mcp tool list --uri "${MCP_SERVER_URI}" --plain 2>&1)
@@ -247,12 +179,10 @@ if [ "${EXIT_CODE}" -ne 0 ]; then
   exit 1
 fi
 
-echo "${OUTPUT}" | grep -q "smoke-test-tool" \
-  && echo "PASS: smoke-test-tool visible via MCP" \
-  || echo "FAIL: smoke-test-tool not visible via MCP"
+echo "PASS: MCP tool list returned successfully"
 ```
 
-### Test 2.6: Call a non-existent tool should fail
+### Test 2.3: Call a non-existent tool should fail
 
 ```bash
 OUTPUT=$(java -jar ${CLI_JAR} mcp tool \
@@ -433,16 +363,7 @@ echo "${CONTENT_TYPE}" | grep -qi "text/html" \
 
 ## Phase 6: Cleanup
 
-### Step 6.1: Remove registered tools
-
-```bash
-java -jar ${CLI_JAR} tools remove \
-  --host "${WANAKU_ROUTER_URL}" \
-  --name smoke-test-tool 2>/dev/null || true
-echo "PASS: smoke-test-tool removed (or already absent)"
-```
-
-### Step 6.2: Remove registered prompts (idempotent)
+### Step 6.1: Remove registered prompts (idempotent)
 
 ```bash
 java -jar ${CLI_JAR} prompts remove \
@@ -489,12 +410,9 @@ fi
 | 1 | 1.1 | Verify CLI JAR exists | Critical |
 | 1 | 1.2 | Verify router is healthy | Critical |
 | 1 | 1.3 | Verify CLI can connect to router | Critical |
-| 2 | 2.1 | Register an HTTP tool | Critical |
-| 2 | 2.2 | List tools and verify registration | Critical |
-| 2 | 2.3 | Show tool details | High |
-| 2 | 2.4 | Call tool via MCP | Critical |
-| 2 | 2.5 | List tools via MCP | High |
-| 2 | 2.6 | Call non-existent tool (negative) | High |
+| 2 | 2.1 | List tools returns successfully | High |
+| 2 | 2.2 | List tools via MCP | High |
+| 2 | 2.3 | Call non-existent tool (negative) | High |
 | 3 | 3.1 | List resources returns successfully | Medium |
 | 3 | 3.2 | List resources via MCP returns successfully | Medium |
 | 4 | 4.1 | Add a prompt | Critical |
@@ -505,7 +423,6 @@ fi
 | 4 | 4.6 | Remove non-existent prompt (negative) | High |
 | 5 | 5.1 | Admin UI returns HTTP 200 | High |
 | 5 | 5.2 | Admin UI serves HTML content | Medium |
-| 6 | 6.1 | Remove registered tools | Critical |
-| 6 | 6.2 | Remove registered prompts | Critical |
-| 6 | 6.3 | Kill the Wanaku process | Critical |
-| 6 | 6.4 | Verify process is gone | High |
+| 6 | 6.1 | Remove registered prompts | Critical |
+| 6 | 6.2 | Kill the Wanaku process | Critical |
+| 6 | 6.3 | Verify process is gone | High |
