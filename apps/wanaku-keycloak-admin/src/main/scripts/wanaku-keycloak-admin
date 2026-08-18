@@ -1,0 +1,5 @@
+#!/bin/sh
+
+localDir="$(dirname "$0")"
+
+exec java --add-opens=java.base/java.lang=ALL-UNNAMED -jar "${localDir}"/quarkus-run.jar "$@"

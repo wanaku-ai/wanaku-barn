@@ -70,7 +70,7 @@ When using `wanaku` CLI commands that require admin access, prefer environment v
 ```bash
 export WANAKU_ADMIN_USERNAME=admin
 export WANAKU_ADMIN_PASSWORD=secure-password
-wanaku admin realm create --config wanaku-config.json
+wanaku-keycloak-admin realm create --config wanaku-config.json
 ```
 
 ## Network Policies

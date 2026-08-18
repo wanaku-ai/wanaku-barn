@@ -2,7 +2,7 @@
 
 ## Overview
 
-This test plan verifies the `wanaku admin users`, `wanaku admin credentials`, and `wanaku auth login` CLI commands against a Keycloak instance deployed on OpenShift. It covers full CRUD operations for users (list, add, set-password, remove), service client credentials (list, add, show, regenerate, remove), and the OIDC login flow in two modes: direct Keycloak login with `--realm` and router OIDC proxy login without `--realm`.
+This test plan verifies the `wanaku-keycloak-admin users`, `wanaku-keycloak-admin credentials`, and `wanaku auth login` CLI commands against a Keycloak instance deployed on OpenShift. It covers full CRUD operations for users (list, add, set-password, remove), service client credentials (list, add, show, regenerate, remove), and the OIDC login flow in two modes: direct Keycloak login with `--realm` and router OIDC proxy login without `--realm`.
 
 Every step is fully automatable.
 
@@ -13,6 +13,7 @@ Every step is fully automatable.
 | Tool | Minimum version | Verify command |
 |------|-----------------|----------------|
 | `wanaku` | build from source | `wanaku --version` |
+| `wanaku-keycloak-admin` | build from source | `wanaku-keycloak-admin --version` |
 | `java` | 21+ | `java -version` |
 | `mvn` | 3.9+ | `mvn -version` |
 | `oc` | 4.x | `oc version` |
@@ -89,10 +90,13 @@ When using the CLI from a local build (not installed), use `java -jar` directly:
 
 ```bash
 CLI_JAR="${WANAKU_REPO_ROOT}/apps/wanaku-cli/target/quarkus-app/quarkus-run.jar"
-java -jar ${CLI_JAR} admin users list --keycloak-url ... --plain
+KEYCLOAK_ADMIN_JAR="${WANAKU_REPO_ROOT}/apps/wanaku-keycloak-admin/target/quarkus-app/quarkus-run.jar"
+java -jar ${KEYCLOAK_ADMIN_JAR} users list --keycloak-url ... --plain
 ```
 
-Do **not** assign the full command to a single variable (e.g., `WANAKU_CLI="java -jar path/to/jar"`) — zsh treats it as a single token. Use `CLI_JAR` for the path and call `java -jar ${CLI_JAR}` explicitly.
+Do **not** assign the full command to a single variable (e.g., `WANAKU_CLI="java -jar path/to/jar"`) — zsh treats it as a single token. Use `CLI_JAR`/`KEYCLOAK_ADMIN_JAR` for the path and call `java -jar ${CLI_JAR}` explicitly.
+
+The `users`, `credentials`, and `realm` commands live in the standalone `wanaku-keycloak-admin` binary (jar at `KEYCLOAK_ADMIN_JAR`); the `auth` commands remain in the `wanaku` CLI (jar at `CLI_JAR`).
 
 ---
 
@@ -159,7 +163,7 @@ fi
 ### Test 2.1: List users returns successfully
 
 ```bash
-OUTPUT=$(wanaku admin users list \
+OUTPUT=$(wanaku-keycloak-admin users list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -179,7 +183,7 @@ echo "${OUTPUT}"
 ### Test 2.2: List users does not contain the test user yet
 
 ```bash
-OUTPUT=$(wanaku admin users list \
+OUTPUT=$(wanaku-keycloak-admin users list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -197,7 +201,7 @@ echo "${OUTPUT}" | grep -q "${TEST_USERNAME}" \
 ### Test 3.1: Create a new user
 
 ```bash
-OUTPUT=$(wanaku admin users add \
+OUTPUT=$(wanaku-keycloak-admin users add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -218,7 +222,7 @@ echo "PASS: user '${TEST_USERNAME}' created"
 ### Test 3.2: List users shows the newly created user
 
 ```bash
-OUTPUT=$(wanaku admin users list \
+OUTPUT=$(wanaku-keycloak-admin users list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -232,7 +236,7 @@ echo "${OUTPUT}" | grep -q "${TEST_USERNAME}" \
 ### Test 3.3: Create a duplicate user should fail
 
 ```bash
-OUTPUT=$(wanaku admin users add \
+OUTPUT=$(wanaku-keycloak-admin users add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -251,7 +255,7 @@ fi
 ### Test 3.4: Create user with only required fields (no email)
 
 ```bash
-OUTPUT=$(wanaku admin users add \
+OUTPUT=$(wanaku-keycloak-admin users add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -276,7 +280,7 @@ echo "PASS: user '${TEST_USERNAME}-minimal' created with minimal fields"
 
 ```bash
 NEW_PASSWORD="NewPass456"
-OUTPUT=$(wanaku admin users set-password \
+OUTPUT=$(wanaku-keycloak-admin users set-password \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -296,7 +300,7 @@ echo "PASS: password updated for user '${TEST_USERNAME}'"
 ### Test 4.2: Set password for non-existent user should fail
 
 ```bash
-OUTPUT=$(wanaku admin users set-password \
+OUTPUT=$(wanaku-keycloak-admin users set-password \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -318,7 +322,7 @@ fi
 ### Test 5.1: Remove the minimal test user
 
 ```bash
-OUTPUT=$(wanaku admin users remove \
+OUTPUT=$(wanaku-keycloak-admin users remove \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -337,7 +341,7 @@ echo "PASS: user '${TEST_USERNAME}-minimal' removed"
 ### Test 5.2: Verify removed user no longer appears in list
 
 ```bash
-OUTPUT=$(wanaku admin users list \
+OUTPUT=$(wanaku-keycloak-admin users list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -351,7 +355,7 @@ echo "${OUTPUT}" | grep -q "${TEST_USERNAME}-minimal" \
 ### Test 5.3: Remove a non-existent user should fail
 
 ```bash
-OUTPUT=$(wanaku admin users remove \
+OUTPUT=$(wanaku-keycloak-admin users remove \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -372,7 +376,7 @@ fi
 ### Test 6.1: List credentials returns successfully
 
 ```bash
-OUTPUT=$(wanaku admin credentials list \
+OUTPUT=$(wanaku-keycloak-admin credentials list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -394,7 +398,7 @@ echo "${OUTPUT}"
 The list command should filter out internal Keycloak clients and only show service clients.
 
 ```bash
-OUTPUT=$(wanaku admin credentials list \
+OUTPUT=$(wanaku-keycloak-admin credentials list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -408,7 +412,7 @@ echo "${OUTPUT}" | grep -q "account" \
 ### Test 6.3: List shows the wanaku-service client from realm import
 
 ```bash
-OUTPUT=$(wanaku admin credentials list \
+OUTPUT=$(wanaku-keycloak-admin credentials list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -426,7 +430,7 @@ echo "${OUTPUT}" | grep -q "wanaku-service" \
 ### Test 7.1: Create a new service client
 
 ```bash
-OUTPUT=$(wanaku admin credentials add \
+OUTPUT=$(wanaku-keycloak-admin credentials add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -446,7 +450,7 @@ echo "PASS: service client '${TEST_CLIENT_ID}' created"
 ### Test 7.2: Verify the new client appears in the list
 
 ```bash
-OUTPUT=$(wanaku admin credentials list \
+OUTPUT=$(wanaku-keycloak-admin credentials list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -460,7 +464,7 @@ echo "${OUTPUT}" | grep -q "${TEST_CLIENT_ID}" \
 ### Test 7.3: Create a service client with --show-secret
 
 ```bash
-OUTPUT=$(wanaku admin credentials add \
+OUTPUT=$(wanaku-keycloak-admin credentials add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -482,7 +486,7 @@ echo "${OUTPUT}" | grep -qi "secret" \
 ### Test 7.4: Create a duplicate client should fail
 
 ```bash
-OUTPUT=$(wanaku admin credentials add \
+OUTPUT=$(wanaku-keycloak-admin credentials add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -504,7 +508,7 @@ fi
 ### Test 8.1: Show details for the test client
 
 ```bash
-OUTPUT=$(wanaku admin credentials show \
+OUTPUT=$(wanaku-keycloak-admin credentials show \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -526,7 +530,7 @@ echo "${OUTPUT}" | grep -q "${TEST_CLIENT_ID}" \
 ### Test 8.2: Show with --show-secret displays the secret
 
 ```bash
-OUTPUT=$(wanaku admin credentials show \
+OUTPUT=$(wanaku-keycloak-admin credentials show \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -547,7 +551,7 @@ fi
 ### Test 8.3: Show without --show-secret does not display the secret value
 
 ```bash
-OUTPUT=$(wanaku admin credentials show \
+OUTPUT=$(wanaku-keycloak-admin credentials show \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -567,7 +571,7 @@ echo "PASS: credentials show without --show-secret succeeded"
 ### Test 8.4: Show a non-existent client should fail
 
 ```bash
-OUTPUT=$(wanaku admin credentials show \
+OUTPUT=$(wanaku-keycloak-admin credentials show \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -590,7 +594,7 @@ fi
 
 ```bash
 # Capture the original secret first
-ORIGINAL_OUTPUT=$(wanaku admin credentials show \
+ORIGINAL_OUTPUT=$(wanaku-keycloak-admin credentials show \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -600,7 +604,7 @@ ORIGINAL_OUTPUT=$(wanaku admin credentials show \
 ORIGINAL_SECRET=$(echo "${ORIGINAL_OUTPUT}" | grep "Client Secret:" | sed 's/.*Client Secret: //')
 
 # Regenerate
-OUTPUT=$(wanaku admin credentials regenerate \
+OUTPUT=$(wanaku-keycloak-admin credentials regenerate \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -620,7 +624,7 @@ echo "PASS: credentials regenerate succeeded"
 ### Test 9.2: Verify the regenerated secret differs from the original
 
 ```bash
-NEW_OUTPUT=$(wanaku admin credentials show \
+NEW_OUTPUT=$(wanaku-keycloak-admin credentials show \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -641,7 +645,7 @@ fi
 ### Test 9.3: Regenerate for a non-existent client should fail
 
 ```bash
-OUTPUT=$(wanaku admin credentials regenerate \
+OUTPUT=$(wanaku-keycloak-admin credentials regenerate \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -663,7 +667,7 @@ fi
 ### Test 10.1: Remove the secondary test client
 
 ```bash
-OUTPUT=$(wanaku admin credentials remove \
+OUTPUT=$(wanaku-keycloak-admin credentials remove \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -682,7 +686,7 @@ echo "PASS: service client '${TEST_CLIENT_ID}-with-secret' removed"
 ### Test 10.2: Remove the primary test client
 
 ```bash
-OUTPUT=$(wanaku admin credentials remove \
+OUTPUT=$(wanaku-keycloak-admin credentials remove \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -701,7 +705,7 @@ echo "PASS: service client '${TEST_CLIENT_ID}' removed"
 ### Test 10.3: Verify removed client no longer appears in list
 
 ```bash
-OUTPUT=$(wanaku admin credentials list \
+OUTPUT=$(wanaku-keycloak-admin credentials list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -715,7 +719,7 @@ echo "${OUTPUT}" | grep -q "${TEST_CLIENT_ID}" \
 ### Test 10.4: Remove a non-existent client should fail
 
 ```bash
-OUTPUT=$(wanaku admin credentials remove \
+OUTPUT=$(wanaku-keycloak-admin credentials remove \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -736,7 +740,7 @@ fi
 ### Test 11.1: Commands with wrong admin credentials should fail
 
 ```bash
-OUTPUT=$(wanaku admin users list \
+OUTPUT=$(wanaku-keycloak-admin users list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "wrong-admin" \
   --admin-password "wrong-pass" \
@@ -753,7 +757,7 @@ fi
 ### Test 11.2: Commands against unreachable Keycloak should fail gracefully
 
 ```bash
-OUTPUT=$(wanaku admin users list \
+OUTPUT=$(wanaku-keycloak-admin users list \
   --keycloak-url "http://localhost:59999" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -770,7 +774,7 @@ fi
 ### Test 11.3: Credentials list against unreachable Keycloak should fail gracefully
 
 ```bash
-OUTPUT=$(wanaku admin credentials list \
+OUTPUT=$(wanaku-keycloak-admin credentials list \
   --keycloak-url "http://localhost:59999" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -787,7 +791,7 @@ fi
 ### Test 11.4: Add user without required --username should fail
 
 ```bash
-OUTPUT=$(wanaku admin users add \
+OUTPUT=$(wanaku-keycloak-admin users add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -804,7 +808,7 @@ fi
 ### Test 11.5: Add credentials without required --client-id should fail
 
 ```bash
-OUTPUT=$(wanaku admin credentials add \
+OUTPUT=$(wanaku-keycloak-admin credentials add \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -1274,7 +1278,7 @@ fi
 ### Step 17.1: Remove the test user
 
 ```bash
-wanaku admin users remove \
+wanaku-keycloak-admin users remove \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -1287,7 +1291,7 @@ echo "PASS: test user cleanup complete"
 
 ```bash
 for CLIENT in "${TEST_CLIENT_ID}" "${TEST_CLIENT_ID}-with-secret"; do
-  wanaku admin credentials remove \
+  wanaku-keycloak-admin credentials remove \
     --keycloak-url "${KEYCLOAK_URL}" \
     --admin-username "${KEYCLOAK_ADMIN_USER}" \
     --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -1300,7 +1304,7 @@ echo "PASS: test client cleanup complete"
 ### Step 17.3: Verify admin cleanup
 
 ```bash
-OUTPUT=$(wanaku admin users list \
+OUTPUT=$(wanaku-keycloak-admin users list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -1310,7 +1314,7 @@ echo "${OUTPUT}" | grep -q "${TEST_USERNAME}" \
   && echo "FAIL: test user '${TEST_USERNAME}' still present after cleanup" \
   || echo "PASS: test user cleaned up"
 
-OUTPUT=$(wanaku admin credentials list \
+OUTPUT=$(wanaku-keycloak-admin credentials list \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \

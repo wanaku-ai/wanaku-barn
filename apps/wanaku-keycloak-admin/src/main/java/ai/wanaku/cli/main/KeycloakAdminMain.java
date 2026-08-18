@@ -6,42 +6,19 @@ import java.util.concurrent.Callable;
 import io.quarkus.picocli.runtime.annotations.TopCommand;
 import io.quarkus.runtime.QuarkusApplication;
 import ai.wanaku.cli.main.commands.BaseCommand;
-import ai.wanaku.cli.main.commands.auth.Auth;
-import ai.wanaku.cli.main.commands.completion.Completion;
-import ai.wanaku.cli.main.commands.configure.Configure;
-import ai.wanaku.cli.main.commands.datastores.DataStores;
-import ai.wanaku.cli.main.commands.forwards.Forwards;
-import ai.wanaku.cli.main.commands.man.Man;
-import ai.wanaku.cli.main.commands.mcp.Mcp;
-import ai.wanaku.cli.main.commands.namespaces.Namespaces;
-import ai.wanaku.cli.main.commands.prompts.Prompts;
-import ai.wanaku.cli.main.commands.resources.Resources;
-import ai.wanaku.cli.main.commands.service.Service;
-import ai.wanaku.cli.main.commands.start.Start;
-import ai.wanaku.cli.main.commands.tools.Tools;
+import ai.wanaku.cli.main.commands.credentials.Credentials;
+import ai.wanaku.cli.main.commands.realm.Realm;
+import ai.wanaku.cli.main.commands.users.Users;
 import ai.wanaku.cli.main.support.WanakuExceptionHandler;
 import ai.wanaku.core.util.VersionHelper;
 import picocli.CommandLine;
 
 @TopCommand
 @CommandLine.Command(
-        name = "wanaku",
-        subcommands = {
-            Auth.class,
-            Forwards.class,
-            Resources.class,
-            Prompts.class,
-            Start.class,
-            Tools.class,
-            Namespaces.class,
-            Mcp.class,
-            Man.class,
-            Completion.class,
-            DataStores.class,
-            Configure.class,
-            Service.class
-        })
-public class CliMain implements Callable<Integer>, QuarkusApplication {
+        name = "wanaku-keycloak-admin",
+        description = "Keycloak administration commands for Wanaku",
+        subcommands = {Users.class, Credentials.class, Realm.class})
+public class KeycloakAdminMain implements Callable<Integer>, QuarkusApplication {
     @Inject
     CommandLine.IFactory factory;
 
@@ -53,7 +30,7 @@ public class CliMain implements Callable<Integer>, QuarkusApplication {
 
     @CommandLine.Option(
             names = {"-v", "--version"},
-            description = "Display the current version of Wanaku CLI")
+            description = "Display the current version of the Wanaku Keycloak admin tool")
     private boolean versionRequested = false;
 
     @CommandLine.Option(
@@ -72,7 +49,7 @@ public class CliMain implements Callable<Integer>, QuarkusApplication {
     @Override
     public Integer call() {
         if (versionRequested) {
-            System.out.println("Wanaku CLI version " + VersionHelper.VERSION);
+            System.out.println("Wanaku Keycloak admin version " + VersionHelper.VERSION);
             return BaseCommand.EXIT_OK;
         }
 

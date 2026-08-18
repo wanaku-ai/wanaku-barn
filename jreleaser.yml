@@ -48,6 +48,10 @@ distributions:
     artifacts:
       - path: apps/wanaku-cli/target/distributions/wanaku-cli-{{projectVersion}}.zip
     type: JAVA_BINARY
+  keycloak-admin:
+    artifacts:
+      - path: apps/wanaku-keycloak-admin/target/distributions/wanaku-keycloak-admin-{{projectVersion}}.zip
+    type: JAVA_BINARY
   router:
     artifacts:
       - path: apps/wanaku-barn-backend/target/distributions/wanaku-barn-backend-{{projectVersion}}.zip
@@ -67,6 +71,12 @@ distributions:
       - path: apps/wanaku-cli/target/distributions/wanaku-cli-{{projectVersion}}-osx-aarch_64.zip
         platform: osx-aarch_64
       - path: apps/wanaku-cli/target/distributions/wanaku-cli-{{projectVersion}}-linux-x86_64.zip
+        platform: linux-x86_64
+  keycloak-admin-native:
+    artifacts:
+      - path: apps/wanaku-keycloak-admin/target/distributions/wanaku-keycloak-admin-{{projectVersion}}-osx-aarch_64.zip
+        platform: osx-aarch_64
+      - path: apps/wanaku-keycloak-admin/target/distributions/wanaku-keycloak-admin-{{projectVersion}}-linux-x86_64.zip
         platform: linux-x86_64
 
 packagers:

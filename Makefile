@@ -26,6 +26,7 @@ dist-native:
 install:
 	mkdir -p $(HOME)/bin
 	install -m755 apps/wanaku-cli/target/wanaku-cli-$(WANAKU_VERSION)-runner $(HOME)/bin/wanaku
+	install -m755 apps/wanaku-keycloak-admin/target/wanaku-keycloak-admin-$(WANAKU_VERSION)-runner $(HOME)/bin/wanaku-keycloak-admin
 	ln -sf $(HOME)/bin/wanaku $(HOME)/bin/wk
 
 load-meta:

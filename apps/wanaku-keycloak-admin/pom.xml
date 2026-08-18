@@ -8,65 +8,13 @@
         <version>0.3.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>wanaku-cli</artifactId>
-    <name>Wanaku :: Apps :: CLI</name>
+    <artifactId>wanaku-keycloak-admin</artifactId>
+    <name>Wanaku :: Apps :: Keycloak Admin</name>
 
     <properties>
         <assembly.descriptor>src/main/assembly/assembly.xml</assembly.descriptor>
         <dist.final.name>${project.artifactId}-${project.version}</dist.final.name>
     </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>io.swagger.core.v3</groupId>
-                <artifactId>swagger-models</artifactId>
-                <version>${swagger-core.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.swagger.core.v3</groupId>
-                <artifactId>swagger-core</artifactId>
-                <version>${swagger-core.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jline</groupId>
-                <artifactId>jline</artifactId>
-                <version>${jline.version}</version>
-                <classifier>jdk11</classifier>
-            </dependency>
-            <dependency>
-                <groupId>org.jline</groupId>
-                <artifactId>jline-prompt</artifactId>
-                <version>${jline.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.swagger.parser.v3</groupId>
-                <artifactId>swagger-parser</artifactId>
-                <version>${swagger-parser.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.skyscreamer</groupId>
-                <artifactId>jsonassert</artifactId>
-                <version>${jsonassert.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.googlecode.juniversalchardet</groupId>
-                <artifactId>juniversalchardet</artifactId>
-                <version>${juniversalchardet.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.fusesource.jansi</groupId>
-                <artifactId>jansi</artifactId>
-                <version>${jansi.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -74,25 +22,10 @@
             <artifactId>wanaku-cli-common</artifactId>
             <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>ai.wanaku</groupId>
             <artifactId>core-util</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>ai.wanaku.sdk</groupId>
-            <artifactId>capabilities-common</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>ai.wanaku</groupId>
-            <artifactId>core-services-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>ai.wanaku</groupId>
-            <artifactId>core-mcp-client</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -116,77 +49,30 @@
         </dependency>
 
         <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-core</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.swagger.parser.v3</groupId>
-            <artifactId>swagger-parser</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>io.swagger.core.v3</groupId>
-            <artifactId>swagger-models</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.jline</groupId>
             <artifactId>jline</artifactId>
+            <version>${jline.version}</version>
             <classifier>jdk11</classifier>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jline</groupId>
-            <artifactId>jline-prompt</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.googlecode.juniversalchardet</groupId>
-            <artifactId>juniversalchardet</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.fusesource.jansi</groupId>
             <artifactId>jansi</artifactId>
+            <version>${jansi.version}</version>
         </dependency>
 
         <!-- tests -->
         <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-junit-mockito</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>ai.wanaku</groupId>
-            <artifactId>core-util</artifactId>
-            <version>${project.version}</version>
-            <classifier>tests</classifier>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <version>${assertj.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.rest-assured</groupId>
-            <artifactId>rest-assured</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.skyscreamer</groupId>
-            <artifactId>jsonassert</artifactId>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
-
 
     <build>
         <plugins>
@@ -251,11 +137,8 @@
                     --initialize-at-run-time=org.jline.nativ.Kernel32$MENU_EVENT_RECORD,
                     --initialize-at-run-time=org.jline.nativ.JLineLibrary,
                     --initialize-at-run-time=com.nimbusds.oauth2.sdk.http.HTTPRequest,
-		    --initialize-at-run-time=org.jline.nativ.CLibrary$Termios,
-		    --initialize-at-run-time=org.jline.nativ.CLibrary$WinSize,
-			-H:ReflectionConfigurationFiles=reflection-config.json,
-                    -H:IncludeResourceBundles=consoleui_messages,
-                    -H:ResourceConfigurationFiles=resources-config.json
+                    --initialize-at-run-time=org.jline.nativ.CLibrary$Termios,
+                    --initialize-at-run-time=org.jline.nativ.CLibrary$WinSize
                 </quarkus.native.additional-build-args>
             </properties>
             <dependencies>

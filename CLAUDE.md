@@ -24,6 +24,8 @@ Last updated: 2026-08-17
 ```text
 apps/
   wanaku-cli/              # CLI (Picocli + Quarkus)
+  wanaku-cli-common/       # Shared CLI support classes (base command, printer, auth/security)
+  wanaku-keycloak-admin/   # Keycloak admin CLI binary (users, credentials, realm)
   wanaku-barn-backend/     # Backend server (Quarkus REST, persistence, service catalogs)
   wanaku-operator/         # Kubernetes operator (JOSDK)
   wanaku-jbang/            # JBang integration

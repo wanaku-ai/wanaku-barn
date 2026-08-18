@@ -13,7 +13,9 @@
     <name>Wanaku :: Apps</name>
 
     <modules>
+        <module>wanaku-cli-common</module>
         <module>wanaku-cli</module>
+        <module>wanaku-keycloak-admin</module>
         <module>wanaku-jbang</module>
         <module>wanaku-barn-backend</module>
         <module>wanaku-operator</module>

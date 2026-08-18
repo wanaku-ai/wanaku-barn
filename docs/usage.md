@@ -139,14 +139,14 @@ cat deploy/auth/keycloak-ingress.yaml | sed "s/KEYCLOAK_HOST/keycloak.$(minikube
 kubectl apply -f deploy/auth/keycloak-router.yaml
 ```
 
-### Importing the Wanaku Realm Configuration (via Wanaku CLI)
+### Importing the Wanaku Realm Configuration (via Wanaku Keycloak Admin CLI)
 
-The simplest way to import the realm configuration is using the Wanaku CLI. You can set admin credentials once via environment variables:
+The simplest way to import the realm configuration is using the `wanaku-keycloak-admin` CLI. You can set admin credentials once via environment variables:
 
 ```shell
 export WANAKU_ADMIN_USERNAME=admin
 export WANAKU_ADMIN_PASSWORD=admin
-wanaku admin realm create
+wanaku-keycloak-admin realm create
 ```
 
 This imports the default realm configuration from `deploy/auth/wanaku-config.json`. You can specify a custom configuration file with `--config /path/to/realm.json` and a custom Keycloak URL with `--keycloak-url`.
@@ -1049,7 +1049,7 @@ wanaku tools list --no-auth
 
 ## Admin Commands
 
-The `wanaku admin` command group provides Keycloak administration operations for managing realms, users, and service client credentials. These commands authenticate directly against Keycloak using admin credentials rather than the user's stored token.
+The standalone `wanaku-keycloak-admin` binary provides Keycloak administration operations for managing realms, users, and service client credentials. These commands authenticate directly against Keycloak using admin credentials rather than the user's stored token.
 
 ### Common Options
 
@@ -1067,34 +1067,34 @@ If you prefer not to pass admin credentials on every command, set them once in y
 ```shell
 export WANAKU_ADMIN_USERNAME=admin
 export WANAKU_ADMIN_PASSWORD=admin
-wanaku admin users list
+wanaku-keycloak-admin users list
 ```
 
 ### User Management
 
 ```shell
 # List all users in the realm
-wanaku admin users list --admin-username admin --admin-password admin
+wanaku-keycloak-admin users list --admin-username admin --admin-password admin
 
 # Create a new user (email, first-name, last-name are optional and default to username-based values)
 # By default, the email is marked as verified (equivalent to passing --verified).
 # Use --no-verified to leave it unverified, but note that emailVerified must be true
 # for OIDC login to succeed; otherwise Keycloak returns "account_not_fully_set_up"
 # and the CLI throws ServiceAuthException: Account is not fully set up.
-wanaku admin users add --admin-username admin --admin-password admin \
+wanaku-keycloak-admin users add --admin-username admin --admin-password admin \
   --username alice --password secretpass \
   --email alice@example.com --first-name Alice --last-name Smith
 
 # Create a user with an unverified email
-wanaku admin users add --admin-username admin --admin-password admin \
+wanaku-keycloak-admin users add --admin-username admin --admin-password admin \
   --username bob --password secretpass --no-verified
 
 # Remove a user
-wanaku admin users remove --admin-username admin --admin-password admin \
+wanaku-keycloak-admin users remove --admin-username admin --admin-password admin \
   --username alice
 
 # Set a user's password
-wanaku admin users set-password --admin-username admin --admin-password admin \
+wanaku-keycloak-admin users set-password --admin-username admin --admin-password admin \
   --username alice --password newpass
 ```
 
@@ -1102,26 +1102,26 @@ wanaku admin users set-password --admin-username admin --admin-password admin \
 
 ```shell
 # List service clients (filters out internal Keycloak clients)
-wanaku admin credentials list --admin-username admin --admin-password admin
+wanaku-keycloak-admin credentials list --admin-username admin --admin-password admin
 
 # Create a new service client
-wanaku admin credentials add --admin-username admin --admin-password admin \
+wanaku-keycloak-admin credentials add --admin-username admin --admin-password admin \
   --client-id my-service --description "My service client"
 
 # Create a service client and display its secret
-wanaku admin credentials add --admin-username admin --admin-password admin \
+wanaku-keycloak-admin credentials add --admin-username admin --admin-password admin \
   --client-id my-service --show-secret
 
 # Show an existing client's secret
-wanaku admin credentials show --admin-username admin --admin-password admin \
+wanaku-keycloak-admin credentials show --admin-username admin --admin-password admin \
   --client-id my-service --show-secret
 
 # Regenerate a client's secret
-wanaku admin credentials regenerate --admin-username admin --admin-password admin \
+wanaku-keycloak-admin credentials regenerate --admin-username admin --admin-password admin \
   --client-id my-service --show-secret
 
 # Remove a service client
-wanaku admin credentials remove --admin-username admin --admin-password admin \
+wanaku-keycloak-admin credentials remove --admin-username admin --admin-password admin \
   --client-id my-service
 ```
 
@@ -1131,14 +1131,14 @@ wanaku admin credentials remove --admin-username admin --admin-password admin \
 
 ```shell
 # Import the default realm configuration (deploy/auth/wanaku-config.json)
-wanaku admin realm create --admin-username admin --admin-password admin
+wanaku-keycloak-admin realm create --admin-username admin --admin-password admin
 
 # Import a custom realm configuration file
-wanaku admin realm create --admin-username admin --admin-password admin \
+wanaku-keycloak-admin realm create --admin-username admin --admin-password admin \
   --config /path/to/realm.json
 
 # Import with a custom Keycloak URL
-wanaku admin realm create --keycloak-url http://keycloak:8080 \
+wanaku-keycloak-admin realm create --keycloak-url http://keycloak:8080 \
   --admin-username admin --admin-password admin
 ```
 

@@ -85,7 +85,7 @@ The main plan should only contain logic unique to that test scenario. If a step 
 
 ## Use the Wanaku CLI, not raw API clients
 
-Test plans **must** use the Wanaku CLI for all interactions with the router and Keycloak. Use either a native binary installed on the system or — preferably — the CLI jar file built from the codebase (`java -jar apps/wanaku-cli/target/quarkus-app/quarkus-run.jar`).
+Test plans **must** use the Wanaku CLI for all interactions with the router and Keycloak. Use either a native binary installed on the system or — preferably — the CLI jar file built from the codebase (`java -jar apps/wanaku-cli/target/quarkus-app/quarkus-run.jar`). For Keycloak administration (users, credentials, realm), use the standalone `wanaku-keycloak-admin` binary (`java -jar apps/wanaku-keycloak-admin/target/quarkus-app/quarkus-run.jar`).
 
 Do **not** use `curl`, `wget`, `httpie`, or other HTTP clients to call Wanaku or Keycloak APIs unless the test is specifically oriented to verify HTTP-level behavior (e.g., checking raw HTTP status codes on health endpoints, testing SSE streaming headers, or verifying endpoint reachability before the CLI can connect).
 
