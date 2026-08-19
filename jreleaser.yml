@@ -53,25 +53,6 @@ distributions:
       - path: apps/wanaku-barn-backend/target/distributions/wanaku-barn-backend-{{projectVersion}}.zip
         platform: linux-x86_64
     type: JAVA_BINARY
-  service-http:
-    artifacts:
-      - path: capabilities/tools/wanaku-tool-service-http/target/distributions/wanaku-tool-service-http-{{projectVersion}}.zip
-        platform: linux-x86_64
-    type: JAVA_BINARY
-  service-exec:
-    artifacts:
-      - path: capabilities/tools/wanaku-tool-service-exec/target/distributions/wanaku-tool-service-exec-{{projectVersion}}.zip
-        platform: linux-x86_64
-  tool-performance-noop:
-    artifacts:
-      - path: capabilities/tools/wanaku-tool-performance-noop/target/distributions/wanaku-tool-performance-noop-{{projectVersion}}.zip
-        platform: linux-x86_64
-    type: JAVA_BINARY
-  provider-performance-static-file:
-    artifacts:
-      - path: capabilities/providers/wanaku-provider-performance-static-file/target/distributions/wanaku-provider-performance-static-file-{{projectVersion}}.zip
-        platform: linux-x86_64
-    type: JAVA_BINARY
   service-templates:
     artifacts:
       - path: services/service-templates/target/distributions/service-templates-{{projectVersion}}.zip
