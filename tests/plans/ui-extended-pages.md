@@ -317,7 +317,7 @@ fi
 2. Wait for `Loading...` to disappear.
 3. Assert `h1.title` text is `"Service Catalog"`.
 4. Assert `p.description` text contains `"View and manage"`.
-5. Assert three tabs are visible: `"Service Catalogs"`, `"Service Templates"`, `"Toolset Repositories"`.
+5. Assert two tabs are visible: `"Service Catalogs"`, `"Service Templates"`.
 6. Assert the `"Service Catalogs"` tab is active by default.
 
 ### Test 4.2: Service Catalogs tab -- empty state
@@ -401,34 +401,6 @@ fi
 4. If the template has properties, assert property input fields are rendered with labels.
 5. Click `"Cancel"`.
 6. Assert the wizard closes.
-
-### Test 4.12: Toolset Repositories tab -- loads
-
-1. Navigate to `#/service-catalog`.
-2. Click the `"Toolset Repositories"` tab.
-3. Wait for loading to finish.
-4. Assert either repository cards are visible or the empty tile shows `"No toolset repositories registered"`.
-
-### Test 4.13: Toolset Repositories tab -- add repository modal
-
-1. Click the `"Toolset Repositories"` tab.
-2. Click `"Add Repository"`.
-3. Assert modal opens with heading `"Add Toolset Repository"`.
-4. Assert inputs: `#repo-name`, `#repo-url`, `#repo-branch`, `#repo-description` are present.
-5. Assert primary button is disabled when name or URL is empty.
-6. Fill `#repo-name` with `e2e-repo-<timestamp>`.
-7. Fill `#repo-url` with `https://github.com/example/repo`.
-8. Assert primary button is enabled.
-9. Click `"Cancel"`.
-10. Assert modal closes.
-
-### Test 4.14: Toolset Repositories tab -- delete confirmation
-
-1. If a repository exists, click the delete icon button.
-2. Assert a danger modal opens with heading `"Delete Toolset Repository"`.
-3. Assert the body mentions the repository name and notes that previously imported tools are not removed.
-4. Click `"Cancel"`.
-5. Assert the modal closes.
 
 **Note:** Tests 4.4-4.7 and 4.10-4.11 require pre-existing catalogs or templates. If the router has none, these tests should be skipped gracefully using `test.skip()` with a descriptive message.
 
@@ -646,9 +618,6 @@ Extend `helpers/test-data.ts` with:
 | 4 | 4.9 | Service Templates tab -- search bar | Medium |
 | 4 | 4.10 | Service Templates tab -- card structure | High |
 | 4 | 4.11 | Service Templates tab -- instantiate wizard | High |
-| 4 | 4.12 | Toolset Repositories tab -- loads | High |
-| 4 | 4.13 | Toolset Repositories tab -- add modal | High |
-| 4 | 4.14 | Toolset Repositories tab -- delete confirmation | Medium |
 | 5 | 5.1 | Targets page loads with title and description | High |
 | 5 | 5.2 | Table structure is correct | High |
 | 5 | 5.3 | Empty state when no capabilities | Medium |

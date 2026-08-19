@@ -8,6 +8,5 @@
 export interface SystemStatistics {
   serviceCatalogsCount?: number;
   serviceTemplatesCount?: number;
-  toolsetReposCount?: number;
   dataStoresCount?: number;
 }

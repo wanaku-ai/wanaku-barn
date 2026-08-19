@@ -32,7 +32,7 @@ public class ToolsGenerate extends BaseCommand {
     @CommandLine.Option(
             names = {"--output-file", "-o"},
             description =
-                    "path of the file where the toolset will be written. If not set, the toolset will be written to the STDOUT",
+                    "path of the file where the generated tools will be written. If not set, the generated tools will be written to the STDOUT",
             arity = "0..1")
     private String outputFile;
 

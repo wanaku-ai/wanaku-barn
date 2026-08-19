@@ -3,16 +3,13 @@ package ai.wanaku.backend.api.v1.management.statistics;
 public class SystemStatistics {
     private long serviceCatalogsCount;
     private long serviceTemplatesCount;
-    private long toolsetReposCount;
     private long dataStoresCount;
 
     public SystemStatistics() {}
 
-    public SystemStatistics(
-            long serviceCatalogsCount, long serviceTemplatesCount, long toolsetReposCount, long dataStoresCount) {
+    public SystemStatistics(long serviceCatalogsCount, long serviceTemplatesCount, long dataStoresCount) {
         this.serviceCatalogsCount = serviceCatalogsCount;
         this.serviceTemplatesCount = serviceTemplatesCount;
-        this.toolsetReposCount = toolsetReposCount;
         this.dataStoresCount = dataStoresCount;
     }
 
@@ -30,14 +27,6 @@ public class SystemStatistics {
 
     public void setServiceTemplatesCount(long serviceTemplatesCount) {
         this.serviceTemplatesCount = serviceTemplatesCount;
-    }
-
-    public long getToolsetReposCount() {
-        return toolsetReposCount;
-    }
-
-    public void setToolsetReposCount(long toolsetReposCount) {
-        this.toolsetReposCount = toolsetReposCount;
     }
 
     public long getDataStoresCount() {

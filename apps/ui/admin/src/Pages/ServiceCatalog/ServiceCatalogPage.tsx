@@ -2,7 +2,6 @@ import React, {useCallback, useEffect, useState} from "react";
 import {Tab, TabList, TabPanel, TabPanels, Tabs, ToastNotification} from "@carbon/react";
 import {ServiceCatalogCards} from "./ServiceCatalogCards";
 import {ServiceTemplateCards} from "./ServiceTemplateCards";
-import {ToolsetReposTab} from "./ToolsetReposTab";
 import {useServiceCatalog} from "../../hooks/api/use-service-catalog";
 import {useServiceTemplate} from "../../hooks/api/use-service-template";
 import "./ServiceCatalogPage.scss";
@@ -156,13 +155,12 @@ export const ServiceCatalogPage: React.FC = () => {
       )}
       <h1 className="title">Service Catalog</h1>
       <p className="description">
-        View and manage deployed service catalogs, service templates, and remote toolset repositories.
+        View and manage deployed service catalogs and service templates.
       </p>
       <Tabs>
         <TabList aria-label="Service catalog tabs">
           <Tab>Service Catalogs</Tab>
           <Tab>Service Templates</Tab>
-          <Tab>Toolset Repositories</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -187,12 +185,6 @@ export const ServiceCatalogPage: React.FC = () => {
                 onInstantiateSuccess={handleInstantiateSuccess}
               />
             )}
-          </TabPanel>
-          <TabPanel>
-            <ToolsetReposTab
-              onError={(msg) => setErrorMessage(msg)}
-              onSuccess={(msg) => setSuccessMessage(msg)}
-            />
           </TabPanel>
         </TabPanels>
       </Tabs>

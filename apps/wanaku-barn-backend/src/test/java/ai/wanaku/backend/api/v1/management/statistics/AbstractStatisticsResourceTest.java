@@ -29,7 +29,6 @@ public abstract class AbstractStatisticsResourceTest extends WanakuRouterTest {
                 .body("data", notNullValue())
                 .body("data.serviceCatalogsCount", greaterThanOrEqualTo(0))
                 .body("data.serviceTemplatesCount", greaterThanOrEqualTo(0))
-                .body("data.toolsetReposCount", greaterThanOrEqualTo(0))
                 .body("data.dataStoresCount", greaterThanOrEqualTo(0));
     }
 }

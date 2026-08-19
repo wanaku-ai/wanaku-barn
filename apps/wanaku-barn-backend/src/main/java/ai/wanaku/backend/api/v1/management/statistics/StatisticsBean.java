@@ -6,7 +6,6 @@ import jakarta.inject.Inject;
 import ai.wanaku.backend.api.v1.datastores.DataStoresBean;
 import ai.wanaku.backend.api.v1.servicecatalog.ServiceCatalogBean;
 import ai.wanaku.backend.api.v1.servicecatalog.ServiceTemplateBean;
-import ai.wanaku.backend.api.v1.toolsetrepos.ToolsetReposBean;
 
 @ApplicationScoped
 public class StatisticsBean {
@@ -18,17 +17,13 @@ public class StatisticsBean {
     ServiceTemplateBean serviceTemplateBean;
 
     @Inject
-    ToolsetReposBean toolsetReposBean;
-
-    @Inject
     DataStoresBean dataStoresBean;
 
     public SystemStatistics getStatistics() {
         long serviceCatalogsCount = serviceCatalogBean.list(null).size();
         long serviceTemplatesCount = serviceTemplateBean.list(null).size();
-        long toolsetReposCount = toolsetReposBean.list().size();
         long dataStoresCount = dataStoresBean.list(null).size();
 
-        return new SystemStatistics(serviceCatalogsCount, serviceTemplatesCount, toolsetReposCount, dataStoresCount);
+        return new SystemStatistics(serviceCatalogsCount, serviceTemplatesCount, dataStoresCount);
     }
 }

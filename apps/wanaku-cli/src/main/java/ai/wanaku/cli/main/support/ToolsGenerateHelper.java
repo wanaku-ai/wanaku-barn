@@ -134,7 +134,7 @@ public class ToolsGenerateHelper {
         try (PrintWriter out = getOutputPrintWriter(output)) {
             new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(out, toolReferences);
         } catch (Exception e) {
-            LOG.trace("Error writing toolset", e);
+            LOG.trace("Error writing tool references", e);
             throw e;
         }
     }

@@ -1382,12 +1382,12 @@ The `--output-file` (or `-o`) option specifies the file path where the generated
 It determines where the output JSON containing all the tool references will be saved.
 
 ```shell
-wanaku tools generate -o ./toolsets/api-tools.json http://petstore3.swagger.io/api/v3/openapi.json
+wanaku tools generate -o ./tools/api-tools.json http://petstore3.swagger.io/api/v3/openapi.json
 ```
 
-If `--output-file` is specified, the command will write the JSON toolset to the specified file path.
+If `--output-file` is specified, the command will write the JSON tool references to the specified file path.
 
-If `--output-file` is not specified, the command will write the JSON toolset to standard output (STDOUT).
+If `--output-file` is not specified, the command will write the JSON tool references to standard output (STDOUT).
 
 If the specified path is a directory, the command will write to a file named `out.json` within that directory and provide
 a warning message.
