@@ -74,6 +74,18 @@ public interface ServiceCatalogService {
     WanakuResponse<DataStore> download(@QueryParam("name") String name);
 
     /**
+     * Validate a service catalog package without deploying it.
+     *
+     * @param dataStore the data store entry containing the Base64-encoded ZIP
+     * @return response with the validation result
+     */
+    @Path("/validate")
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<ValidationResult> validate(DataStore dataStore);
+
+    /**
      * Remove a service catalog by name.
      *
      * @param name the catalog name to remove

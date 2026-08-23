@@ -55,6 +55,8 @@ public class WanakuExceptionMapper implements ExceptionMapper<WanakuException> {
             status = 404;
         } else if (e instanceof EntityAlreadyExistsException) {
             status = 409;
+        } else if (e instanceof InvalidPayloadException) {
+            status = 422;
         } else if (e instanceof ServiceUnavailableException) {
             status = 502;
         } else {

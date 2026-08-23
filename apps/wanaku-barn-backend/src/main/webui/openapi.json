@@ -196,6 +196,43 @@
           }
         }
       },
+      "ValidationIssue" : {
+        "type" : "object",
+        "properties" : {
+          "path" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ValidationResult" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "valid" : {
+            "type" : "boolean"
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ValidationIssue"
+            }
+          },
+          "warnings" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ValidationIssue"
+            }
+          }
+        }
+      },
       "WanakuError" : {
         "type" : "object",
         "properties" : {
@@ -349,6 +386,17 @@
           },
           "data" : {
             "$ref" : "#/components/schemas/SystemStatistics"
+          }
+        }
+      },
+      "WanakuResponseValidationResult" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/ValidationResult"
           }
         }
       },
@@ -697,6 +745,40 @@
         "tags" : [ "Service Catalog Resource" ]
       }
     },
+    "/api/v1/service-catalog/validate" : {
+      "post" : {
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DataStore"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "The package was validated: check 'valid' and 'errors' in the body for the outcome",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseValidationResult"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "The request carries no package data to validate"
+          },
+          "400" : {
+            "description" : "Bad Request"
+          }
+        },
+        "summary" : "Validate",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
     "/api/v1/service-catalog/{name}" : {
       "delete" : {
         "parameters" : [ {
@@ -931,6 +1013,40 @@
           }
         },
         "summary" : "Remove",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/validate" : {
+      "post" : {
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DataStore"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "The package was validated: check 'valid' and 'errors' in the body for the outcome",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseValidationResult"
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "The request carries no package data to validate"
+          },
+          "400" : {
+            "description" : "Bad Request"
+          }
+        },
+        "summary" : "Validate",
         "tags" : [ "Service Template Resource" ]
       }
     }

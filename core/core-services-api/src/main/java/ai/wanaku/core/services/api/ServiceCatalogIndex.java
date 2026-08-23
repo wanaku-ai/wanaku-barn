@@ -23,12 +23,14 @@ import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
  *   <li>{@code catalog.description} - human-readable description</li>
  *   <li>{@code catalog.services} - comma-separated list of system identifiers</li>
  *   <li>{@code catalog.routes.<system>} - relative path to Camel route YAML for each system</li>
- *   <li>{@code catalog.rules.<system>} - relative path to Wanaku rules YAML for each system</li>
  * </ul>
  * Optional properties:
  * <ul>
  *   <li>{@code catalog.icon} - display icon</li>
  *   <li>{@code catalog.dependencies.<system>} - relative path to dependencies file</li>
+ *   <li>{@code catalog.rules.<system>} - relative path to Wanaku rules YAML. Superseded by Camel's
+ *       built-in MCP support: as of 0.3.0 it is no longer required nor validated, and is only read
+ *       back for catalogs packaged with earlier versions</li>
  * </ul>
  */
 public class ServiceCatalogIndex {
@@ -147,24 +149,16 @@ public class ServiceCatalogIndex {
             throw new WanakuException("Property '" + PROP_SERVICES + "' must list at least one system");
         }
 
-        // Validate each system has routes and rules entries
+        // Validate each system has a routes entry
         for (String system : serviceNames) {
             String routesPath = requireProperty(props, PROP_ROUTES_PREFIX + system);
-            String rulesPath = requireProperty(props, PROP_RULES_PREFIX + system);
 
             validateZipEntryPath(routesPath);
-            validateZipEntryPath(rulesPath);
 
             // If we have ZIP entries, verify referenced files exist
-            if (zipEntries != null) {
-                if (!zipEntries.contains(routesPath)) {
-                    throw new WanakuException("Referenced routes file '" + routesPath + "' for system '" + system
-                            + "' not found in ZIP archive");
-                }
-                if (!zipEntries.contains(rulesPath)) {
-                    throw new WanakuException("Referenced rules file '" + rulesPath + "' for system '" + system
-                            + "' not found in ZIP archive");
-                }
+            if (zipEntries != null && !zipEntries.contains(routesPath)) {
+                throw new WanakuException("Referenced routes file '" + routesPath + "' for system '" + system
+                        + "' not found in ZIP archive");
             }
 
             String depsPath = props.getProperty(PROP_DEPENDENCIES_PREFIX + system);
@@ -204,7 +198,7 @@ public class ServiceCatalogIndex {
      * @param path the entry path to validate
      * @throws WanakuException if the path contains traversal sequences or is absolute
      */
-    static void validateZipEntryPath(String path) throws WanakuException {
+    public static void validateZipEntryPath(String path) throws WanakuException {
         if (path == null || path.isEmpty()) {
             return;
         }
@@ -240,7 +234,10 @@ public class ServiceCatalogIndex {
     }
 
     /**
-     * Get the rules file path for a given system.
+     * Get the rules file path for a given system, or null if not set.
+     * <p>
+     * Rules files are a legacy of pre-0.3.0 catalogs, superseded by Camel's built-in MCP support.
+     * They are no longer required nor validated.
      */
     public String getRulesFile(String system) {
         return properties.getProperty(PROP_RULES_PREFIX + system);

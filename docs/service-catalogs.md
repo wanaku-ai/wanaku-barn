@@ -75,7 +75,7 @@ catalog.services=system-a,system-b
 catalog.routes.system-a=system-a/system-a.camel.yaml
 catalog.routes.system-b=system-b/system-b.camel.yaml
 
-# Rules mapping
+# Rules mapping (optional, legacy)
 catalog.rules.system-a=system-a/system-a.wanaku-rules.yaml
 catalog.rules.system-b=system-b/system-b.wanaku-rules.yaml
 
@@ -90,7 +90,8 @@ catalog.dependencies.system-b=system-b/system-b.dependencies.txt
 - `catalog.description` — human-readable description
 - `catalog.services` — comma-separated list of service names
 - `catalog.routes.<service>` — path to Camel routes file
-- `catalog.rules.<service>` — path to Wanaku rules file
+- `catalog.rules.<service>` — path to Wanaku rules file (optional). Superseded by Camel's built-in
+  MCP support: as of 0.3.0 it is no longer required nor validated
 - `catalog.dependencies.<service>` — path to dependencies file (optional)
 
 ### Camel Routes Files
@@ -470,6 +471,94 @@ curl -X POST \
   "error": null
 }
 ```
+
+### Validate a Catalog
+
+Validates a packaged catalog without deploying it. Useful to check a package before shipping it, from
+CI pipelines, external tools or the admin UI.
+
+**Endpoint:** `POST /api/v1/service-catalog/validate`
+
+**Body:** the same payload used to deploy a catalog — a JSON object with the package name and the
+Base64-encoded ZIP:
+
+```json
+{
+  "name": "my-service.zip",
+  "data": "<base64-encoded ZIP>"
+}
+```
+
+**Response:** every problem found is reported at once, each one pointing at the file (and property)
+that is at fault:
+
+```json
+{
+  "data": {
+    "type": "catalog",
+    "name": "my-service",
+    "valid": false,
+    "errors": [
+      {
+        "path": "index.properties#catalog.routes.system-a",
+        "message": "Referenced file 'system-a/system-a.camel.yaml' is not present in the package"
+      },
+      {
+        "path": "system-b/system-b.camel.yaml#/0/route/from",
+        "message": "Invalid Camel YAML DSL: required property 'steps' not found"
+      }
+    ],
+    "warnings": [
+      {
+        "path": "index.properties#catalog.icon",
+        "message": "Optional property 'catalog.icon' is not set: a default icon will be used"
+      }
+    ]
+  },
+  "error": null
+}
+```
+
+**Checks performed:**
+
+- The payload is valid Base64 and a readable ZIP archive
+- The archive contains a parseable `index.properties` manifest
+- `catalog.name`, `catalog.description` and `catalog.services` are declared
+- Every system declares `catalog.routes.<system>`, and the referenced file has a safe relative path
+  and is present in the archive
+- The optional `catalog.dependencies.<system>` and `catalog.properties.<system>` entries, when
+  declared, point to files present in the archive
+- The route file of every system is valid Camel YAML DSL, checked with Camel's own
+  [YAML DSL validator](https://camel.apache.org/manual/camel-yaml-dsl-validator-maven-plugin.html) —
+  the same validation used by the Camel Maven plugin, so both YAML syntax errors and DSL violations
+  (unknown or misplaced elements, missing required properties) are reported
+- `service.properties` files are well-formed property files
+
+> [!NOTE]
+> Rules files are not validated: they are superseded by Camel's built-in MCP support and are no
+> longer required as of 0.3.0.
+
+**Status codes:**
+
+| Status | Meaning |
+|--------|---------|
+| `200`  | The package was validated. Check `data.valid` and `data.errors` for the outcome |
+| `422`  | The request carries no package data to validate |
+
+**Example with curl:**
+
+```shell
+wanaku service package --path=my-service -o my-service.b64
+
+jq -n --arg data "$(cat my-service.b64)" '{name: "my-service.zip", data: $data}' | \
+  curl -X POST -H "Content-Type: application/json" --data @- \
+  http://localhost:8080/api/v1/service-catalog/validate
+```
+
+> [!TIP]
+> Warnings do not make a package invalid: they point at things that are likely mistakes, such as a
+> catalog that declares parameterized properties and should be deployed as a
+> [service template](service-templates.md) instead.
 
 ### Remove a Catalog
 

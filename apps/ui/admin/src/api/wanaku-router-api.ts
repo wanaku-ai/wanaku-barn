@@ -29,6 +29,7 @@ import type {
   WanakuResponseServerInfo,
   WanakuResponseServiceTemplateDetail,
   WanakuResponseSystemStatistics,
+  WanakuResponseValidationResult,
   WanakuResponseVoid,
 } from "../models";
 
@@ -556,6 +557,58 @@ export const getApiV1ServiceCatalogInstructions = async (
 };
 
 /**
+ * @summary Validate
+ */
+export type postApiV1ServiceCatalogValidateResponse200 = {
+  data: WanakuResponseValidationResult;
+  status: 200;
+};
+
+export type postApiV1ServiceCatalogValidateResponse400 = {
+  data: void;
+  status: 400;
+};
+
+export type postApiV1ServiceCatalogValidateResponse422 = {
+  data: void;
+  status: 422;
+};
+
+export type postApiV1ServiceCatalogValidateResponseSuccess =
+  postApiV1ServiceCatalogValidateResponse200 & {
+    headers: Headers;
+  };
+export type postApiV1ServiceCatalogValidateResponseError = (
+  | postApiV1ServiceCatalogValidateResponse400
+  | postApiV1ServiceCatalogValidateResponse422
+) & {
+  headers: Headers;
+};
+
+export type postApiV1ServiceCatalogValidateResponse =
+  | postApiV1ServiceCatalogValidateResponseSuccess
+  | postApiV1ServiceCatalogValidateResponseError;
+
+export const getPostApiV1ServiceCatalogValidateUrl = () => {
+  return `/api/v1/service-catalog/validate`;
+};
+
+export const postApiV1ServiceCatalogValidate = async (
+  dataStore: DataStore,
+  options?: RequestInit,
+): Promise<postApiV1ServiceCatalogValidateResponse> => {
+  return customFetch<postApiV1ServiceCatalogValidateResponse>(
+    getPostApiV1ServiceCatalogValidateUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(dataStore),
+    },
+  );
+};
+
+/**
  * @summary Remove
  */
 export type deleteApiV1ServiceCatalogNameResponse200 = {
@@ -935,6 +988,58 @@ export const deleteApiV1ServiceTemplateRemove = async (
     {
       ...options,
       method: "DELETE",
+    },
+  );
+};
+
+/**
+ * @summary Validate
+ */
+export type postApiV1ServiceTemplateValidateResponse200 = {
+  data: WanakuResponseValidationResult;
+  status: 200;
+};
+
+export type postApiV1ServiceTemplateValidateResponse400 = {
+  data: void;
+  status: 400;
+};
+
+export type postApiV1ServiceTemplateValidateResponse422 = {
+  data: void;
+  status: 422;
+};
+
+export type postApiV1ServiceTemplateValidateResponseSuccess =
+  postApiV1ServiceTemplateValidateResponse200 & {
+    headers: Headers;
+  };
+export type postApiV1ServiceTemplateValidateResponseError = (
+  | postApiV1ServiceTemplateValidateResponse400
+  | postApiV1ServiceTemplateValidateResponse422
+) & {
+  headers: Headers;
+};
+
+export type postApiV1ServiceTemplateValidateResponse =
+  | postApiV1ServiceTemplateValidateResponseSuccess
+  | postApiV1ServiceTemplateValidateResponseError;
+
+export const getPostApiV1ServiceTemplateValidateUrl = () => {
+  return `/api/v1/service-template/validate`;
+};
+
+export const postApiV1ServiceTemplateValidate = async (
+  dataStore: DataStore,
+  options?: RequestInit,
+): Promise<postApiV1ServiceTemplateValidateResponse> => {
+  return customFetch<postApiV1ServiceTemplateValidateResponse>(
+    getPostApiV1ServiceTemplateValidateUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(dataStore),
     },
   );
 };

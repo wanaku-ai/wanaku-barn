@@ -15,7 +15,7 @@
         parameter.sort.description: "What to sort results by (created, updated, popularity, long-running). Default: created"
         parameter.direction: string
         parameter.direction.description: "The direction of the sort (asc, desc)"
-    steps:
+      steps:
       - setHeader:
           name: CamelHttpPath
           simple: "/repos/{{github.owner}}/{{github.repo}}/pulls"
