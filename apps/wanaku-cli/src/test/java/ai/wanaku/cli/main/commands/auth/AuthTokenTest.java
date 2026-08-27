@@ -10,6 +10,7 @@ import ai.wanaku.cli.main.support.AuthCredentialStore;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.cli.main.support.security.TokenRefresher;
 import ai.wanaku.cli.main.support.security.TokenRefresher.RefreshResult;
+import picocli.CommandLine;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -294,5 +295,42 @@ class AuthTokenTest {
 
         verify(mockRefresher).refresh(refreshToken, authServerUrl, clientId, null);
         assertEquals(newToken, credentialStore.getApiToken());
+    }
+
+    @Test
+    void shouldParseGetUnmaskAndPlainFlagsTogether() throws Exception {
+        // Regression test for the exact invocation used by the test plan helpers:
+        // `wanaku auth token --get --unmask --plain`. Ensures picocli accepts all
+        // three flags in combination and that the full unmasked token is printed.
+        String token = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.test-payload.signature";
+
+        credentialStore.storeApiToken(token);
+        credentialStore.storeAuthMode("token");
+        // Token expires in 5 minutes (not expired)
+        credentialStore.storeTokenExpiry(Instant.now().getEpochSecond() + 300);
+
+        AuthToken authToken = new AuthToken(credentialStore, mock(TokenRefresher.class));
+        new CommandLine(authToken).parseArgs("--get", "--unmask", "--plain");
+
+        assertTrue(authToken.operation.getOptions.getToken, "--get should be parsed");
+        assertTrue(authToken.operation.getOptions.unmask, "--unmask should be parsed");
+
+        WanakuPrinter.setPlainMode(true);
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        try (Terminal terminal = TerminalBuilder.builder()
+                .system(false)
+                .streams(System.in, captured)
+                .jni(false)
+                .color(false)
+                .build()) {
+            WanakuPrinter printer = new WanakuPrinter(null, terminal);
+            Integer exitCode = authToken.doCall(terminal, printer);
+            assertEquals(0, exitCode);
+        } finally {
+            WanakuPrinter.setPlainMode(false);
+        }
+
+        String output = captured.toString().trim();
+        assertTrue(output.contains(token), "Expected full unmasked token in plain-mode output, got: " + output);
     }
 }
