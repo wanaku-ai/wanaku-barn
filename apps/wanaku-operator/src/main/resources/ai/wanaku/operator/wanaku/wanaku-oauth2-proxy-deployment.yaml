@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ""
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ""
+      component: ""
+  template:
+    metadata:
+      labels:
+        app: ""
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: "oauth2-proxy-mcp"
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.9.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 4180
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 4180
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /ping
+              port: 4180
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 10
+        - name: "oauth2-proxy-mgmt"
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.9.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 4181
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 4181
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /ping
+              port: 4181
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 10

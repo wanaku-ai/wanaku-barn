@@ -19,11 +19,26 @@ spec:
             properties:
               auth:
                 properties:
-                  authProxy:
+                  clientId:
                     type: "string"
-                  authRealm:
+                  enabled:
+                    type: "boolean"
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: "string"
+                        value:
+                          type: "string"
+                      type: "object"
+                    type: "array"
+                  image:
                     type: "string"
-                  authServer:
+                  imagePullPolicy:
+                    type: "string"
+                  issuerUrl:
+                    type: "string"
+                  secretName:
                     type: "string"
                 type: "object"
               exposure:
@@ -70,8 +85,26 @@ spec:
                 type: "object"
               imagePullPolicy:
                 type: "string"
+              praxis:
+                properties:
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: "string"
+                        value:
+                          type: "string"
+                      type: "object"
+                    type: "array"
+                  image:
+                    type: "string"
+                  imagePullPolicy:
+                    type: "string"
+                type: "object"
               router:
                 properties:
+                  enabled:
+                    type: "boolean"
                   env:
                     items:
                       properties:

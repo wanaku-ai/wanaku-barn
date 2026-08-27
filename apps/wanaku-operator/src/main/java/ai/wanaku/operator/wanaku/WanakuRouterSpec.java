@@ -7,6 +7,7 @@ public class WanakuRouterSpec {
     private WanakuTypes.ExposureSpec exposure;
     private RouterSpec router;
     private PraxisSpec praxis;
+    private AuthSpec auth;
 
     public String getImagePullPolicy() {
         return imagePullPolicy;
@@ -38,6 +39,85 @@ public class WanakuRouterSpec {
 
     public void setPraxis(PraxisSpec praxis) {
         this.praxis = praxis;
+    }
+
+    public AuthSpec getAuth() {
+        return auth;
+    }
+
+    public void setAuth(AuthSpec auth) {
+        this.auth = auth;
+    }
+
+    /**
+     * Authentication via oauth2-proxy instances placed in front of Praxis.
+     * Two proxies are deployed: one protecting the MCP port (4180) and one
+     * protecting the management port (4181), sharing the same cookie secret for SSO.
+     */
+    public static class AuthSpec {
+        private boolean enabled;
+        private String image;
+        private String imagePullPolicy;
+        private String issuerUrl;
+        private String clientId;
+        private String secretName;
+        private List<WanakuTypes.EnvVar> env;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getImage() {
+            return image;
+        }
+
+        public void setImage(String image) {
+            this.image = image;
+        }
+
+        public String getImagePullPolicy() {
+            return imagePullPolicy;
+        }
+
+        public void setImagePullPolicy(String imagePullPolicy) {
+            this.imagePullPolicy = imagePullPolicy;
+        }
+
+        public String getIssuerUrl() {
+            return issuerUrl;
+        }
+
+        public void setIssuerUrl(String issuerUrl) {
+            this.issuerUrl = issuerUrl;
+        }
+
+        public String getClientId() {
+            return clientId;
+        }
+
+        public void setClientId(String clientId) {
+            this.clientId = clientId;
+        }
+
+        public String getSecretName() {
+            return secretName;
+        }
+
+        public void setSecretName(String secretName) {
+            this.secretName = secretName;
+        }
+
+        public List<WanakuTypes.EnvVar> getEnv() {
+            return env;
+        }
+
+        public void setEnv(List<WanakuTypes.EnvVar> env) {
+            this.env = env;
+        }
     }
 
     public static class PraxisSpec {

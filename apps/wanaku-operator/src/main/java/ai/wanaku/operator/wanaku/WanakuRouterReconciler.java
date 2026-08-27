@@ -140,7 +140,17 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
 
         deployPraxis(resource, context, namespace);
 
+        final boolean authEnabled = RouterResourceFactory.isAuthEnabled(resource);
+        if (authEnabled) {
+            // The service must exist before the Route/Ingress that targets it
+            deployOauth2ProxyService(resource, namespace);
+        }
+
         String host = reconcileExternalAccess(resource, namespace);
+
+        if (authEnabled) {
+            deployOauth2ProxyDeployment(resource, namespace, host);
+        }
 
         wanakuStatus.setHost("https://" + host);
         wanakuStatus.setSseEndpoint("https://%s/mcp/sse".formatted(host));
@@ -149,6 +159,46 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         WanakuRouterSpec.RouterSpec routerSpec = resource.getSpec().getRouter();
         if (routerSpec != null && routerSpec.isEnabled()) {
             deployBarnBackend(resource, context, namespace);
+        }
+    }
+
+    private void deployOauth2ProxyService(WanakuRouter resource, String namespace) {
+        final Service desiredService = RouterResourceFactory.makeOauth2ProxyService(resource);
+        Service existingService = kubernetesClient
+                .services()
+                .inNamespace(namespace)
+                .withName(desiredService.getMetadata().getName())
+                .get();
+        if (!match(desiredService, existingService)) {
+            LOG.infof(
+                    "Creating or updating oauth2-proxy Service %s in %s",
+                    desiredService.getMetadata().getName(), namespace);
+            kubernetesClient
+                    .services()
+                    .inNamespace(namespace)
+                    .resource(desiredService)
+                    .createOr(Replaceable::update);
+        }
+    }
+
+    private void deployOauth2ProxyDeployment(WanakuRouter resource, String namespace, String host) {
+        final Deployment desiredDeployment = RouterResourceFactory.makeOauth2ProxyDeployment(resource, host);
+        Deployment existingDeployment = kubernetesClient
+                .apps()
+                .deployments()
+                .inNamespace(namespace)
+                .withName(desiredDeployment.getMetadata().getName())
+                .get();
+        if (!match(desiredDeployment, existingDeployment)) {
+            LOG.infof(
+                    "Creating or updating oauth2-proxy Deployment %s in %s",
+                    desiredDeployment.getMetadata().getName(), namespace);
+            kubernetesClient
+                    .apps()
+                    .deployments()
+                    .inNamespace(namespace)
+                    .resource(desiredDeployment)
+                    .createOr(Replaceable::update);
         }
     }
 
@@ -264,6 +314,10 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         if (exposureSpec == null
                 || exposureSpec.getType() == null
                 || exposureSpec.getType() == WanakuTypes.ExposureType.NONE) {
+            if (RouterResourceFactory.isAuthEnabled(resource)) {
+                return RouterResourceFactory.oauth2ProxyServiceName(
+                        resource.getMetadata().getName());
+            }
             return "praxis-" + resource.getMetadata().getName();
         }
         if (exposureSpec.getType() == WanakuTypes.ExposureType.ROUTE) {
@@ -385,15 +439,21 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         WanakuTypes.ExposureSpec exposureSpec =
                 resource.getSpec() != null ? resource.getSpec().getExposure() : null;
 
-        if (exposureSpec == null
-                || exposureSpec.getType() == null
-                || exposureSpec.getType() == WanakuTypes.ExposureType.NONE) {
-            return ValidateSpecResult.OK;
-        }
-
-        if (exposureSpec.getType() == WanakuTypes.ExposureType.INGRESS
+        if (exposureSpec != null
+                && exposureSpec.getType() == WanakuTypes.ExposureType.INGRESS
                 && StringHelper.isBlank(exposureSpec.getHost())) {
             return ValidateSpecResult.invalid("spec.exposure.host is required when spec.exposure.type is Ingress");
+        }
+
+        WanakuRouterSpec.AuthSpec authSpec =
+                resource.getSpec() != null ? resource.getSpec().getAuth() : null;
+        if (authSpec != null && authSpec.isEnabled()) {
+            if (StringHelper.isBlank(authSpec.getIssuerUrl())) {
+                return ValidateSpecResult.invalid("spec.auth.issuerUrl is required when spec.auth.enabled is true");
+            }
+            if (StringHelper.isBlank(authSpec.getSecretName())) {
+                return ValidateSpecResult.invalid("spec.auth.secretName is required when spec.auth.enabled is true");
+            }
         }
 
         return ValidateSpecResult.OK;
