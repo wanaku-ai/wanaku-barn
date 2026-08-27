@@ -905,6 +905,12 @@ By default, `--get` masks the token value. Use `--unmask` to print the full toke
 wanaku auth token --get --unmask
 ```
 
+To extract the token programmatically (for example, in a script or test helper), combine `--unmask` with `--plain` and capture stdout:
+
+```shell
+TOKEN=$(wanaku auth token --get --unmask --plain)
+```
+
 You can also set or clear the stored token directly:
 
 ```shell
