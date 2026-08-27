@@ -4,11 +4,6 @@ import jakarta.ws.rs.client.ClientRequestContext;
 import jakarta.ws.rs.client.ClientRequestFilter;
 import jakarta.ws.rs.core.HttpHeaders;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,27 +27,21 @@ public class AuthenticationInterceptor implements ClientRequestFilter {
 
     private final AuthCredentialStore credentialStore;
     private final TokenRefresher tokenRefresher;
-    private final boolean insecure;
-
-    private volatile Boolean routerAuthEnabled;
 
     public AuthenticationInterceptor(boolean insecure) {
         this.credentialStore = new AuthCredentialStore();
         this.tokenRefresher = new TokenRefresher(insecure);
-        this.insecure = insecure;
     }
 
     public AuthenticationInterceptor(AuthCredentialStore credentialStore, boolean insecure) {
         this.credentialStore = credentialStore;
         this.tokenRefresher = new TokenRefresher(insecure);
-        this.insecure = insecure;
     }
 
     public AuthenticationInterceptor(
             AuthCredentialStore credentialStore, TokenRefresher tokenRefresher, boolean insecure) {
         this.credentialStore = credentialStore;
         this.tokenRefresher = tokenRefresher;
-        this.insecure = insecure;
     }
 
     @Override
@@ -63,51 +52,14 @@ public class AuthenticationInterceptor implements ClientRequestFilter {
             return;
         }
 
-        if (!isRouterAuthEnabled(requestContext.getUri())) {
-            LOG.debug("Router is running without authentication, skipping auth header");
-            return;
-        }
-
+        // A stored token is always sent: the router may sit behind an external auth
+        // proxy (oauth2-proxy, ForwardAuth, ext_authz) that blocks any probe of the
+        // OIDC well-known endpoint, so reachability of that endpoint says nothing
+        // about whether authentication is required.
         String apiToken = getValidAccessToken();
         if (apiToken != null && !apiToken.trim().isEmpty()) {
             requestContext.getHeaders().add(HttpHeaders.AUTHORIZATION, "Bearer " + apiToken);
         }
-    }
-
-    /**
-     * Checks whether the router requires authentication by probing the OIDC well-known endpoint.
-     * The result is cached after the first check.
-     */
-    private boolean isRouterAuthEnabled(URI requestUri) {
-        if (routerAuthEnabled != null) {
-            return routerAuthEnabled;
-        }
-
-        if (requestUri == null) {
-            return true;
-        }
-
-        URI wellKnown = requestUri.resolve("/.well-known/oauth-authorization-server");
-        try (HttpClient client = HttpUtil.newHttpClient(insecure, Duration.ofSeconds(3))) {
-            HttpRequest request = HttpRequest.newBuilder(wellKnown)
-                    .timeout(Duration.ofSeconds(5))
-                    .GET()
-                    .build();
-
-            HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-            routerAuthEnabled = response.statusCode() == 200;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            routerAuthEnabled = false;
-        } catch (Exception e) {
-            LOG.warn(
-                    "Could not reach OIDC endpoint at {}: {} — authentication headers will not be sent",
-                    wellKnown,
-                    e.getMessage());
-            routerAuthEnabled = false;
-        }
-
-        return routerAuthEnabled;
     }
 
     /**

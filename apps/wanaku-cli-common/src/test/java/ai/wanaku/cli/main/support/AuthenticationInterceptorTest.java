@@ -61,6 +61,21 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
+    void shouldAddAuthorizationHeaderEvenWhenWellKnownEndpointIsUnreachable() throws Exception {
+        // Simulates a router behind an external auth proxy (e.g. oauth2-proxy) where
+        // /.well-known/oauth-authorization-server is blocked or absent: the stored
+        // token must be sent regardless.
+        String token = "test-api-token";
+        credentialStore.storeApiToken(token);
+        credentialStore.storeAuthMode("token");
+        when(requestContext.getUri()).thenReturn(URI.create("http://localhost:1/api/v1/tools/list"));
+
+        interceptor.filter(requestContext);
+
+        assertEquals("Bearer " + token, headers.getFirst(HttpHeaders.AUTHORIZATION));
+    }
+
+    @Test
     void shouldNotAddHeaderWhenAuthModeIsNone() throws Exception {
         credentialStore.storeApiToken("test-token");
         credentialStore.storeAuthMode("none");
