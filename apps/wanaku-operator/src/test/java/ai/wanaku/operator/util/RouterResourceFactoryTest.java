@@ -303,7 +303,8 @@ class RouterResourceFactoryTest {
         WanakuRouter router = createRouter(null);
         WanakuRouterSpec.AuthSpec authSpec = new WanakuRouterSpec.AuthSpec();
         authSpec.setEnabled(true);
-        authSpec.setIssuerUrl("https://keycloak.example.com/realms/wanaku");
+        // Keycloak base URL: the operator appends the /realms/wanaku path
+        authSpec.setIssuerUrl("https://keycloak.example.com");
         authSpec.setSecretName("wanaku-auth");
         router.getSpec().setAuth(authSpec);
         return router;

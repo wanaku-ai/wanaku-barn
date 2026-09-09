@@ -134,8 +134,8 @@ Defines a Wanaku router instance.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `spec.auth.enabled` | boolean | No | `false` | When `true`, the operator deploys two [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instances in front of Praxis: one protecting the MCP port (proxy port 4180 → Praxis 8081) and one protecting the management port (proxy port 4181 → Praxis 9090), sharing the same cookie secret for SSO. External exposure (Route/Ingress) then targets the MCP proxy instead of Praxis directly. |
-| `spec.auth.issuerUrl` | string | When auth enabled | `""` | OIDC issuer URL, e.g. `https://keycloak.example.com/realms/wanaku`. OIDC discovery is skipped (the public and in-cluster Keycloak URLs may differ); the login, token, and JWKS endpoints are derived from this URL and can be individually overridden through `spec.auth.env` (`OAUTH2_PROXY_LOGIN_URL`, `OAUTH2_PROXY_REDEEM_URL`, `OAUTH2_PROXY_OIDC_JWKS_URL`). |
+| `spec.auth.enabled` | boolean | No | `false` | When `true`, the operator deploys two [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instances in front of Praxis: one protecting the MCP port (proxy port 4180 → Praxis 8081) and one protecting the management port (proxy port 4181 → Praxis 9090), sharing the same cookie secret for SSO. External exposure then targets the proxies instead of Praxis directly: the Ingress routes `/mcp` to the MCP proxy (4180) and `/` to the management proxy (4181); an OpenShift Route targets the MCP proxy. |
+| `spec.auth.issuerUrl` | string | When auth enabled | `""` | Keycloak base URL, e.g. `http://keycloak:8080`; the operator appends the `/realms/wanaku` path to build the issuer. OIDC discovery is skipped (the public and in-cluster Keycloak URLs may differ); the login, token, and JWKS endpoints are derived from this URL and can be individually overridden through `spec.auth.env` (`OAUTH2_PROXY_OIDC_ISSUER_URL`, `OAUTH2_PROXY_LOGIN_URL`, `OAUTH2_PROXY_REDEEM_URL`, `OAUTH2_PROXY_OIDC_JWKS_URL`) — typically the issuer and login URLs are overridden with the publicly reachable Keycloak URL. |
 | `spec.auth.clientId` | string | No | `wanaku-mcp-router` | OIDC client ID. The client must be confidential (client authentication enabled). |
 | `spec.auth.secretName` | string | When auth enabled | `""` | Name of a pre-existing Secret in the same namespace with the keys `client-secret` (the OIDC client secret) and `cookie-secret` (16, 24, or 32 bytes; generate with `openssl rand -hex 16`). |
 | `spec.auth.image` | string | No | `quay.io/oauth2-proxy/oauth2-proxy:v7.9.0` | oauth2-proxy container image. |
@@ -180,8 +180,15 @@ metadata:
 spec:
   auth:
     enabled: true
-    issuerUrl: https://keycloak.example.com/realms/wanaku
+    # In-cluster Keycloak base URL; the operator appends /realms/wanaku
+    issuerUrl: http://keycloak:8080
     secretName: wanaku-oauth2-proxy
+    env:
+      # Point the browser-facing endpoints at the publicly reachable Keycloak URL
+      - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+        value: https://keycloak.example.com/realms/wanaku
+      - name: OAUTH2_PROXY_LOGIN_URL
+        value: https://keycloak.example.com/realms/wanaku/protocol/openid-connect/auth
 ```
 
 The referenced Secret must exist before the reconciliation:
