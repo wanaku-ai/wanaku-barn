@@ -19,7 +19,6 @@ set -euo pipefail
 NAMESPACE="${1:-wanaku}"
 WANAKU_ADMIN_USERNAME="${WANAKU_ADMIN_USERNAME:-admin}"
 WANAKU_ADMIN_PASSWORD="${WANAKU_ADMIN_PASSWORD:-admin}"
-WANAKU_KEYCLOAK_REALM="${WANAKU_KEYCLOAK_REALM:-wanaku}"
 WANAKU_KC_ADMIN_CLI=wanaku-keycloak-admin
 WANAKU_INGRESS_HOST="${WANAKU_INGRESS_HOST:-}"
 
@@ -74,6 +73,9 @@ else
     }
 fi
 
+# keycloak address visible only in the cluster; the operator appends the realm path
+QUARKUS_OIDC_CLIENT_AUTH_SERVER="${INTERNAL_KEYCLOAK_HOST}"
+
 # detect if using https on external keycloak server
 if curl -k -s -f -o /dev/null "https://${EXTERNAL_KEYCLOAK_HOST}"; then
     EXTERNAL_KEYCLOAK_HOST="https://${EXTERNAL_KEYCLOAK_HOST}"
@@ -81,11 +83,6 @@ else
     EXTERNAL_KEYCLOAK_HOST="http://${EXTERNAL_KEYCLOAK_HOST}"
 fi
 log_info "Keycloak public URL: ${EXTERNAL_KEYCLOAK_HOST}"
-
-# public issuer used by the browser on login; the in-cluster one is used by
-# the oauth2-proxy for the server-to-server calls (token redeem and JWKS)
-EXTERNAL_ISSUER_URL="${EXTERNAL_KEYCLOAK_HOST}/realms/${WANAKU_KEYCLOAK_REALM}"
-INTERNAL_ISSUER_URL="${INTERNAL_KEYCLOAK_HOST}/realms/${WANAKU_KEYCLOAK_REALM}"
 
 out=$($WANAKU_KC_ADMIN_CLI credentials show --verbose --insecure \
     --keycloak-url "${EXTERNAL_KEYCLOAK_HOST}" \
@@ -106,16 +103,17 @@ if [[ -z "${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}" ]]; then
 fi
 log_info "OIDC client secret retrieved successfully"
 
-# oauth2-proxy secret: the OIDC client secret plus the SSO cookie secret
-kubectl delete secret wanaku-oauth2-proxy --namespace "${NAMESPACE}" --ignore-not-found > /dev/null 2>&1
-kubectl create secret generic wanaku-oauth2-proxy --namespace "${NAMESPACE}" \
+kubectl create secret generic wanaku-oauth2-proxy \
     --from-literal=client-secret="${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}" \
-    --from-literal=cookie-secret="$(openssl rand -hex 16)" || {
-    log_error "FAIL: could not create wanaku-oauth2-proxy secret"
-    exit 1
-}
-log_info "wanaku-oauth2-proxy Kubernetes Secret created"
+    --from-literal=cookie-secret=$(openssl rand -hex 16) \
+    2>/dev/null \
+  || kubectl get secret wanaku-oauth2-proxy > /dev/null 2>&1
 
+if ! kubectl get secret wanaku-oauth2-proxy > /dev/null 2>&1; then
+  log_error "FAIL: could not create wanaku-oauth2-proxy secret"
+  exit 1
+fi
+log_info "wanaku-oauth2-proxy Kubernetes Secret created"
 
 # --- Switch to target namespace ---
 log_step "Switching to namespace '${NAMESPACE}'"
@@ -154,16 +152,14 @@ log_info "Existing router removed"
 # --- Deploy router ---
 log_step "Deploying the router"
 if [[ -n "${IS_OPENSHIFT}" ]]; then
-    sed -e "s|internal-oidc-url-replace|${INTERNAL_ISSUER_URL}|g" \
-        -e "s|oidc-url-replace|${EXTERNAL_ISSUER_URL}|g" \
+    sed -e "s|oidc-url-replace|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
         -e "s|wanaku-image-replace|${WANAKU_ROUTER_IMAGE}|g" \
         "${REPO_ROOT}/deploy/kubernetes/wanaku-router.yaml" | kubectl apply -f - || {
         log_error "Failed to apply wanaku-router.yaml"
         exit 1
     }
 else
-    sed -e "s|internal-oidc-url-replace|${INTERNAL_ISSUER_URL}|g" \
-        -e "s|oidc-url-replace|${EXTERNAL_ISSUER_URL}|g" \
+    sed -e "s|oidc-url-replace|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
         -e "s|replace-wanaku-ingress-host|${WANAKU_INGRESS_HOST}|g" \
         -e "s|wanaku-image-replace|${WANAKU_ROUTER_IMAGE}|g" \
         "${REPO_ROOT}/deploy/kubernetes/wanaku-router.yaml" | kubectl apply -f - || {

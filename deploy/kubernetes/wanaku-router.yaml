@@ -5,21 +5,18 @@ metadata:
   annotations:
     # env.wanaku.ai/QUARKUS_TLS_TRUST_ALL: "false"
 spec:
-  # Protect Praxis with oauth2-proxy (MCP on port 4180, management on 4181).
+  # Optional: protect Praxis with oauth2-proxy (MCP on port 4180, management on 4181).
   # Requires a Secret with the keys `client-secret` and `cookie-secret`.
-  auth:
-    enabled: true
-    # Public issuer URL (with the realm path); the browser is redirected to it on login
-    issuerUrl: oidc-url-replace
-    clientId: wanaku-mcp-router
-    secretName: wanaku-oauth2-proxy
-    env:
-      # The proxies reach Keycloak through the in-cluster service for the
-      # server-to-server calls (token redeem and JWKS)
-      - name: OAUTH2_PROXY_REDEEM_URL
-        value: internal-oidc-url-replace/protocol/openid-connect/token
-      - name: OAUTH2_PROXY_OIDC_JWKS_URL
-        value: internal-oidc-url-replace/protocol/openid-connect/certs
+  # auth:
+  #   enabled: true
+  #   issuerUrl: oidc-url-replace
+  #   clientId: wanaku-mcp-router
+  #   secretName: wanaku-oauth2-proxy
+  #   env:
+  #     - name: OAUTH2_PROXY_LOGIN_URL
+  #       value: https://keycloak.192.168.49.2.nip.io/realms/wanaku/protocol/openid-connect/auth
+  #     - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+  #       value: https://keycloak.192.168.49.2.nip.io/realms/wanaku
   exposure:
     type: ingress
     host: replace-wanaku-ingress-host

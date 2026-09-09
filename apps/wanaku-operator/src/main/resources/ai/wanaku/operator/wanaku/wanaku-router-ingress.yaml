@@ -9,10 +9,17 @@ spec:
     - host: ""
       http:
         paths:
+          - path: /mcp
+            pathType: Prefix
+            backend:
+              service:
+                name: ""
+                port:
+                  number: 8081
           - path: /
             pathType: Prefix
             backend:
               service:
                 name: ""
                 port:
-                  number: 8080
+                  number: 9090

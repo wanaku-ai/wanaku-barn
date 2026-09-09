@@ -13,6 +13,7 @@ import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceSpec;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentSpec;
+import io.fabric8.kubernetes.api.model.networking.v1.HTTPIngressPath;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressTLS;
 import io.fabric8.openshift.api.model.Route;
@@ -131,28 +132,24 @@ public final class RouterResourceFactory {
 
         String backendServiceName =
                 isAuthEnabled(resource) ? oauth2ProxyServiceName(deploymentName) : "praxis-" + deploymentName;
-        int backendServicePort = isAuthEnabled(resource) ? 4180 : 8081;
+        int backendMcpServicePort = isAuthEnabled(resource) ? 4180 : 8081;
+        int backendMgmtServicePort = isAuthEnabled(resource) ? 4181 : 9090;
 
         ingress.getSpec().getRules().getFirst().setHost(host);
-        ingress.getSpec()
-                .getRules()
-                .getFirst()
-                .getHttp()
-                .getPaths()
-                .getFirst()
-                .getBackend()
-                .getService()
-                .setName(backendServiceName);
-        ingress.getSpec()
-                .getRules()
-                .getFirst()
-                .getHttp()
-                .getPaths()
-                .getFirst()
-                .getBackend()
-                .getService()
-                .getPort()
-                .setNumber(backendServicePort);
+
+        // configure the /mcp
+        HTTPIngressPath mcpIngress =
+                ingress.getSpec().getRules().getFirst().getHttp().getPaths().getFirst();
+        mcpIngress.getBackend().getService().setName(backendServiceName);
+        mcpIngress.setPath("/mcp");
+        mcpIngress.getBackend().getService().getPort().setNumber(backendMcpServicePort);
+
+        // configure the management (web) path
+        HTTPIngressPath mgmtIngress =
+                ingress.getSpec().getRules().getFirst().getHttp().getPaths().getLast();
+        mgmtIngress.getBackend().getService().setName(backendServiceName);
+        mgmtIngress.setPath("/");
+        mgmtIngress.getBackend().getService().getPort().setNumber(backendMgmtServicePort);
 
         applyIngressExtras(ingress, resource.getSpec().getExposure(), host);
         ingress.addOwnerReference(resource);
@@ -498,13 +495,13 @@ public final class RouterResourceFactory {
 
         List<EnvVar> env = new java.util.ArrayList<>();
         env.add(envVar("OAUTH2_PROXY_PROVIDER", "keycloak-oidc"));
-        env.add(envVar("OAUTH2_PROXY_OIDC_ISSUER_URL", issuerUrl));
+        env.add(envVar("OAUTH2_PROXY_OIDC_ISSUER_URL", issuerUrl + "/realms/wanaku"));
         // The Keycloak public and in-cluster URLs may differ, so skip the OIDC discovery and derive the
         // endpoints from the issuer; each one can be overridden through spec.auth.env
         env.add(envVar("OAUTH2_PROXY_SKIP_OIDC_DISCOVERY", "true"));
-        env.add(envVar("OAUTH2_PROXY_LOGIN_URL", issuerBase + "/protocol/openid-connect/auth"));
-        env.add(envVar("OAUTH2_PROXY_REDEEM_URL", issuerBase + "/protocol/openid-connect/token"));
-        env.add(envVar("OAUTH2_PROXY_OIDC_JWKS_URL", issuerBase + "/protocol/openid-connect/certs"));
+        env.add(envVar("OAUTH2_PROXY_LOGIN_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/auth"));
+        env.add(envVar("OAUTH2_PROXY_REDEEM_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/token"));
+        env.add(envVar("OAUTH2_PROXY_OIDC_JWKS_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/certs"));
         env.add(envVar("OAUTH2_PROXY_CLIENT_ID", clientId));
         env.add(secretEnvVar("OAUTH2_PROXY_CLIENT_SECRET", authSpec.getSecretName(), OAUTH2_PROXY_CLIENT_SECRET_KEY));
         env.add(secretEnvVar("OAUTH2_PROXY_COOKIE_SECRET", authSpec.getSecretName(), OAUTH2_PROXY_COOKIE_SECRET_KEY));
