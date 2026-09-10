@@ -8,19 +8,23 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import ai.wanaku.backend.api.v1.exceptions.InvalidPayloadException;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
+import ai.wanaku.core.services.api.ValidationResult;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -34,6 +38,9 @@ class ServiceCatalogResourceTest {
 
     @Mock
     ServiceCatalogBean serviceCatalogBean;
+
+    @Spy
+    CatalogValidator catalogValidator = new CatalogValidator();
 
     @InjectMocks
     ServiceCatalogResource resource;
@@ -146,6 +153,36 @@ class ServiceCatalogResourceTest {
     }
 
     @Test
+    void testValidateValidCatalog() {
+        DataStore input = new DataStore();
+        input.setName("test.service.zip");
+        input.setData(createTestZipBase64("test", "desc", "sys1"));
+
+        WanakuResponse<ValidationResult> response = resource.validate(input);
+        assertNotNull(response);
+        assertTrue(response.data().valid());
+        assertEquals("test", response.data().name());
+        assertTrue(response.data().errors().isEmpty());
+    }
+
+    @Test
+    void testValidateInvalidCatalog() {
+        DataStore input = new DataStore();
+        input.setName("broken.service.zip");
+        input.setData("this-is-not-base-64");
+
+        WanakuResponse<ValidationResult> response = resource.validate(input);
+        assertNotNull(response);
+        assertFalse(response.data().valid());
+        assertFalse(response.data().errors().isEmpty());
+    }
+
+    @Test
+    void testValidateWithoutData() {
+        assertThrows(InvalidPayloadException.class, () -> resource.validate(new DataStore()));
+    }
+
+    @Test
     void testRemoveFound() {
         when(serviceCatalogBean.remove("test.service.zip")).thenReturn(1);
         WanakuResponse<Void> response = resource.remove("test.service.zip");
@@ -168,6 +205,19 @@ class ServiceCatalogResourceTest {
 
     // Helper
 
+    private static String routes(String system) {
+        return """
+                - route:
+                    id: %s
+                    from:
+                      uri: "ai-tool:%s"
+                      steps:
+                        - log:
+                            message: "Handling ${body}"
+                """
+                .formatted(system, system);
+    }
+
     private String createTestZipBase64(String name, String description, String... systems) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -179,16 +229,10 @@ class ServiceCatalogResourceTest {
 
                 for (String sys : systems) {
                     String routesPath = sys + "/" + sys + ".camel.yaml";
-                    String rulesPath = sys + "/" + sys + ".wanaku-rules.yaml";
                     props.setProperty("catalog.routes." + sys, routesPath);
-                    props.setProperty("catalog.rules." + sys, rulesPath);
 
                     zos.putNextEntry(new ZipEntry(routesPath));
-                    zos.write(("# Routes for " + sys).getBytes());
-                    zos.closeEntry();
-
-                    zos.putNextEntry(new ZipEntry(rulesPath));
-                    zos.write(("# Rules for " + sys).getBytes());
+                    zos.write(routes(sys).getBytes());
                     zos.closeEntry();
                 }
 

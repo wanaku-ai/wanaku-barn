@@ -206,6 +206,49 @@ wanaku service package --output my-template.service.zip
 
 This creates a ZIP file suitable for deployment.
 
+### Validating the Template
+
+Before deploying, validate the packaged template against the expected structure:
+
+**Endpoint:** `POST /api/v1/service-template/validate`
+
+**Body:** a JSON object with the package name and the Base64-encoded ZIP:
+
+```json
+{
+  "name": "my-template.service.zip",
+  "data": "<base64-encoded ZIP>"
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "type": "template",
+    "name": "my-template",
+    "valid": false,
+    "errors": [
+      {
+        "path": "index.properties",
+        "message": "A service template must provide a properties file for at least one system, either declared as 'catalog.properties.<system>' or placed at '<system>/service.properties'"
+      }
+    ],
+    "warnings": []
+  },
+  "error": null
+}
+```
+
+The endpoint runs the same checks as the [service catalog validation endpoint](service-catalogs.md#validate-a-catalog)
+and additionally requires the package to provide a `service.properties` file for at least one system —
+a template without parameterized properties is just a service catalog.
+
+Every problem found is reported at once, each one pointing at the file (and property) that is at fault.
+The endpoint returns `200` with the outcome in `data.valid` and `data.errors`, or `422` when the request
+carries no package data to validate.
+
 ### Deploying the Template
 
 To deploy your custom template to the router:
@@ -380,6 +423,8 @@ If deployment fails with a ZIP parsing error:
 - Ensure the ZIP contains an `index.properties` file at the root.
 - Check that service directories match the names declared in `catalog.services`.
 - Verify that file paths in `index.properties` match the actual file locations in the ZIP.
+- Post the package to `POST /api/v1/service-template/validate` to get the full list of problems, each
+  one pointing at the file and property that is at fault.
 
 ## Related Documentation
 

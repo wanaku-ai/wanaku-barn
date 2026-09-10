@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
 import ai.wanaku.backend.api.v1.exceptions.ServiceTemplateNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
@@ -25,6 +26,7 @@ import ai.wanaku.capabilities.sdk.api.types.ServiceTemplateSystem;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.capabilities.sdk.api.types.io.TemplateInstantiationRequest;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
+import ai.wanaku.core.services.api.ValidationResult;
 import ai.wanaku.core.util.StringHelper;
 
 /**
@@ -40,6 +42,9 @@ public class ServiceTemplateResource {
 
     @Inject
     ServiceTemplateBean serviceTemplateBean;
+
+    @Inject
+    CatalogValidator catalogValidator;
 
     /**
      * List all service template entries, optionally filtered by search term.
@@ -169,6 +174,25 @@ public class ServiceTemplateResource {
         LOG.debugf("REST: Deploying service template: %s", dataStore.getName());
         DataStore result = serviceTemplateBean.deploy(dataStore);
         return new WanakuResponse<>(result);
+    }
+
+    /**
+     * Validate a service template package without deploying it.
+     * POST /api/v1/service-template/validate
+     *
+     * @param dataStore the data store entry containing the Base64-encoded ZIP
+     * @return response with the validation result: HTTP 200 with the errors in the body when the
+     *         package is invalid, or HTTP 422 when there is no package data to validate
+     */
+    @Path("/validate")
+    @POST
+    @APIResponse(
+            responseCode = "200",
+            description = "The package was validated: check 'valid' and 'errors' in the body for the outcome")
+    @APIResponse(responseCode = "422", description = "The request carries no package data to validate")
+    public WanakuResponse<ValidationResult> validate(DataStore dataStore) {
+        LOG.debugf("REST: Validating service template: %s", dataStore != null ? dataStore.getName() : null);
+        return new WanakuResponse<>(catalogValidator.validateTemplate(dataStore));
     }
 
     /**

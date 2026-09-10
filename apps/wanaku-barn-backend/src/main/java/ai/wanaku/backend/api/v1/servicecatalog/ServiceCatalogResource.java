@@ -2,6 +2,7 @@ package ai.wanaku.backend.api.v1.servicecatalog;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
@@ -22,6 +24,7 @@ import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.core.services.api.DeploymentInstructions;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
+import ai.wanaku.core.services.api.ValidationResult;
 
 /**
  * REST API resource for service catalog operations.
@@ -37,6 +40,9 @@ public class ServiceCatalogResource {
 
     @Inject
     DeploymentInstructionsBean deploymentInstructionsBean;
+
+    @Inject
+    CatalogValidator catalogValidator;
 
     /**
      * List all service catalog entries, optionally filtered by search term.
@@ -149,6 +155,27 @@ public class ServiceCatalogResource {
         LOG.debugf("REST: Deploying service catalog: %s", dataStore.getName());
         DataStore result = serviceCatalogBean.deploy(dataStore);
         return new WanakuResponse<>(result);
+    }
+
+    /**
+     * Validate a service catalog package without deploying it.
+     * POST /api/v1/service-catalog/validate
+     *
+     * @param dataStore the data store entry containing the Base64-encoded ZIP
+     * @return response with the validation result: HTTP 200 with the errors in the body when the
+     *         package is invalid, or HTTP 422 when there is no package data to validate
+     */
+    @Path("/validate")
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    @APIResponse(
+            responseCode = "200",
+            description = "The package was validated: check 'valid' and 'errors' in the body for the outcome")
+    @APIResponse(responseCode = "422", description = "The request carries no package data to validate")
+    public WanakuResponse<ValidationResult> validate(DataStore dataStore) {
+        LOG.debugf("REST: Validating service catalog: %s", dataStore != null ? dataStore.getName() : null);
+        return new WanakuResponse<>(catalogValidator.validateCatalog(dataStore));
     }
 
     /**
