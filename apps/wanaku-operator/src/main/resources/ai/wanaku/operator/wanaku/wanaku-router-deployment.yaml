@@ -32,24 +32,24 @@ spec:
             failureThreshold: 5
             httpGet:
               path: /q/health/live
-              port: 8080
+              port: 8180
             initialDelaySeconds: 30
             periodSeconds: 20
             timeoutSeconds: 10
           ports:
-            - containerPort: 8080
+            - containerPort: 8180
               protocol: TCP
           readinessProbe:
             httpGet:
               path: /q/health/ready
-              port: 8080
+              port: 8180
             initialDelaySeconds: 10
             periodSeconds: 5
             timeoutSeconds: 5
           startupProbe:
             httpGet:
               path: /q/health/started
-              port: 8080
+              port: 8180
             initialDelaySeconds: 5
             periodSeconds: 10
             failureThreshold: 30

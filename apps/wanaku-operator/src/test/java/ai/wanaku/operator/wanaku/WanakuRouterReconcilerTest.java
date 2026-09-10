@@ -91,6 +91,38 @@ class WanakuRouterReconcilerTest {
         assertFalse(result.valid);
     }
 
+    // ── auth validation tests ───────────────────────────────────────────────
+
+    @Test
+    void authDisabledPassesValidation() {
+        WanakuRouter resource = createRouterWithAuth(false, null, null);
+        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
+        assertTrue(result.valid);
+    }
+
+    @Test
+    void authEnabledWithIssuerAndSecretPassesValidation() {
+        WanakuRouter resource = createRouterWithAuth(true, "https://keycloak.example.com/realms/wanaku", "wanaku-auth");
+        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
+        assertTrue(result.valid);
+    }
+
+    @Test
+    void authEnabledWithoutIssuerUrlFailsValidation() {
+        WanakuRouter resource = createRouterWithAuth(true, null, "wanaku-auth");
+        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
+        assertFalse(result.valid);
+        assertTrue(result.errorMessage.contains("issuerUrl"));
+    }
+
+    @Test
+    void authEnabledWithoutSecretNameFailsValidation() {
+        WanakuRouter resource = createRouterWithAuth(true, "https://keycloak.example.com/realms/wanaku", "  ");
+        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
+        assertFalse(result.valid);
+        assertTrue(result.errorMessage.contains("secretName"));
+    }
+
     // ── OpenShift guard tests (via reconcile(), mocked kubernetesClient) ────
 
     @Test
@@ -138,6 +170,16 @@ class WanakuRouterReconcilerTest {
         WanakuTypes.ExposureSpec ingressSpec = new WanakuTypes.ExposureSpec();
         ingressSpec.setType(type);
         return createRouter(ingressSpec);
+    }
+
+    private static WanakuRouter createRouterWithAuth(boolean enabled, String issuerUrl, String secretName) {
+        WanakuRouter router = createRouter(null);
+        WanakuRouterSpec.AuthSpec authSpec = new WanakuRouterSpec.AuthSpec();
+        authSpec.setEnabled(enabled);
+        authSpec.setIssuerUrl(issuerUrl);
+        authSpec.setSecretName(secretName);
+        router.getSpec().setAuth(authSpec);
+        return router;
     }
 
     private static WanakuRouter createRouterWithTypeAndHost(WanakuTypes.ExposureType type, String host) {

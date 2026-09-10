@@ -13,6 +13,7 @@ import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceSpec;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentSpec;
+import io.fabric8.kubernetes.api.model.networking.v1.HTTPIngressPath;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressTLS;
 import io.fabric8.openshift.api.model.Route;
@@ -36,9 +37,15 @@ public final class RouterResourceFactory {
     public static final String ROUTER_INGRESS_FILE = "wanaku-router-ingress.yaml";
     public static final String PRAXIS_DEPLOYMENT_FILE = "wanaku-praxis-deployment.yaml";
     public static final String PRAXIS_INTERNAL_SERVICE_FILE = "wanaku-praxis-service-internal.yaml";
+    public static final String OAUTH2_PROXY_DEPLOYMENT_FILE = "wanaku-oauth2-proxy-deployment.yaml";
+    public static final String OAUTH2_PROXY_SERVICE_FILE = "wanaku-oauth2-proxy-service.yaml";
     public static final String SERVICES_VOLUME_PVC_FILE = "services-volume-pvc.yaml";
     public static final String ROUTER_VOLUME_CLAIM = "router-volume-claim";
     public static final String PRAXIS_VOLUME_CLAIM = "praxis-volume-claim";
+
+    public static final String DEFAULT_OAUTH2_PROXY_CLIENT_ID = "wanaku-mcp-router";
+    public static final String OAUTH2_PROXY_CLIENT_SECRET_KEY = "client-secret";
+    public static final String OAUTH2_PROXY_COOKIE_SECRET_KEY = "cookie-secret";
 
     private RouterResourceFactory() {}
 
@@ -97,8 +104,13 @@ public final class RouterResourceFactory {
         route.getMetadata().setNamespace(ns);
         route.getMetadata().getLabels().put("app", praxisName(deploymentName));
         route.getMetadata().getLabels().put("component", "wanaku-praxis");
-        route.getSpec().getTo().setName("praxis-" + deploymentName);
-        route.getSpec().getPort().setTargetPort(new io.fabric8.kubernetes.api.model.IntOrString("8081-tcp"));
+        if (isAuthEnabled(resource)) {
+            route.getSpec().getTo().setName(oauth2ProxyServiceName(deploymentName));
+            route.getSpec().getPort().setTargetPort(new io.fabric8.kubernetes.api.model.IntOrString("4180-tcp"));
+        } else {
+            route.getSpec().getTo().setName("praxis-" + deploymentName);
+            route.getSpec().getPort().setTargetPort(new io.fabric8.kubernetes.api.model.IntOrString("8081-tcp"));
+        }
 
         applyRouteTls(route, resource.getSpec().getExposure());
         route.addOwnerReference(resource);
@@ -118,26 +130,26 @@ public final class RouterResourceFactory {
         ingress.getMetadata().getLabels().put("app", praxisName(deploymentName));
         ingress.getMetadata().getLabels().put("component", "wanaku-praxis");
 
+        String backendServiceName =
+                isAuthEnabled(resource) ? oauth2ProxyServiceName(deploymentName) : "praxis-" + deploymentName;
+        int backendMcpServicePort = isAuthEnabled(resource) ? 4180 : 8081;
+        int backendMgmtServicePort = isAuthEnabled(resource) ? 4181 : 9090;
+
         ingress.getSpec().getRules().getFirst().setHost(host);
-        ingress.getSpec()
-                .getRules()
-                .getFirst()
-                .getHttp()
-                .getPaths()
-                .getFirst()
-                .getBackend()
-                .getService()
-                .setName("praxis-" + deploymentName);
-        ingress.getSpec()
-                .getRules()
-                .getFirst()
-                .getHttp()
-                .getPaths()
-                .getFirst()
-                .getBackend()
-                .getService()
-                .getPort()
-                .setNumber(8081);
+
+        // configure the /mcp
+        HTTPIngressPath mcpIngress =
+                ingress.getSpec().getRules().getFirst().getHttp().getPaths().getFirst();
+        mcpIngress.getBackend().getService().setName(backendServiceName);
+        mcpIngress.setPath("/mcp");
+        mcpIngress.getBackend().getService().getPort().setNumber(backendMcpServicePort);
+
+        // configure the management (web) path
+        HTTPIngressPath mgmtIngress =
+                ingress.getSpec().getRules().getFirst().getHttp().getPaths().getLast();
+        mgmtIngress.getBackend().getService().setName(backendServiceName);
+        mgmtIngress.setPath("/");
+        mgmtIngress.getBackend().getService().getPort().setNumber(backendMgmtServicePort);
 
         applyIngressExtras(ingress, resource.getSpec().getExposure(), host);
         ingress.addOwnerReference(resource);
@@ -370,11 +382,170 @@ public final class RouterResourceFactory {
         return service;
     }
 
+    public static boolean isAuthEnabled(WanakuRouter resource) {
+        final WanakuRouterSpec.AuthSpec auth =
+                resource.getSpec() != null ? resource.getSpec().getAuth() : null;
+        return auth != null && auth.isEnabled();
+    }
+
+    public static Service makeOauth2ProxyService(WanakuRouter resource) {
+        Service service = ReconcilerUtilsInternal.loadYaml(
+                Service.class, WanakuRouterReconciler.class, OAUTH2_PROXY_SERVICE_FILE);
+
+        String deploymentName = resource.getMetadata().getName();
+        String ns = resource.getMetadata().getNamespace();
+
+        service.getMetadata().setName(oauth2ProxyServiceName(deploymentName));
+        service.getMetadata().setNamespace(ns);
+        service.getMetadata().getLabels().put("app", oauth2ProxyName(deploymentName));
+        service.getMetadata().getLabels().put("component", "wanaku-oauth2-proxy");
+
+        ServiceSpec serviceSpec = service.getSpec();
+        serviceSpec.setSelector(Map.of("app", oauth2ProxyName(deploymentName), "component", "wanaku-oauth2-proxy"));
+
+        service.addOwnerReference(resource);
+        return service;
+    }
+
+    public static Deployment makeOauth2ProxyDeployment(WanakuRouter resource, String host) {
+        Deployment desiredDeployment = ReconcilerUtilsInternal.loadYaml(
+                Deployment.class, WanakuRouterReconciler.class, OAUTH2_PROXY_DEPLOYMENT_FILE);
+
+        String deploymentName = resource.getMetadata().getName();
+        String ns = resource.getMetadata().getNamespace();
+
+        desiredDeployment.getMetadata().setName(oauth2ProxyName(deploymentName));
+        desiredDeployment.getMetadata().setNamespace(ns);
+
+        final DeploymentSpec deploymentSpec = desiredDeployment.getSpec();
+        deploymentSpec.getSelector().getMatchLabels().put("app", oauth2ProxyName(deploymentName));
+        deploymentSpec.getSelector().getMatchLabels().put("component", "wanaku-oauth2-proxy");
+        deploymentSpec.getTemplate().getMetadata().getLabels().put("app", oauth2ProxyName(deploymentName));
+        deploymentSpec.getTemplate().getMetadata().getLabels().put("component", "wanaku-oauth2-proxy");
+
+        final WanakuRouterSpec.AuthSpec authSpec = resource.getSpec().getAuth();
+        final String redirectUrl = "https://%s/oauth2/callback".formatted(host);
+
+        for (Container container : deploymentSpec.getTemplate().getSpec().getContainers()) {
+            if (authSpec.getImage() != null && !authSpec.getImage().isEmpty()) {
+                OperatorUtil.validateImageAllowed(authSpec.getImage());
+                container.setImage(authSpec.getImage());
+            }
+            container.setImagePullPolicy(OperatorUtil.resolveImagePullPolicy(
+                    authSpec.getImagePullPolicy(), resource.getSpec().getImagePullPolicy()));
+
+            List<EnvVar> envVars = new java.util.ArrayList<>();
+            if (authSpec.getEnv() != null) {
+                for (WanakuTypes.EnvVar env : authSpec.getEnv()) {
+                    envVars.add(new EnvVarBuilder()
+                            .withName(env.getName())
+                            .withValue(env.getValue())
+                            .build());
+                }
+            }
+            List<EnvVar> defaults = "oauth2-proxy-mcp".equals(container.getName())
+                    ? oauth2ProxyMcpEnv(authSpec, deploymentName, redirectUrl)
+                    : oauth2ProxyMgmtEnv(authSpec, deploymentName, redirectUrl);
+            for (EnvVar defaultVar : defaults) {
+                final Optional<EnvVar> override = envVars.stream()
+                        .filter(envVar -> envVar.getName().equals(defaultVar.getName()))
+                        .findFirst();
+                if (override.isEmpty()) {
+                    envVars.add(defaultVar);
+                }
+            }
+            container.setEnv(envVars);
+        }
+
+        desiredDeployment.addOwnerReference(resource);
+        return desiredDeployment;
+    }
+
+    private static List<EnvVar> oauth2ProxyMcpEnv(
+            WanakuRouterSpec.AuthSpec authSpec, String deploymentName, String redirectUrl) {
+        List<EnvVar> env = oauth2ProxySharedEnv(authSpec, redirectUrl);
+        env.add(envVar("OAUTH2_PROXY_HTTP_ADDRESS", "0.0.0.0:4180"));
+        env.add(envVar("OAUTH2_PROXY_UPSTREAMS", "http://praxis-%s:8081".formatted(deploymentName)));
+        env.add(envVar(
+                "OAUTH2_PROXY_SKIP_AUTH_ROUTES",
+                "^/.well-known/.*,^/public/.*,^/authorize$,^/token$,^/register$,OPTIONS=^/.*"));
+        env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/mcp.*"));
+        env.add(envVar("OAUTH2_PROXY_UPSTREAM_TIMEOUT", "3600s"));
+        return env;
+    }
+
+    private static List<EnvVar> oauth2ProxyMgmtEnv(
+            WanakuRouterSpec.AuthSpec authSpec, String deploymentName, String redirectUrl) {
+        List<EnvVar> env = oauth2ProxySharedEnv(authSpec, redirectUrl);
+        env.add(envVar("OAUTH2_PROXY_HTTP_ADDRESS", "0.0.0.0:4181"));
+        env.add(envVar("OAUTH2_PROXY_UPSTREAMS", "http://praxis-%s:9090".formatted(deploymentName)));
+        env.add(envVar("OAUTH2_PROXY_SKIP_AUTH_ROUTES", "^/healthz$,^/health$"));
+        return env;
+    }
+
+    private static List<EnvVar> oauth2ProxySharedEnv(WanakuRouterSpec.AuthSpec authSpec, String redirectUrl) {
+        String clientId = StringHelper.isNotEmpty(authSpec.getClientId())
+                ? authSpec.getClientId()
+                : DEFAULT_OAUTH2_PROXY_CLIENT_ID;
+
+        String issuerUrl = authSpec.getIssuerUrl();
+        String issuerBase = issuerUrl != null && issuerUrl.endsWith("/")
+                ? issuerUrl.substring(0, issuerUrl.length() - 1)
+                : issuerUrl;
+
+        List<EnvVar> env = new java.util.ArrayList<>();
+        env.add(envVar("OAUTH2_PROXY_PROVIDER", "keycloak-oidc"));
+        env.add(envVar("OAUTH2_PROXY_OIDC_ISSUER_URL", issuerUrl + "/realms/wanaku"));
+        // The Keycloak public and in-cluster URLs may differ, so skip the OIDC discovery and derive the
+        // endpoints from the issuer; each one can be overridden through spec.auth.env
+        env.add(envVar("OAUTH2_PROXY_SKIP_OIDC_DISCOVERY", "true"));
+        env.add(envVar("OAUTH2_PROXY_LOGIN_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/auth"));
+        env.add(envVar("OAUTH2_PROXY_REDEEM_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/token"));
+        env.add(envVar("OAUTH2_PROXY_OIDC_JWKS_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/certs"));
+        env.add(envVar("OAUTH2_PROXY_CLIENT_ID", clientId));
+        env.add(secretEnvVar("OAUTH2_PROXY_CLIENT_SECRET", authSpec.getSecretName(), OAUTH2_PROXY_CLIENT_SECRET_KEY));
+        env.add(secretEnvVar("OAUTH2_PROXY_COOKIE_SECRET", authSpec.getSecretName(), OAUTH2_PROXY_COOKIE_SECRET_KEY));
+        env.add(envVar("OAUTH2_PROXY_REDIRECT_URL", redirectUrl));
+        env.add(envVar("OAUTH2_PROXY_EMAIL_DOMAINS", "*"));
+        env.add(envVar("OAUTH2_PROXY_CODE_CHALLENGE_METHOD", "S256"));
+        env.add(envVar("OAUTH2_PROXY_SKIP_JWT_BEARER_TOKENS", "true"));
+        env.add(envVar("OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER", "true"));
+        env.add(envVar("OAUTH2_PROXY_PASS_USER_HEADERS", "true"));
+        env.add(envVar("OAUTH2_PROXY_SET_XAUTHREQUEST", "true"));
+        env.add(envVar("OAUTH2_PROXY_OIDC_EXTRA_AUDIENCES", "mcp-client,wanaku-mcp-client"));
+        env.add(envVar("OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL", "true"));
+        return env;
+    }
+
+    private static EnvVar envVar(String name, String value) {
+        return new EnvVarBuilder().withName(name).withValue(value).build();
+    }
+
+    private static EnvVar secretEnvVar(String name, String secretName, String key) {
+        return new EnvVarBuilder()
+                .withName(name)
+                .withNewValueFrom()
+                .withNewSecretKeyRef()
+                .withName(secretName)
+                .withKey(key)
+                .endSecretKeyRef()
+                .endValueFrom()
+                .build();
+    }
+
     private static String routerName(String deploymentName) {
         return deploymentName + "-mcp-router";
     }
 
     private static String praxisName(String deploymentName) {
         return deploymentName + "-praxis";
+    }
+
+    private static String oauth2ProxyName(String deploymentName) {
+        return deploymentName + "-oauth2-proxy";
+    }
+
+    public static String oauth2ProxyServiceName(String deploymentName) {
+        return "oauth2-proxy-" + deploymentName;
     }
 }

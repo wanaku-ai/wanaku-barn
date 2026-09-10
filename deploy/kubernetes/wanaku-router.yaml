@@ -5,15 +5,24 @@ metadata:
   annotations:
     # env.wanaku.ai/QUARKUS_TLS_TRUST_ALL: "false"
 spec:
-  auth:
-    authServer: oidc-url-replace
-    # Address of the proxy (could be the same as the auth server - default) or "auto" (for using Wanaku as the proxy via OIDC proxy)
-    authProxy: "auto"
+  # Optional: protect Praxis with oauth2-proxy (MCP on port 4180, management on 4181).
+  # Requires a Secret with the keys `client-secret` and `cookie-secret`.
+  # auth:
+  #   enabled: true
+  #   issuerUrl: oidc-url-replace
+  #   clientId: wanaku-mcp-router
+  #   secretName: wanaku-oauth2-proxy
+  #   env:
+  #     - name: OAUTH2_PROXY_LOGIN_URL
+  #       value: https://keycloak.192.168.49.2.nip.io/realms/wanaku/protocol/openid-connect/auth
+  #     - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+  #       value: https://keycloak.192.168.49.2.nip.io/realms/wanaku
   exposure:
     type: ingress
     host: replace-wanaku-ingress-host
     # tls:
     #   secretName: wanaku-tls
   router:
+    enabled: true
     image: wanaku-image-replace
     imagePullPolicy: Always

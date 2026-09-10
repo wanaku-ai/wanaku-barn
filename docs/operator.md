@@ -103,9 +103,7 @@ metadata:
   annotations:
     env.wanaku.ai/MY_CUSTOM_VAR: "hello"
     env.wanaku.ai/QUARKUS_TLS_TRUST_ALL: "false"   # overrides the template default
-spec:
-  auth:
-    authServer: http://keycloak:8080
+spec: {}
 ```
 
 The generated Deployment will contain:
@@ -136,9 +134,13 @@ Defines a Wanaku router instance.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `spec.auth.authServer` | string | No | `""` | Keycloak server address (format: `http://address`). Leave empty if running without auth. |
-| `spec.auth.authRealm` | string | No | `"wanaku"` | Keycloak realm name. |
-| `spec.auth.authProxy` | string | No | `""` | OIDC proxy address. Use `"auto"` to enable the built-in OIDC proxy, or set to Keycloak's address directly. Empty inherits Keycloak's address. |
+| `spec.auth.enabled` | boolean | No | `false` | When `true`, the operator deploys two [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instances in front of Praxis: one protecting the MCP port (proxy port 4180 → Praxis 8081) and one protecting the management port (proxy port 4181 → Praxis 9090), sharing the same cookie secret for SSO. External exposure then targets the proxies instead of Praxis directly: the Ingress routes `/mcp` to the MCP proxy (4180) and `/` to the management proxy (4181); an OpenShift Route targets the MCP proxy. |
+| `spec.auth.issuerUrl` | string | When auth enabled | `""` | Keycloak base URL, e.g. `http://keycloak:8080`; the operator appends the `/realms/wanaku` path to build the issuer. OIDC discovery is skipped (the public and in-cluster Keycloak URLs may differ); the login, token, and JWKS endpoints are derived from this URL and can be individually overridden through `spec.auth.env` (`OAUTH2_PROXY_OIDC_ISSUER_URL`, `OAUTH2_PROXY_LOGIN_URL`, `OAUTH2_PROXY_REDEEM_URL`, `OAUTH2_PROXY_OIDC_JWKS_URL`) — typically the issuer and login URLs are overridden with the publicly reachable Keycloak URL. |
+| `spec.auth.clientId` | string | No | `wanaku-mcp-router` | OIDC client ID. The client must be confidential (client authentication enabled). |
+| `spec.auth.secretName` | string | When auth enabled | `""` | Name of a pre-existing Secret in the same namespace with the keys `client-secret` (the OIDC client secret) and `cookie-secret` (16, 24, or 32 bytes; generate with `openssl rand -hex 16`). |
+| `spec.auth.image` | string | No | `quay.io/oauth2-proxy/oauth2-proxy:v7.9.0` | oauth2-proxy container image. |
+| `spec.auth.env` | list | No | `[]` | List of `{name, value}` environment variables applied to both oauth2-proxy containers. Entries override the operator-generated defaults with the same name (e.g. set `OAUTH2_PROXY_ALLOWED_ROLES` to restrict the management proxy). |
+| `spec.auth.imagePullPolicy` | string | No | inherits `spec.imagePullPolicy` | Override pull policy for the oauth2-proxy pod only. |
 | `spec.imagePullPolicy` | string | No | `"IfNotPresent"` | Global image pull policy for all operator-managed deployments (`Always`, `IfNotPresent`, `Never`). |
 | `spec.exposure.host` | string | No | `""` | External hostname. Required when `spec.exposure.type: ingress` (mapped to `spec.rules[0].host` on the Ingress object). Ignored for `type: route` — OpenShift auto-assigns the host from the cluster router domain. Unused for `type: none`. |
 | `spec.exposure.type` | string | No | `none` | Controls which external-access resource the operator creates. `route` — creates an OpenShift Route (`route.openshift.io/v1`); only valid on OpenShift clusters; the host is auto-assigned by the cluster router. `ingress` — creates a Kubernetes Ingress (`networking.k8s.io/v1`); `spec.exposure.host` is required. `none` (default) — no external resource is created; only the internal ClusterIP service is available. |
@@ -168,7 +170,7 @@ The status section reports:
 | `status.streamableEndpoint` | string | Streamable HTTP endpoint URL. |
 | `status.conditions` | list | Standard Kubernetes condition array (each entry: `status`, `reason`, `message`, `lastTransitionTime`, `observedGeneration`). |
 
-**Example (minimal, with Keycloak):**
+**Example (with oauth2-proxy authentication):**
 
 ```yaml
 apiVersion: "wanaku.ai/v1alpha1"
@@ -177,11 +179,25 @@ metadata:
   name: wanaku-dev
 spec:
   auth:
-    authServer: http://keycloak:8080
+    enabled: true
+    # In-cluster Keycloak base URL; the operator appends /realms/wanaku
+    issuerUrl: http://keycloak:8080
+    secretName: wanaku-oauth2-proxy
+    env:
+      # Point the browser-facing endpoints at the publicly reachable Keycloak URL
+      - name: OAUTH2_PROXY_OIDC_ISSUER_URL
+        value: https://keycloak.example.com/realms/wanaku
+      - name: OAUTH2_PROXY_LOGIN_URL
+        value: https://keycloak.example.com/realms/wanaku/protocol/openid-connect/auth
 ```
 
-> [!NOTE]
-> `WanakuRouter` does not define `spec.secrets`. OIDC client secrets are configured on `WanakuCapability` resources only.
+The referenced Secret must exist before the reconciliation:
+
+```shell
+kubectl create secret generic wanaku-oauth2-proxy \
+  --from-literal=client-secret=<keycloak-client-secret> \
+  --from-literal=cookie-secret=$(openssl rand -hex 16)
+```
 
 **Example (unauthenticated, development only):**
 
@@ -190,11 +206,7 @@ apiVersion: "wanaku.ai/v1alpha1"
 kind: WanakuRouter
 metadata:
   name: wanaku-dev-noauth
-spec:
-  router:
-    env:
-      - name: wanaku.http.auth
-        value: none
+spec: {}
 ```
 
 ### WanakuCapability (`wanaku.ai/v1alpha1`)

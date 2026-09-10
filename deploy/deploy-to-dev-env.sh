@@ -5,13 +5,13 @@ set -euo pipefail
 # Usage: WANAKU_ADMIN_USERNAME=admin WANAKU_ADMIN_PASSWORD="the-password" ./deploy-to-dev-env.sh [namespace]
 #
 # Prerequisites:
-# - tools: kubectl, helm, wanaku CLI
+# - tools: kubectl, helm, openssl, wanaku-keycloak-admin CLI
 # - Keycloak installed and configured in the cluster
 # - Active cluster login.
 # Cluster access is restricted to Wanaku Core Committers.
 
-# if you are developing wanaku and don't have/want the wanaku binary cli in the bin/ directory
-# then you may alias wanaku='java -jar apps/wanaku-cli/target/quarkus-app/quarkus-run.jar'
+# if you don't have/want the wanaku-keycloak-admin binary in the bin/ directory, the script
+# falls back to: java -jar apps/wanaku-keycloak-admin/target/quarkus-app/quarkus-run.jar
 
 # debug the script
 # set -x
@@ -19,7 +19,7 @@ set -euo pipefail
 NAMESPACE="${1:-wanaku}"
 WANAKU_ADMIN_USERNAME="${WANAKU_ADMIN_USERNAME:-admin}"
 WANAKU_ADMIN_PASSWORD="${WANAKU_ADMIN_PASSWORD:-admin}"
-WANAKU_CLI=wanaku
+WANAKU_KC_ADMIN_CLI=wanaku-keycloak-admin
 WANAKU_INGRESS_HOST="${WANAKU_INGRESS_HOST:-}"
 
 # kubernetes cluster detection to minikube or openshift
@@ -33,9 +33,9 @@ if [[ -z "${WANAKU_INGRESS_HOST}" && -n "${IS_MINIKUBE}" ]]; then
     WANAKU_INGRESS_HOST="wanaku.$(minikube ip).nip.io"
 fi
 
-if ! command -v "wanaku" &> /dev/null; then
-    echo "Aliasing the wanaku cli to apps/wanaku-cli/target/quarkus-app/quarkus-run.jar"
-    WANAKU_CLI='java -jar apps/wanaku-cli/target/quarkus-app/quarkus-run.jar'
+if ! command -v "wanaku-keycloak-admin" &> /dev/null; then
+    echo "Aliasing the wanaku-keycloak-admin cli to apps/wanaku-keycloak-admin/target/quarkus-app/quarkus-run.jar"
+    WANAKU_KC_ADMIN_CLI='java -jar apps/wanaku-keycloak-admin/target/quarkus-app/quarkus-run.jar'
 fi
 
 image=$(grep image: apps/wanaku-operator/deploy/helm/wanaku-operator/values.yaml |awk '{print $2}')
@@ -47,7 +47,7 @@ log_error() { echo "[ERROR] $*" >&2; }
 log_step()  { echo ""; echo "==> $*"; }
 
 # --- Check prerequisites ---
-for cmd in kubectl helm ; do
+for cmd in kubectl helm openssl ; do
     if ! command -v "${cmd}" &> /dev/null; then
         log_error "Required command '${cmd}' not found in PATH"
         exit 1
@@ -73,7 +73,7 @@ else
     }
 fi
 
-# keycloak address visible only in the cluster
+# keycloak address visible only in the cluster; the operator appends the realm path
 QUARKUS_OIDC_CLIENT_AUTH_SERVER="${INTERNAL_KEYCLOAK_HOST}"
 
 # detect if using https on external keycloak server
@@ -84,11 +84,11 @@ else
 fi
 log_info "Keycloak public URL: ${EXTERNAL_KEYCLOAK_HOST}"
 
-out=$($WANAKU_CLI admin credentials show --verbose --insecure \
+out=$($WANAKU_KC_ADMIN_CLI credentials show --verbose --insecure \
     --keycloak-url "${EXTERNAL_KEYCLOAK_HOST}" \
     --admin-username "${WANAKU_ADMIN_USERNAME}" \
     --admin-password "${WANAKU_ADMIN_PASSWORD}" \
-    --client-id wanaku-service --show-secret --plain) || true
+    --client-id wanaku-mcp-router --show-secret --plain) || true
 
 if [[ $out == *"Exception"* ]]; then
     log_error "Failed to retrieve OIDC client credentials secret: $out"
@@ -103,15 +103,17 @@ if [[ -z "${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}" ]]; then
 fi
 log_info "OIDC client secret retrieved successfully"
 
-kubectl create secret generic wanaku-oidc --from-literal=client-secret="${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}" 2>/dev/null \
-  || kubectl get secret wanaku-oidc > /dev/null 2>&1
+kubectl create secret generic wanaku-oauth2-proxy \
+    --from-literal=client-secret="${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}" \
+    --from-literal=cookie-secret=$(openssl rand -hex 16) \
+    2>/dev/null \
+  || kubectl get secret wanaku-oauth2-proxy > /dev/null 2>&1
 
-if ! kubectl get secret wanaku-oidc > /dev/null 2>&1; then
-  log_error "FAIL: could not create wanaku-oidc secret"
+if ! kubectl get secret wanaku-oauth2-proxy > /dev/null 2>&1; then
+  log_error "FAIL: could not create wanaku-oauth2-proxy secret"
   exit 1
 fi
-log_info "wanaku-oidc Kubernetes Secret created"
-
+log_info "wanaku-oauth2-proxy Kubernetes Secret created"
 
 # --- Switch to target namespace ---
 log_step "Switching to namespace '${NAMESPACE}'"
@@ -133,20 +135,11 @@ log_step "Installing new operator"
 helm install wanaku-operator \
     "${REPO_ROOT}/apps/wanaku-operator/deploy/helm/wanaku-operator" \
     --namespace "${NAMESPACE}" \
-    --set app.envs.AUTH_SERVER="${QUARKUS_OIDC_CLIENT_AUTH_SERVER}" \
     --set app.image="${WANAKU_OPERATOR_IMAGE}" || {
     log_error "Helm install of wanaku-operator failed"
     exit 1
 }
 log_info "Operator installed successfully"
-
-# --- Undeploy existing HTTP capability (before router) ---
-log_step "Undeploying existing HTTP capability (if present)"
-kubectl delete wanakucapabilities/wanaku-dev-capabilities --ignore-not-found --timeout=60s || {
-    log_error "Failed to delete existing HTTP capability"
-    exit 1
-}
-log_info "Existing HTTP capability removed"
 
 # --- Undeploy existing router ---
 log_step "Undeploying existing router (if present)"
@@ -181,22 +174,6 @@ kubectl wait wanakurouter/wanaku-ci-dev --for=condition=Ready --timeout=120s || 
     exit 1
 }
 log_info "Router is ready"
-
-# --- Deploy HTTP capability ---
-log_step "Deploying the HTTP capability"
-sed -e "s|oidc-url-replace|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
-    -e "s|replace-me-with-the-client-credentials-secret|${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}|g" \
-    "${REPO_ROOT}/deploy/kubernetes/wanaku-capabilities.yaml" | kubectl apply -f - || {
-    log_error "Failed to apply wanaku-capabilities.yaml"
-    exit 1
-}
-
-log_info "Waiting for capabilities to become ready..."
-kubectl wait wanakucapabilities/wanaku-dev-capabilities --for=condition=Ready --timeout=120s || {
-    log_error "Capabilities did not become ready within 120s"
-    exit 1
-}
-log_info "Capabilities are ready"
 
 log_step "Deployment completed successfully"
 
