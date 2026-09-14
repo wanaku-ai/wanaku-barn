@@ -51,37 +51,6 @@ spec:
                     type: "string"
                   ingressClassName:
                     type: "string"
-                  tls:
-                    properties:
-                      caCertificate:
-                        type: "string"
-                      certificate:
-                        type: "string"
-                      destinationCACertificate:
-                        type: "string"
-                      insecureEdgeTerminationPolicy:
-                        enum:
-                        - "Allow"
-                        - "None"
-                        - "Redirect"
-                        type: "string"
-                      key:
-                        type: "string"
-                      secretName:
-                        type: "string"
-                      termination:
-                        enum:
-                        - "edge"
-                        - "passthrough"
-                        - "reencrypt"
-                        type: "string"
-                    type: "object"
-                  type:
-                    enum:
-                    - "ingress"
-                    - "none"
-                    - "route"
-                    type: "string"
                 type: "object"
               imagePullPolicy:
                 type: "string"

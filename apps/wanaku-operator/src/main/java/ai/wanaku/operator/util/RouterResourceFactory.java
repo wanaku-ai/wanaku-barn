@@ -16,8 +16,6 @@ import io.fabric8.kubernetes.api.model.apps.DeploymentSpec;
 import io.fabric8.kubernetes.api.model.networking.v1.HTTPIngressPath;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressTLS;
-import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.api.model.TLSConfig;
 import io.javaoperatorsdk.operator.ReconcilerUtilsInternal;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import ai.wanaku.core.util.StringHelper;
@@ -25,8 +23,6 @@ import ai.wanaku.operator.wanaku.WanakuRouter;
 import ai.wanaku.operator.wanaku.WanakuRouterReconciler;
 import ai.wanaku.operator.wanaku.WanakuRouterSpec;
 import ai.wanaku.operator.wanaku.WanakuTypes;
-import ai.wanaku.operator.wanaku.WanakuTypes.InsecureEdgeTerminationPolicy;
-import ai.wanaku.operator.wanaku.WanakuTypes.TlsTermination;
 
 public final class RouterResourceFactory {
     private static final Logger LOG = Logger.getLogger(RouterResourceFactory.class);
@@ -92,31 +88,6 @@ public final class RouterResourceFactory {
         return service;
     }
 
-    public static Route makePraxisExternalRoute(WanakuRouter resource) {
-        Route route = ReconcilerUtilsInternal.loadYaml(
-                Route.class, WanakuRouterReconciler.class, ROUTER_BACKEND_EXTERNAL_SERVICE_FILE);
-
-        String deploymentName = resource.getMetadata().getName();
-        String ns = resource.getMetadata().getNamespace();
-
-        LOG.infof("Creating external route for Praxis: %s", deploymentName);
-        route.getMetadata().setName(deploymentName);
-        route.getMetadata().setNamespace(ns);
-        route.getMetadata().getLabels().put("app", praxisName(deploymentName));
-        route.getMetadata().getLabels().put("component", "wanaku-praxis");
-        if (isAuthEnabled(resource)) {
-            route.getSpec().getTo().setName(oauth2ProxyServiceName(deploymentName));
-            route.getSpec().getPort().setTargetPort(new io.fabric8.kubernetes.api.model.IntOrString("4180-tcp"));
-        } else {
-            route.getSpec().getTo().setName("praxis-" + deploymentName);
-            route.getSpec().getPort().setTargetPort(new io.fabric8.kubernetes.api.model.IntOrString("8081-tcp"));
-        }
-
-        applyRouteTls(route, resource.getSpec().getExposure());
-        route.addOwnerReference(resource);
-        return route;
-    }
-
     public static Ingress makePraxisIngress(WanakuRouter resource, String host) {
         Ingress ingress =
                 ReconcilerUtilsInternal.loadYaml(Ingress.class, WanakuRouterReconciler.class, ROUTER_INGRESS_FILE);
@@ -151,47 +122,12 @@ public final class RouterResourceFactory {
         mgmtIngress.setPath("/");
         mgmtIngress.getBackend().getService().getPort().setNumber(backendMgmtServicePort);
 
-        applyIngressExtras(ingress, resource.getSpec().getExposure(), host);
+        applyIngressExtras(ingress, resource.getSpec().getExposure());
         ingress.addOwnerReference(resource);
         return ingress;
     }
 
-    private static void applyRouteTls(Route route, WanakuTypes.ExposureSpec ingressSpec) {
-        if (ingressSpec == null) {
-            return;
-        }
-        TLSConfig tlsConfig = new TLSConfig();
-        if (ingressSpec.getTls() == null) {
-            tlsConfig.setTermination(TlsTermination.EDGE.toValue());
-            tlsConfig.setInsecureEdgeTerminationPolicy(InsecureEdgeTerminationPolicy.REDIRECT.toValue());
-
-        } else {
-            WanakuTypes.TlsSpec tlsSpec = ingressSpec.getTls();
-            if (tlsSpec.getTermination() == null) {
-                return;
-            }
-            tlsConfig.setTermination(tlsSpec.getTermination().toValue());
-            if (StringHelper.isNotEmpty(tlsSpec.getCertificate())) {
-                tlsConfig.setCertificate(tlsSpec.getCertificate());
-            }
-            if (StringHelper.isNotEmpty(tlsSpec.getKey())) {
-                tlsConfig.setKey(tlsSpec.getKey());
-            }
-            if (StringHelper.isNotEmpty(tlsSpec.getCaCertificate())) {
-                tlsConfig.setCaCertificate(tlsSpec.getCaCertificate());
-            }
-            if (StringHelper.isNotEmpty(tlsSpec.getDestinationCACertificate())) {
-                tlsConfig.setDestinationCACertificate(tlsSpec.getDestinationCACertificate());
-            }
-            if (tlsSpec.getInsecureEdgeTerminationPolicy() != null) {
-                tlsConfig.setInsecureEdgeTerminationPolicy(
-                        tlsSpec.getInsecureEdgeTerminationPolicy().toValue());
-            }
-        }
-        route.getSpec().setTls(tlsConfig);
-    }
-
-    private static void applyIngressExtras(Ingress ingress, WanakuTypes.ExposureSpec exposureSpec, String host) {
+    private static void applyIngressExtras(Ingress ingress, WanakuTypes.ExposureSpec exposureSpec) {
         if (exposureSpec == null) {
             return;
         }
@@ -208,11 +144,9 @@ public final class RouterResourceFactory {
             ingress.getMetadata().setAnnotations(merged);
         }
         IngressTLS ingressTls = new IngressTLS();
-        ingressTls.setHosts(List.of(host));
-        if (exposureSpec.getTls() != null
-                && StringHelper.isNotEmpty(exposureSpec.getTls().getSecretName())) {
-            ingressTls.setSecretName(exposureSpec.getTls().getSecretName());
-        }
+        // intentionally empty to let the kubernetes platform set to the default hostname
+        // minikube, openshift defaults
+        // ingressTls.setHosts(List.of("{}"));
         ingress.getSpec().setTls(List.of(ingressTls));
     }
 

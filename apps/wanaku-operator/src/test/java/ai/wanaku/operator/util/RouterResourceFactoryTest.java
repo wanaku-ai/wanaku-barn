@@ -6,7 +6,6 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
-import io.fabric8.openshift.api.model.Route;
 import ai.wanaku.operator.wanaku.WanakuRouter;
 import ai.wanaku.operator.wanaku.WanakuRouterSpec;
 import ai.wanaku.operator.wanaku.WanakuTypes;
@@ -81,18 +80,15 @@ class RouterResourceFactoryTest {
 
     @Test
     void praxisIngressWithTlsSecretName() {
-        WanakuTypes.TlsSpec tls = new WanakuTypes.TlsSpec();
-        tls.setSecretName("wanaku-tls");
-        WanakuRouter router = createRouterWithExposure(null, "nginx", null, tls);
+        WanakuRouter router = createRouterWithExposure("nginx", null);
         Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
         assertNotNull(ingress.getSpec().getTls());
         assertEquals(1, ingress.getSpec().getTls().size());
-        assertEquals("wanaku-tls", ingress.getSpec().getTls().getFirst().getSecretName());
     }
 
     @Test
     void praxisIngressWithIngressClassName() {
-        WanakuRouter router = createRouterWithExposure(null, "nginx", null, null);
+        WanakuRouter router = createRouterWithExposure("nginx", null);
         Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
         assertEquals("nginx", ingress.getSpec().getIngressClassName());
     }
@@ -100,36 +96,10 @@ class RouterResourceFactoryTest {
     @Test
     void praxisIngressWithAnnotationsMergesThem() {
         Map<String, String> annotations = Map.of("cert-manager.io/cluster-issuer", "letsencrypt-prod");
-        WanakuRouter router = createRouterWithExposure(null, null, annotations, null);
+        WanakuRouter router = createRouterWithExposure(null, annotations);
         Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
         assertNotNull(ingress.getMetadata().getAnnotations());
         assertEquals("letsencrypt-prod", ingress.getMetadata().getAnnotations().get("cert-manager.io/cluster-issuer"));
-    }
-
-    // ── Praxis Route factory tests ───────────────────────────────────────────
-
-    @Test
-    void praxisRouteTargetsPraxisService() {
-        WanakuRouter router = createRouter(null);
-        Route route = RouterResourceFactory.makePraxisExternalRoute(router);
-        assertEquals("praxis-test-router", route.getSpec().getTo().getName());
-    }
-
-    @Test
-    void praxisRouteTargetsPort8081() {
-        WanakuRouter router = createRouter(null);
-        Route route = RouterResourceFactory.makePraxisExternalRoute(router);
-        assertEquals("8081-tcp", route.getSpec().getPort().getTargetPort().getStrVal());
-    }
-
-    @Test
-    void praxisRouteWithEdgeTls() {
-        WanakuTypes.TlsSpec tls = new WanakuTypes.TlsSpec();
-        tls.setTermination(WanakuTypes.TlsTermination.EDGE);
-        WanakuRouter router = createRouterWithExposure(WanakuTypes.ExposureType.ROUTE, null, null, tls);
-        Route route = RouterResourceFactory.makePraxisExternalRoute(router);
-        assertNotNull(route.getSpec().getTls());
-        assertEquals("edge", route.getSpec().getTls().getTermination());
     }
 
     // ── oauth2-proxy factory tests ────────────────────────────────────────────
@@ -258,15 +228,6 @@ class RouterResourceFactoryTest {
         assertEquals(4180, backendService.getPort().getNumber());
     }
 
-    @Test
-    void praxisRouteTargetsOauth2ProxyWhenAuthEnabled() {
-        WanakuRouter router = createRouterWithAuth();
-        Route route = RouterResourceFactory.makePraxisExternalRoute(router);
-
-        assertEquals("oauth2-proxy-test-router", route.getSpec().getTo().getName());
-        assertEquals("4180-tcp", route.getSpec().getPort().getTargetPort().getStrVal());
-    }
-
     // ── Annotation env var tests ──────────────────────────────────────────────
 
     @Test
@@ -279,17 +240,11 @@ class RouterResourceFactoryTest {
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    private static WanakuRouter createRouterWithExposure(
-            WanakuTypes.ExposureType type,
-            String ingressClassName,
-            Map<String, String> annotations,
-            WanakuTypes.TlsSpec tls) {
+    private static WanakuRouter createRouterWithExposure(String ingressClassName, Map<String, String> annotations) {
         WanakuTypes.ExposureSpec exposureSpec = new WanakuTypes.ExposureSpec();
-        exposureSpec.setType(type);
         exposureSpec.setHost("wanaku.example.com");
         exposureSpec.setIngressClassName(ingressClassName);
         exposureSpec.setAnnotations(annotations);
-        exposureSpec.setTls(tls);
         WanakuRouter router = createRouter(null);
         router.getSpec().setExposure(exposureSpec);
         return router;

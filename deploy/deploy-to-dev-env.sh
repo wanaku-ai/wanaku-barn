@@ -26,11 +26,12 @@ WANAKU_INGRESS_HOST="${WANAKU_INGRESS_HOST:-}"
 IS_OPENSHIFT=$([ "$(kubectl api-resources 2>/dev/null | grep -c openshift)" -gt 0 ] && echo "true" || echo "")
 IS_MINIKUBE=$([ "$(minikube status 2>/dev/null | grep -i -c running)" -eq 3 ] && echo "true" || echo "")
 
-# if deploying to openshift, then ingress is not required, as the endpoint is exposed as an openshift route CR
-#   and the host is automatically set by the openshift router controller.
-# if deploying to minikube, then ingress is required, as the endpoint is exposed as an ingress CR which requires a host.
 if [[ -z "${WANAKU_INGRESS_HOST}" && -n "${IS_MINIKUBE}" ]]; then
-    WANAKU_INGRESS_HOST="wanaku.$(minikube ip).nip.io"
+    WANAKU_INGRESS_HOST="wanaku-ci-dev.$(minikube ip).nip.io"
+fi
+if [[ -z "${WANAKU_INGRESS_HOST}" && -n "${IS_OPENSHIFT}" ]]; then
+    OCP_DOMAIN=`kubectl -n openshift-ingress-operator get ingresscontrollers.operator.openshift.io default -o jsonpath='{.status.domain}'`
+    WANAKU_INGRESS_HOST="wanaku-ci-dev."$OCP_DOMAIN
 fi
 
 if ! command -v "wanaku-keycloak-admin" &> /dev/null; then
@@ -151,22 +152,13 @@ log_info "Existing router removed"
 
 # --- Deploy router ---
 log_step "Deploying the router"
-if [[ -n "${IS_OPENSHIFT}" ]]; then
-    sed -e "s|oidc-url-replace|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
-        -e "s|wanaku-image-replace|${WANAKU_ROUTER_IMAGE}|g" \
-        "${REPO_ROOT}/deploy/kubernetes/wanaku-router.yaml" | kubectl apply -f - || {
-        log_error "Failed to apply wanaku-router.yaml"
-        exit 1
-    }
-else
-    sed -e "s|oidc-url-replace|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
-        -e "s|replace-wanaku-ingress-host|${WANAKU_INGRESS_HOST}|g" \
-        -e "s|wanaku-image-replace|${WANAKU_ROUTER_IMAGE}|g" \
-        "${REPO_ROOT}/deploy/kubernetes/wanaku-router.yaml" | kubectl apply -f - || {
-        log_error "Failed to apply wanaku-router.yaml"
-        exit 1
-    }
-fi
+sed -e "s|oidc-url-replace|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
+    -e "s|replace-wanaku-ingress-host|${WANAKU_INGRESS_HOST}|g" \
+    -e "s|wanaku-image-replace|${WANAKU_ROUTER_IMAGE}|g" \
+    "${REPO_ROOT}/deploy/kubernetes/wanaku-router.yaml" | kubectl apply -f - || {
+    log_error "Failed to apply wanaku-router.yaml"
+    exit 1
+}
 
 log_info "Waiting for router to become ready..."
 kubectl wait wanakurouter/wanaku-ci-dev --for=condition=Ready --timeout=120s || {

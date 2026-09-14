@@ -124,9 +124,6 @@ spec:
 > [!NOTE]
 > This mechanism is for runtime tuning only. For structured, first-class configuration fields
 > (such as auth server, image, or resource limits) use the dedicated `spec` fields of each CRD.
-> See also [Annotations on Operator-Managed Resources](#annotations-on-operator-managed-resources)
-> for `spec.annotations`, which propagates annotations to the Deployment and Service objects
-> themselves (distinct from this env-injection feature).
 
 ### WanakuRouter (`wanaku.ai/v1alpha1`)
 
@@ -134,7 +131,7 @@ Defines a Wanaku router instance.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `spec.auth.enabled` | boolean | No | `false` | When `true`, the operator deploys two [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instances in front of Praxis: one protecting the MCP port (proxy port 4180 → Praxis 8081) and one protecting the management port (proxy port 4181 → Praxis 9090), sharing the same cookie secret for SSO. External exposure then targets the proxies instead of Praxis directly: the Ingress routes `/mcp` to the MCP proxy (4180) and `/` to the management proxy (4181); an OpenShift Route targets the MCP proxy. |
+| `spec.auth.enabled` | boolean | No | `false` | When `true`, the operator deploys two [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy) instances in front of Praxis: one protecting the MCP port (proxy port 4180 → Praxis 8081) and one protecting the management port (proxy port 4181 → Praxis 9090), sharing the same cookie secret for SSO. External exposure then targets the proxies instead of Praxis directly: the Ingress routes `/mcp` to the MCP proxy (4180) and `/` to the management proxy (4181). |
 | `spec.auth.issuerUrl` | string | When auth enabled | `""` | Keycloak base URL, e.g. `http://keycloak:8080`; the operator appends the `/realms/wanaku` path to build the issuer. OIDC discovery is skipped (the public and in-cluster Keycloak URLs may differ); the login, token, and JWKS endpoints are derived from this URL and can be individually overridden through `spec.auth.env` (`OAUTH2_PROXY_OIDC_ISSUER_URL`, `OAUTH2_PROXY_LOGIN_URL`, `OAUTH2_PROXY_REDEEM_URL`, `OAUTH2_PROXY_OIDC_JWKS_URL`) — typically the issuer and login URLs are overridden with the publicly reachable Keycloak URL. |
 | `spec.auth.clientId` | string | No | `wanaku-mcp-router` | OIDC client ID. The client must be confidential (client authentication enabled). |
 | `spec.auth.secretName` | string | When auth enabled | `""` | Name of a pre-existing Secret in the same namespace with the keys `client-secret` (the OIDC client secret) and `cookie-secret` (16, 24, or 32 bytes; generate with `openssl rand -hex 16`). |
@@ -142,30 +139,27 @@ Defines a Wanaku router instance.
 | `spec.auth.env` | list | No | `[]` | List of `{name, value}` environment variables applied to both oauth2-proxy containers. Entries override the operator-generated defaults with the same name (e.g. set `OAUTH2_PROXY_ALLOWED_ROLES` to restrict the management proxy). |
 | `spec.auth.imagePullPolicy` | string | No | inherits `spec.imagePullPolicy` | Override pull policy for the oauth2-proxy pod only. |
 | `spec.imagePullPolicy` | string | No | `"IfNotPresent"` | Global image pull policy for all operator-managed deployments (`Always`, `IfNotPresent`, `Never`). |
-| `spec.exposure.host` | string | No | `""` | External hostname. Required when `spec.exposure.type: ingress` (mapped to `spec.rules[0].host` on the Ingress object). Ignored for `type: route` — OpenShift auto-assigns the host from the cluster router domain. Unused for `type: none`. |
-| `spec.exposure.type` | string | No | `none` | Controls which external-access resource the operator creates. `route` — creates an OpenShift Route (`route.openshift.io/v1`); only valid on OpenShift clusters; the host is auto-assigned by the cluster router. `ingress` — creates a Kubernetes Ingress (`networking.k8s.io/v1`); `spec.exposure.host` is required. `none` (default) — no external resource is created; only the internal ClusterIP service is available. |
-| `spec.exposure.ingressClassName` | string | No | `""` | Ingress controller class name (e.g. `nginx`, `haproxy`). Mapped to `spec.ingressClassName` on the Ingress object. Only used when `type: ingress`. |
-| `spec.exposure.annotations` | map | No | `{}` | Arbitrary annotations merged onto the Ingress metadata. Useful for controller-specific behaviour (e.g. `nginx.ingress.kubernetes.io/ssl-redirect: "true"`). Only used when `type: ingress`. |
-| `spec.exposure.tls.termination` | string | No | `edge` | TLS termination mode for OpenShift Routes. `edge` — TLS terminates at the cluster router, plain HTTP to the pod (default when `spec.exposure.tls` is absent). `passthrough` — TLS is passed through unchanged to the pod. `reencrypt` — TLS terminates at the cluster router then re-encrypts to the pod. Must be set when `spec.exposure.tls` is present, or TLS configuration is skipped. Not used by Ingress. |
-| `spec.exposure.tls.insecureEdgeTerminationPolicy` | string | No | `Redirect` | How the Route handles plain-HTTP requests. `Redirect` (default when `spec.exposure.tls` is absent) — redirects HTTP to HTTPS. `Allow` — serves both HTTP and HTTPS. `None` — blocks plain HTTP. Only applicable to OpenShift Routes; ignored for Ingress. |
-| `spec.exposure.tls.secretName` | string | No | `""` | Name of a pre-existing `kubernetes.io/tls` Secret. For Ingress: set as `spec.tls[].secretName`; `spec.exposure.host` is automatically added to `spec.tls[].hosts`. For OpenShift Routes: not used — provide inline certificate fields instead. |
-| `spec.exposure.tls.certificate` | string | No | `""` | PEM-encoded TLS certificate inlined into the OpenShift Route TLSConfig. Only used when `type: route`. Use `secretName` for Kubernetes Ingress. |
-| `spec.exposure.tls.key` | string | No | `""` | PEM-encoded TLS private key inlined into the OpenShift Route TLSConfig. Only used when `type: route`. |
-| `spec.exposure.tls.caCertificate` | string | No | `""` | PEM-encoded CA certificate used to verify the route certificate. Only used when `type: route`. |
-| `spec.exposure.tls.destinationCACertificate` | string | No | `""` | PEM-encoded CA certificate used to verify the backend pod's certificate when `termination: reencrypt`. Only used when `type: route`. |
-| `spec.router.image` | string | No | `quay.io/wanaku/wanaku-barn-backend:latest` | Router container image. |
-| `spec.router.env` | list | No | `[]` | List of `{name, value}` environment variables for the router (e.g., to set `wanaku.http.auth=none`). |
-| `spec.router.imagePullPolicy` | string | No | inherits `spec.imagePullPolicy` | Override pull policy for router pod only. |
+| `spec.exposure.host` | string | No | `""` | External hostname placed in `spec.rules[0].host` of the Ingress object. Required when `spec.exposure` is set. When omitted, no external resource is created. |
+| `spec.exposure.ingressClassName` | string | No | `""` | Ingress controller class name (e.g. `nginx`, `haproxy`). Mapped to `spec.ingressClassName` on the Ingress object. |
+| `spec.exposure.annotations` | map | No | `{}` | Arbitrary annotations merged onto the Ingress metadata. Useful for controller-specific behaviour (e.g. `nginx.ingress.kubernetes.io/ssl-redirect: "true"`). |
+| `spec.router.image` | string | No | `quay.io/wanaku/wanaku-barn-backend:latest` | Classic Wanaku barn-backend container image. Only used when `spec.router.enabled` is `true`. |
+| `spec.router.env` | list | No | `[]` | List of `{name, value}` environment variables for the barn-backend (e.g., to set `wanaku.http.auth=none`). Only used when `spec.router.enabled` is `true`. |
+| `spec.router.imagePullPolicy` | string | No | inherits `spec.imagePullPolicy` | Override pull policy for the barn-backend pod only. |
+| `spec.router.enabled` | boolean | No | `false` | When `true`, the operator deploys the Classic Wanaku barn-backend (`wanaku-barn-backend`) alongside Praxis, providing the persistence and service-catalog layer. When `false` (default), only Praxis is deployed. |
+| `spec.praxis.image` | string | No | `quay.io/wanaku/wanaku-praxis:latest` | Praxis MCP routing engine container image. |
+| `spec.praxis.env` | list | No | `[]` | List of `{name, value}` environment variables for the Praxis container. Entries override operator-generated defaults with the same name. |
+| `spec.praxis.imagePullPolicy` | string | No | inherits `spec.imagePullPolicy` | Override pull policy for the Praxis pod only. |
 
 > [!NOTE]
-> **Route TLS defaults**: when `spec.exposure.type: route` and `spec.exposure.tls` is omitted, the operator automatically applies `termination: edge` and `insecureEdgeTerminationPolicy: Redirect` — the Route is HTTPS-only with HTTP redirected.
-> **Ingress TLS**: only `spec.exposure.tls.secretName` is used for Ingress; inline certificate fields (`certificate`, `key`, `caCertificate`, `destinationCACertificate`) and Route-specific fields (`termination`, `insecureEdgeTerminationPolicy`) are silently ignored for `type: ingress`.
+> **External access**: when `spec.exposure.host` is set, the operator creates a Kubernetes `Ingress` resource targeting the Praxis service. When `spec.exposure` is omitted entirely, no external resource is created and the router is only reachable via its internal `ClusterIP` service.
+>
+> **OpenShift**: the OpenShift Ingress Operator automatically creates a corresponding `Route` resource for every Kubernetes `Ingress`. On OpenShift clusters you therefore get full external access through the cluster router without any additional configuration — the operator does not need to create a `Route` directly.
 
 The status section reports:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `status.host` | string | External hostname assigned to the router (from OpenShift Route or Ingress). |
+| `status.host` | string | External hostname assigned to the router (populated from the Ingress host). |
 | `status.sseEndpoint` | string | SSE stream endpoint URL. |
 | `status.streamableEndpoint` | string | Streamable HTTP endpoint URL. |
 | `status.conditions` | list | Standard Kubernetes condition array (each entry: `status`, `reason`, `message`, `lastTransitionTime`, `observedGeneration`). |
@@ -612,18 +606,6 @@ spec:
 
 > [!IMPORTANT]
 > The `client-secret` key in the Secret **must** be named `client-secret` (lowercase, hyphenated). The operator reads this key verbatim — different names cause a reconciliation error.
-
-### Annotations on Operator-Managed Resources
-
-`spec.annotations` (top-level on the CR) passes arbitrary key/value pairs to the operator-managed Deployment and Service. Use this to add sidecar injection markers, prometheus scraping annotations, or pod security labels:
-
-```yaml
-spec:
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "8080"
-    sidecar.istio.io/inject: "true"
-```
 
 ### DeploymentMode for the Code Execution Engine (in-cluster vs remote)
 

@@ -6,7 +6,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.jboss.logging.Logger;
-import io.fabric8.kubernetes.api.model.APIGroup;
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.ConditionBuilder;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
@@ -15,9 +14,6 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.Replaceable;
-import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.api.model.RouteIngress;
-import io.fabric8.openshift.client.OpenShiftClient;
 import io.javaoperatorsdk.operator.api.config.informer.Informer;
 import io.javaoperatorsdk.operator.api.reconciler.Constants;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
@@ -109,16 +105,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         ValidateSpecResult validation = validateSpec(resource);
         if (!validation.valid) {
             return setErrorStatus(resource, "ValidationError", validation.errorMessage);
-        }
-
-        WanakuTypes.ExposureSpec exposureSpec = resource.getSpec().getExposure();
-        if (exposureSpec != null && exposureSpec.getType() == WanakuTypes.ExposureType.ROUTE && !isOpenShiftCluster()) {
-            LOG.errorf(
-                    "WanakuRouter '%s' requests type=Route but the cluster does not have the"
-                            + " OpenShift Route API (route.openshift.io)",
-                    resource.getMetadata().getName());
-            return setErrorStatus(
-                    resource, "ValidationError", "spec.exposure.type is Route but this is not an OpenShift cluster");
         }
 
         final String namespace = resource.getMetadata().getNamespace();
@@ -311,61 +297,14 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
 
     private String reconcileExternalAccess(WanakuRouter resource, String namespace) {
         WanakuTypes.ExposureSpec exposureSpec = resource.getSpec().getExposure();
-        if (exposureSpec == null
-                || exposureSpec.getType() == null
-                || exposureSpec.getType() == WanakuTypes.ExposureType.NONE) {
+        if (exposureSpec == null) {
             if (RouterResourceFactory.isAuthEnabled(resource)) {
                 return RouterResourceFactory.oauth2ProxyServiceName(
                         resource.getMetadata().getName());
             }
             return "praxis-" + resource.getMetadata().getName();
         }
-        if (exposureSpec.getType() == WanakuTypes.ExposureType.ROUTE) {
-            OpenShiftClient openShiftClient = kubernetesClient.adapt(OpenShiftClient.class);
-            return createRouteAndGetHost(resource, namespace, openShiftClient);
-        }
         return createIngressAndGetHost(resource, namespace);
-    }
-
-    private static String createRouteAndGetHost(
-            WanakuRouter resource, String namespace, OpenShiftClient openShiftClient) {
-        final Route desiredRoute = RouterResourceFactory.makePraxisExternalRoute(resource);
-        Route existingRoute;
-        try {
-            existingRoute = openShiftClient
-                    .routes()
-                    .inNamespace(namespace)
-                    .withName(desiredRoute.getMetadata().getName())
-                    .get();
-        } catch (Exception e) {
-            LOG.warnf(e, "There is no existing service");
-            existingRoute = null;
-        }
-        if (!match(desiredRoute, existingRoute)) {
-            LOG.infof(
-                    "Creating or updating Route %s in %s",
-                    desiredRoute.getMetadata().getName(), namespace);
-            final Route created = openShiftClient
-                    .routes()
-                    .inNamespace(namespace)
-                    .resource(desiredRoute)
-                    .createOr(Replaceable::update);
-            final List<RouteIngress> routeIngresses = created.getStatus().getIngress();
-            if (routeIngresses != null && !routeIngresses.isEmpty()) {
-                final RouteIngress ingress = routeIngresses.getFirst();
-                if (ingress != null) {
-                    return ingress.getHost();
-                }
-            }
-            final Route refreshedRoute = openShiftClient
-                    .routes()
-                    .inNamespace(namespace)
-                    .withName(desiredRoute.getMetadata().getName())
-                    .get();
-            return refreshedRoute.getStatus().getIngress().getFirst().getHost();
-        } else {
-            return existingRoute.getStatus().getIngress().getFirst().getHost();
-        }
     }
 
     private String createIngressAndGetHost(WanakuRouter resource, String namespace) {
@@ -391,16 +330,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     .createOr(Replaceable::update);
         }
         return host;
-    }
-
-    private boolean isOpenShiftCluster() {
-        try {
-            APIGroup apiGroup = kubernetesClient.getApiGroup("route.openshift.io");
-            return apiGroup != null;
-        } catch (RuntimeException e) {
-            LOG.warn("Failed to detect OpenShift cluster.", e);
-            return false;
-        }
     }
 
     private UpdateControl<WanakuRouter> setErrorStatus(WanakuRouter resource, String reason, String message) {
@@ -439,9 +368,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         WanakuTypes.ExposureSpec exposureSpec =
                 resource.getSpec() != null ? resource.getSpec().getExposure() : null;
 
-        if (exposureSpec != null
-                && exposureSpec.getType() == WanakuTypes.ExposureType.INGRESS
-                && StringHelper.isBlank(exposureSpec.getHost())) {
+        if (exposureSpec != null && StringHelper.isBlank(exposureSpec.getHost())) {
             return ValidateSpecResult.invalid("spec.exposure.host is required when spec.exposure.type is Ingress");
         }
 

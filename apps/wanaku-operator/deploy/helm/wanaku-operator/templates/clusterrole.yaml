@@ -5,6 +5,45 @@ metadata:
   labels:
     app.kubernetes.io/name: wanaku-operator
     app.kubernetes.io/version: {{ .Chart.AppVersion }}
+  name: {{ .Release.Namespace }}-wanaku-service-catalog-cluster-role
+rules:
+  - apiGroups:
+      - wanaku.ai
+    resources:
+      - wanakuservicecatalogs
+      - wanakuservicecatalogs/status
+      - wanakuservicecatalogs/finalizers
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+      - update
+      - create
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: wanaku-operator
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
   name: {{ .Release.Namespace }}-wanaku-router-cluster-role
 rules:
   - apiGroups:
@@ -86,45 +125,6 @@ rules:
       - update
       - patch
       - delete
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    app.kubernetes.io/name: wanaku-operator
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
-  name: {{ .Release.Namespace }}-wanaku-service-catalog-cluster-role
-rules:
-  - apiGroups:
-      - wanaku.ai
-    resources:
-      - wanakuservicecatalogs
-      - wanakuservicecatalogs/status
-      - wanakuservicecatalogs/finalizers
-    verbs:
-      - get
-      - list
-      - watch
-      - patch
-      - update
-      - create
-      - delete
-  - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - list
-      - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
