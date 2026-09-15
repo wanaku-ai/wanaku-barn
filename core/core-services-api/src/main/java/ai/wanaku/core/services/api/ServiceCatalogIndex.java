@@ -234,10 +234,8 @@ public class ServiceCatalogIndex {
     }
 
     /**
-     * Get the rules file path for a given system, or null if not set.
-     * <p>
-     * Rules files are a legacy of pre-0.3.0 catalogs, superseded by Camel's built-in MCP support.
-     * They are no longer required nor validated.
+     * Get the rules file path for a given system, or null if not set. Rules files are a legacy of
+     * pre-0.3.0 catalogs, superseded by Camel's built-in MCP support: they are no longer required nor validated.
      */
     public String getRulesFile(String system) {
         return properties.getProperty(PROP_RULES_PREFIX + system);
