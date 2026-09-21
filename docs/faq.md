@@ -122,6 +122,9 @@ http://localhost:8080/mcp/
 http://localhost:8080/ns-1/mcp/sse
 ```
 
+> The `wanaku mcp` CLI commands only support Streamable HTTP, so pass the `/mcp/` endpoint to `--uri`
+> (for example, `http://localhost:8080/ns-1/mcp/`).
+
 See [Supported/Tested Clients](usage.md#supportedtested-clients) for client-specific configuration.
 
 ### Can I use Wanaku with Claude Desktop?

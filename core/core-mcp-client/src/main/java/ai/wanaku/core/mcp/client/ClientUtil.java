@@ -9,9 +9,16 @@ import dev.langchain4j.mcp.client.DefaultMcpClient;
 import dev.langchain4j.mcp.client.McpClient;
 import dev.langchain4j.mcp.client.McpHeadersSupplier;
 import dev.langchain4j.mcp.client.transport.McpTransport;
-import dev.langchain4j.mcp.client.transport.http.HttpMcpTransport;
 import dev.langchain4j.mcp.client.transport.http.StreamableHttpMcpTransport;
 
+/**
+ * Creates MCP clients for outbound calls to MCP servers.
+ * <p>
+ * Only the Streamable HTTP transport is supported. The legacy HTTP+SSE transport
+ * (endpoints ending in {@code /sse}) was deprecated by the MCP specification and its
+ * client implementation was removed from LangChain4j 1.19. Callers must use the Streamable
+ * HTTP endpoint of the server instead (for Wanaku, {@code /mcp/} rather than {@code /mcp/sse}).
+ */
 public class ClientUtil {
 
     public static McpClient createClient(String address) {
@@ -27,26 +34,33 @@ public class ClientUtil {
     }
 
     public static McpClient createClient(String address, McpHeadersSupplier headersSupplier) {
-        McpTransport transport;
-        McpHeadersSupplier combinedHeaders = combineHeaders(headersSupplier);
-
-        if (address.endsWith("sse") || address.endsWith("sse/")) {
-            HttpMcpTransport.Builder builder = new HttpMcpTransport.Builder()
-                    .sseUrl(address)
-                    .logRequests(true)
-                    .logResponses(true)
-                    .customHeaders(combinedHeaders);
-            transport = builder.build();
-        } else {
-            StreamableHttpMcpTransport.Builder builder = new StreamableHttpMcpTransport.Builder()
-                    .url(address)
-                    .logRequests(true)
-                    .logResponses(true)
-                    .customHeaders(combinedHeaders);
-            transport = builder.build();
+        if (isLegacySseAddress(address)) {
+            throw new IllegalArgumentException("Legacy SSE MCP endpoints are no longer supported: " + address
+                    + ". Use the Streamable HTTP endpoint instead (for example, replace '/mcp/sse' with '/mcp/').");
         }
 
+        McpTransport transport = new StreamableHttpMcpTransport.Builder()
+                .url(address)
+                .logRequests(true)
+                .logResponses(true)
+                .customHeaders(combineHeaders(headersSupplier))
+                .build();
+
         return new DefaultMcpClient.Builder().transport(transport).build();
+    }
+
+    /**
+     * Returns whether the address points to a legacy HTTP+SSE MCP endpoint (i.e., it ends with {@code /sse}).
+     */
+    public static boolean isLegacySseAddress(String address) {
+        if (address == null) {
+            return false;
+        }
+        String normalized = address.strip();
+        if (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized.endsWith("/sse");
     }
 
     private static McpHeadersSupplier combineHeaders(McpHeadersSupplier extraHeaders) {

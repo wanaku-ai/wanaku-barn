@@ -775,6 +775,13 @@ Wanaku supports MCP via SSE (deprecated) or via Streamable HTTP.
 The MCP endpoint exposed by Wanaku can be accessed on the path `/mcp/sse` of the host you are using (for instance, if running
 locally, that would mean `http://localhost:8080/mcp/sse`).
 
+> [!NOTE]
+> The `wanaku mcp` CLI commands (`wanaku mcp tool`, `wanaku mcp resource`, `wanaku mcp prompt`) only support the
+> Streamable HTTP transport. The MCP specification deprecated the HTTP+SSE transport and LangChain4j, the MCP client
+> library used by the CLI, removed it in version 1.19. If you were passing an SSE endpoint to `--uri`
+> (for instance, `http://localhost:8080/public/mcp/sse`), replace the `/mcp/sse` suffix with `/mcp/`
+> (`http://localhost:8080/public/mcp/`). The router itself keeps serving `/mcp/sse` for MCP clients that still use it.
+
 The Streamable HTTP endpoint can be accessed on the path `/mcp/`.
 
 > [!IMPORTANT]
@@ -2682,6 +2689,7 @@ This section provides solutions to common issues you may encounter while using W
 2. Check the correct MCP endpoint is being used:
    - SSE transport: `http://localhost:8080/mcp/sse`
    - Streamable HTTP: `http://localhost:8080/mcp/`
+   - The `wanaku mcp` CLI commands require the Streamable HTTP endpoint (`/mcp/`, not `/mcp/sse`)
 
 3. For namespace-specific connections, ensure the correct path:
 

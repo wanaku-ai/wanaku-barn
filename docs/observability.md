@@ -100,7 +100,7 @@ When an MCP request arrives, `quarkus-mcp-server`'s `McpTracingInstrumenter` aut
 
 ### 2. Downstream MCP Calls
 
-When outbound MCP calls are made, `ClientUtil.createClient()` uses `McpHeadersSupplier` to propagate:
+When outbound MCP calls are made, `ClientUtil.createClient()` (Streamable HTTP transport only) uses `McpHeadersSupplier` to propagate:
 
 - W3C `traceparent` (from OTel context propagation)
 - `x-wanaku-request-id` (from MDC)
