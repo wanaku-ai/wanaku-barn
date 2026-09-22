@@ -25,10 +25,12 @@ Before deploying an MCP server to the Wanaku router, you can test it locally usi
 ### Starting a Local Wanaku Instance
 
 ```shell
-wanaku start local
+docker compose -f deploy/docker-compose/docker-compose-noauth.yml up
 ```
 
-This starts the router and built-in MCP servers with authentication disabled. The router is available at `http://localhost:8080`.
+This starts the router with authentication disabled. The router is available at `http://localhost:8080`.
+See [Running Without Authentication](usage.md#running-without-authentication) for other ways to start the router
+without Keycloak.
 
 ### Testing with the MCP Inspector
 
@@ -269,7 +271,7 @@ Verify the response contains expected data.
 If tools don't work, check the MCP server logs:
 
 ```shell
-# If running via wanaku start local, check the terminal output
+# If running via Docker Compose, check the container logs
 # For standalone MCP servers:
 java -jar camel-integration-capability-*.jar --help
 ```
@@ -360,7 +362,7 @@ void shouldHandleConcurrentInvocations() throws InterruptedException {
 ### Tools Not Appearing After Deployment
 
 - Refresh the Admin UI (hard refresh: Ctrl+Shift+R)
-- Check the Wanaku router logs in the terminal running `wanaku start local`
+- Check the Wanaku router logs
 - Verify the service catalog was deployed: `wanaku service catalog list`
 
 ### Camel Route Fails with "Component Not Found"

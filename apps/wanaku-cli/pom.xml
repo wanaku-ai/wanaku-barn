@@ -80,11 +80,6 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>ai.wanaku.sdk</groupId>
-            <artifactId>capabilities-common</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>ai.wanaku</groupId>
             <artifactId>core-services-api</artifactId>
             <version>${project.version}</version>

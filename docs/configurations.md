@@ -139,7 +139,7 @@ Set `wanaku.http.auth=none` (or export `WANAKU_HTTP_AUTH=none`) to run without K
 No identity provider is required — all HTTP paths are opened via `policy=permit` automatically.
 
 ```shell
-# Via environment variable (recommended for containers / wanaku start local)
+# Via environment variable (recommended for containers)
 WANAKU_HTTP_AUTH=none java -jar quarkus-run.jar
 
 # Via system property
@@ -194,7 +194,7 @@ wanaku.home=/path/to/custom/home
 ```
 
 ```shell
-# Or via environment variable (recommended for containers / wanaku start local)
+# Or via environment variable (recommended for containers)
 export WANAKU_HOME=/path/to/custom/home
 ```
 
@@ -208,21 +208,8 @@ java -Dwanaku.home=/path/to/custom/home -jar quarkus-run.jar
 | Directory | Purpose |
 |-----------|---------|
 | `<home>/router/` | Infinispan data store (SoftIndexFileStore for tools, resources, namespaces) |
-| `<home>/local/` | CLI-extracted service instances (when using `wanaku start local`) |
-| `<home>/cache/` | CLI download cache for component ZIPs/JARs |
-| `<home>/local/logs/` | Log files for router and MCP servers (`wanaku-router.log`, `<service>.log`) |
+| `<home>/local/logs/` | Router log file (`wanaku-router.log`) when running with the `local` Quarkus profile |
 | `<home>/credentials` | CLI credential store (0600 permissions) |
-
-#### Behavior with `wanaku start local`
-
-When using `wanaku start local`, the CLI automatically:
-
-- Sets `WANAKU_HOME` as an environment variable in all spawned child processes (router, MCP servers, standalone
-  services).
-- Passes `-Dwanaku.home=<resolved-path>` as a JVM argument to all Quarkus-based child processes (router, re-augmented
-  MCP servers).
-
-This ensures all components write to the same resolved home directory without requiring manual configuration.
 
 #### Behavior with direct JVM start
 
@@ -354,8 +341,6 @@ Configuration for the Wanaku command-line interface (`wanaku-cli`).
 | `wanaku.cli.tool.create-cmd`     | The full Maven command to execute when creating a new tool service via `wanaku tool create`.          |
 | `wanaku.cli.resource.create-cmd` | The full Maven command to execute when creating a new resource provider via `wanaku resource create`. |
 | `wanaku.cli.mcp.create-cmd`      | The full Maven command to execute when creating a new MCP server via `wanaku mcp create`.             |
-| `wanaku.cli.components.*`        | URL templates for downloading various Wanaku components. `%s` is replaced with the version number.    |
-| `wanaku.cli.default-services`    | A comma-separated list of default services to start automatically when running the router.            |
 
 ## 4. Testing
 
@@ -460,13 +445,6 @@ quarkus.oidc-client.credentials.secret=${WANAKU_SERVICE_SECRET}
 ```
 
 > The realm name defaults to `wanaku` and can be configured via the `AUTH_REALM` environment variable or the `auth.realm` property.
-
-### Example: CLI Configuration
-
-```properties
-# ~/.wanaku/cli.properties
-wanaku.cli.default-services=http,exec,tavily
-```
 
 ### Example: Enabling Secret Encryption
 

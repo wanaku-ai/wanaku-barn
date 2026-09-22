@@ -66,7 +66,7 @@ export TEST_PACKAGE_OUTPUT="${TEST_PACKAGE_OUTPUT:-/tmp/test-catalog.b64}"
 
 ## Phase 1: Setup
 
-Follow [common/start-local.md](common/start-local.md) to build and start a local Wanaku stack. After completion, `WANAKU_ROUTER_URL`, `WANAKU_PID`, and `CLI_JAR` must be set.
+Follow [common/start-backend.md](common/start-backend.md) to build and start the Wanaku backend locally. After completion, `WANAKU_ROUTER_URL`, `WANAKU_PID`, and `CLI_JAR` must be set.
 
 ---
 
@@ -749,7 +749,7 @@ echo "PASS: temporary files removed"
 
 ### Step 12.3: Stop the local Wanaku instance
 
-Follow the shutdown steps in [common/start-local.md](common/start-local.md):
+Follow the shutdown steps in [common/start-backend.md](common/start-backend.md):
 
 ```bash
 if [ -n "${WANAKU_PID}" ]; then
@@ -765,7 +765,7 @@ fi
 
 | Phase | Test ID | Test Name | Priority |
 |-------|---------|-----------|----------|
-| 1 | -- | Setup (build and start local) | Critical |
+| 1 | -- | Setup (build and start the backend) | Critical |
 | 2 | 2.1-2.4 | Service catalog init and structure verification | Critical |
 | 3 | 3.1-3.3 | Create Camel route files for services | Critical |
 | 4 | 4.1-4.3 | Expose routes and generate rules | Critical |

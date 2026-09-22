@@ -51,7 +51,7 @@ java -version 2>&1 | head -1 && echo "PASS: java available" || echo "FAIL: java 
 
 ## Phase 1: Start Wanaku Locally
 
-Follow [common/start-local.md](common/start-local.md). After completion, `WANAKU_ROUTER_URL`, `WANAKU_PID`, and `CLI_JAR` must be set.
+Follow [common/start-backend.md](common/start-backend.md). After completion, `WANAKU_ROUTER_URL`, `WANAKU_PID`, and `CLI_JAR` must be set.
 
 Verify the CLI can connect:
 
@@ -668,7 +668,7 @@ fi
 | Phase | Test ID | Test Name | Priority |
 |-------|---------|-----------|----------|
 | 0 | 0.1 | Prerequisites check | High |
-| 1 | 1.1 | Start local stack and verify connectivity | Critical |
+| 1 | 1.1 | Start the backend and verify connectivity | Critical |
 | 2 | 2.1-2.6 | Forward add, list, remove, verify gone, namespace resolution | Critical |
 | 3 | 3.1-3.4 | Forward refresh lifecycle | High |
 | 4 | 4.1-4.2 | Data store add from file | Critical |

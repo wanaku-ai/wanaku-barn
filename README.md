@@ -11,12 +11,14 @@ Keycloak.
 
 ## Quick Start
 
-Getting started is a single command. Download the CLI from **[releases page](https://github.com/wanaku-ai/wanaku/releases)**, unpack,
-and then just run:
+The quickest way to run the Classic Wanaku backend locally, without Keycloak, is the no-auth Docker Compose file:
 
 ```shell
-wanaku start local
+docker compose -f deploy/docker-compose/docker-compose-noauth.yml up
 ```
+
+Then download the CLI from the **[releases page](https://github.com/wanaku-ai/wanaku/releases)** and unpack it to
+manage the running instance.
 
 Access <http://localhost:8080> to enter the dashboard:
 

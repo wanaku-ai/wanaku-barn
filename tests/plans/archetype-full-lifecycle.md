@@ -145,7 +145,7 @@ fi
 
 ## Phase 1: Start the Router
 
-Follow [common/start-local.md](common/start-local.md) to build and start the local Wanaku stack.
+Follow [common/start-backend.md](common/start-backend.md) to build and start the Wanaku backend locally.
 
 After completion, `VERSION`, `CLI_JAR`, `WANAKU_ROUTER_URL`, and `WANAKU_PID` must be set.
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This test plan verifies the centralized home directory resolution introduced by `WanakuHome` (PR #1412). It confirms that the Wanaku home directory can be overridden via environment variable (`WANAKU_HOME`) or system property (`wanaku.home`), that the precedence order is correct (system property > env var > default), and that all components (router, CLI, capabilities) respect the resolved path. Tests run locally with **no authentication** and are fully automatable.
+This test plan verifies the centralized home directory resolution introduced by `WanakuHome` (PR #1412). It confirms that the Wanaku home directory can be overridden via environment variable (`WANAKU_HOME`) or system property (`wanaku.home`), that the precedence order is correct (system property > env var > default), and that the router and the CLI respect the resolved path. Tests run locally with **no authentication** and are fully automatable.
 
 ## Prerequisites
 
@@ -40,8 +40,9 @@ Do **not** assign the full command to a single variable (e.g., `WANAKU_CLI="java
 
 ```bash
 export WANAKU_REPO_ROOT="${WANAKU_REPO_ROOT:-.}"
-export WANAKU_ROUTER_URL="${WANAKU_ROUTER_URL:-http://localhost:8080}"
-export MCP_SERVER_URI="${MCP_SERVER_URI:-http://localhost:8080/public/mcp/}"
+export WANAKU_ROUTER_PORT="${WANAKU_ROUTER_PORT:-8080}"
+export WANAKU_ROUTER_URL="${WANAKU_ROUTER_URL:-http://localhost:${WANAKU_ROUTER_PORT}}"
+export MCP_SERVER_URI="${MCP_SERVER_URI:-http://localhost:${WANAKU_ROUTER_PORT}/public/mcp/}"
 export CUSTOM_HOME_DIR="${CUSTOM_HOME_DIR:-/tmp/wanaku-test-home-$$}"
 export CUSTOM_HOME_DIR_SYSPROP="${CUSTOM_HOME_DIR_SYSPROP:-/tmp/wanaku-test-sysprop-$$}"
 # Isolate credentials per test run to avoid contention (see #1697)
@@ -51,6 +52,7 @@ export WANAKU_CREDENTIALS="${WANAKU_CREDENTIALS:-/tmp/wanaku-creds-home-$$}"
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `WANAKU_REPO_ROOT` | `.` | Path to the Wanaku repository root |
+| `WANAKU_ROUTER_PORT` | `8080` | HTTP port the router listens on |
 | `WANAKU_ROUTER_URL` | `http://localhost:8080` | Router base URL (no trailing slash) |
 | `MCP_SERVER_URI` | `http://localhost:8080/public/mcp/` | MCP Streamable HTTP endpoint |
 | `CUSTOM_HOME_DIR` | `/tmp/wanaku-test-home-$$` | Temporary directory for WANAKU_HOME env var tests |
@@ -59,9 +61,9 @@ export WANAKU_CREDENTIALS="${WANAKU_CREDENTIALS:-/tmp/wanaku-creds-home-$$}"
 ### Known limitations
 
 - **No Kubernetes:** This plan tests local execution only. Operator/container behavior is out of scope.
-- **No authentication:** `start local` always runs in noauth mode.
-- **CLI cache/local directories:** The CLI resolves cache and local directories from `WanakuHome.get()`. When `WANAKU_HOME` is set, the CLI extracts distributions into `${WANAKU_HOME}/local/` and caches downloads in `${WANAKU_HOME}/cache/`. This means a fresh `WANAKU_HOME` directory triggers a full download/deploy cycle.
-- **System property override scope:** The `-Dwanaku.home` system property only affects the JVM it is passed to. When using `start local`, the CLI process and child router/capability processes are separate JVMs. To test system property override on the router, the router JAR must be started directly.
+- **No authentication:** The router is always started with `WANAKU_HTTP_AUTH=none`.
+- **Router only:** No capabilities are started. The CLI itself only uses the home directory for its credential store.
+- **System property override scope:** The `-Dwanaku.home` system property only affects the JVM it is passed to. The router and the CLI are separate JVMs, so each must receive its own override.
 
 ---
 
@@ -134,27 +136,25 @@ echo "PASS: test directories do not overlap with default home"
 
 ## Phase 1: Build
 
-Follow [common/start-local.md](common/start-local.md) **step 1 only** (build the distribution). Do **not** start the local stack yet -- individual phases start Wanaku with different environment configurations.
+Follow [common/start-backend.md](common/start-backend.md) **steps 1 and 2 only** (build the project and re-augment the backend). Do **not** start the backend yet -- individual phases start it with different environment configurations.
 
 After completion, the following variables must be set:
 
 - `VERSION` -- Wanaku version string
 - `CLI_JAR` -- path to the CLI JAR
-- `ROUTER_DIST` -- path to the router distribution ZIP
-- `HTTP_TOOL_DIST` -- path to the HTTP tool distribution ZIP
+- `ROUTER_JAR` -- path to the backend runner JAR
 
 ### Test 1.1: Verify build artifacts exist
 
 ```bash
 cd "${WANAKU_REPO_ROOT:-.}"
-mvn -DskipTests -Pdist clean package
+mvn -DskipTests clean package
 
 VERSION=$(cat core/core-util/target/classes/version.txt)
 CLI_JAR="apps/wanaku-cli/target/quarkus-app/quarkus-run.jar"
-ROUTER_DIST="apps/wanaku-barn-backend/target/distributions/wanaku-barn-backend-${VERSION}.zip"
-HTTP_TOOL_DIST="capabilities/tools/wanaku-tool-service-http/target/distributions/wanaku-tool-service-http-${VERSION}.zip"
+ROUTER_JAR="apps/wanaku-barn-backend/target/quarkus-app/quarkus-run.jar"
 
-for FILE in "${CLI_JAR}" "${ROUTER_DIST}" "${HTTP_TOOL_DIST}"; do
+for FILE in "${CLI_JAR}" "${ROUTER_JAR}"; do
   if [ ! -f "${FILE}" ]; then
     echo "FAIL: ${FILE} not found"
     exit 1
@@ -163,20 +163,31 @@ for FILE in "${CLI_JAR}" "${ROUTER_DIST}" "${HTTP_TOOL_DIST}"; do
 done
 ```
 
+### Test 1.2: Re-augment the backend to disable OIDC
+
+```bash
+java -Dquarkus.launch.rebuild=true \
+     -Dquarkus.log.level=WARNING \
+     -Dquarkus.oidc.enabled=false \
+     -Dquarkus.oidc-proxy.enabled=false \
+     -jar "${ROUTER_JAR}"
+echo "PASS: re-augmentation complete"
+```
+
 ---
 
 ## Phase 2: Default Behavior (Backward Compatibility)
 
 Start Wanaku with **no overrides** and verify data goes to the default `~/.wanaku/` path.
 
-### Test 2.1: Start local with default home
+### Test 2.1: Start the router with default home
 
 ```bash
 unset WANAKU_HOME
 
-java -jar "${CLI_JAR}" start local \
-  --local-dist "${ROUTER_DIST}" \
-  --local-dist "${HTTP_TOOL_DIST}" &
+WANAKU_HTTP_AUTH=none java -Dquarkus.profile=local \
+  -Dquarkus.http.port="${WANAKU_ROUTER_PORT}" \
+  -jar "${ROUTER_JAR}" &
 WANAKU_PID=$!
 echo "Wanaku started with PID ${WANAKU_PID}"
 ```
@@ -225,31 +236,7 @@ else
 fi
 ```
 
-### Test 2.5: Verify CLI local directory uses default home
-
-```bash
-DEFAULT_LOCAL_DIR="${HOME}/.wanaku/local"
-
-if [ -d "${DEFAULT_LOCAL_DIR}" ]; then
-  echo "PASS: CLI local directory exists at ${DEFAULT_LOCAL_DIR}"
-else
-  echo "FAIL: CLI local directory not found at ${DEFAULT_LOCAL_DIR}"
-fi
-```
-
-### Test 2.6: Verify CLI cache directory uses default home
-
-```bash
-DEFAULT_CACHE_DIR="${HOME}/.wanaku/cache"
-
-if [ -d "${DEFAULT_CACHE_DIR}" ]; then
-  echo "PASS: CLI cache directory exists at ${DEFAULT_CACHE_DIR}"
-else
-  echo "FAIL: CLI cache directory not found at ${DEFAULT_CACHE_DIR}"
-fi
-```
-
-### Test 2.7: Stop default instance
+### Test 2.5: Stop default instance
 
 ```bash
 if [ -n "${WANAKU_PID}" ]; then
@@ -259,7 +246,7 @@ if [ -n "${WANAKU_PID}" ]; then
 fi
 ```
 
-### Test 2.8: Verify process is gone
+### Test 2.6: Verify process is gone
 
 ```bash
 if [ -n "${WANAKU_PID}" ]; then
@@ -278,14 +265,14 @@ fi
 
 Start Wanaku with `WANAKU_HOME` set to a custom temporary directory. Verify that data directories are created under the custom path instead of `~/.wanaku/`.
 
-### Test 3.1: Start local with WANAKU_HOME override
+### Test 3.1: Start the router with WANAKU_HOME override
 
 ```bash
 export WANAKU_HOME="${CUSTOM_HOME_DIR}"
 
-java -jar "${CLI_JAR}" start local \
-  --local-dist "${ROUTER_DIST}" \
-  --local-dist "${HTTP_TOOL_DIST}" &
+WANAKU_HTTP_AUTH=none java -Dquarkus.profile=local \
+  -Dquarkus.http.port="${WANAKU_ROUTER_PORT}" \
+  -jar "${ROUTER_JAR}" &
 WANAKU_PID=$!
 echo "Wanaku started with PID ${WANAKU_PID} and WANAKU_HOME=${WANAKU_HOME}"
 ```
@@ -334,31 +321,7 @@ else
 fi
 ```
 
-### Test 3.5: Verify CLI local directory under custom home
-
-```bash
-CUSTOM_LOCAL_DIR="${CUSTOM_HOME_DIR}/local"
-
-if [ -d "${CUSTOM_LOCAL_DIR}" ]; then
-  echo "PASS: CLI local directory created under custom home at ${CUSTOM_LOCAL_DIR}"
-else
-  echo "FAIL: CLI local directory not found at ${CUSTOM_LOCAL_DIR}"
-fi
-```
-
-### Test 3.6: Verify CLI cache directory under custom home
-
-```bash
-CUSTOM_CACHE_DIR="${CUSTOM_HOME_DIR}/cache"
-
-if [ -d "${CUSTOM_CACHE_DIR}" ]; then
-  echo "PASS: CLI cache directory created under custom home at ${CUSTOM_CACHE_DIR}"
-else
-  echo "FAIL: CLI cache directory not found at ${CUSTOM_CACHE_DIR}"
-fi
-```
-
-### Test 3.7: Verify CLI can connect to router with custom home
+### Test 3.5: Verify CLI can connect to router with custom home
 
 ```bash
 java -jar ${CLI_JAR} tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1
@@ -370,7 +333,7 @@ else
 fi
 ```
 
-### Test 3.8: Verify router persists data at custom location
+### Test 3.6: Verify router persists data at custom location
 
 Verify the Infinispan store has content under the custom home by listing tools (which triggers data access).
 
@@ -388,7 +351,7 @@ else
 fi
 ```
 
-### Test 3.9: Verify log file has content
+### Test 3.7: Verify log file has content
 
 ```bash
 CUSTOM_LOG_FILE="${CUSTOM_HOME_DIR}/local/logs/wanaku-router.log"
@@ -405,7 +368,7 @@ else
 fi
 ```
 
-### Test 3.10: Stop custom-home instance
+### Test 3.8: Stop custom-home instance
 
 ```bash
 if [ -n "${WANAKU_PID}" ]; then
@@ -416,7 +379,7 @@ fi
 unset WANAKU_HOME
 ```
 
-### Test 3.11: Verify process is gone
+### Test 3.9: Verify process is gone
 
 ```bash
 if [ -n "${WANAKU_PID}" ]; then
@@ -431,27 +394,17 @@ fi
 
 ---
 
-## Phase 4: System Property Override (Direct Router Start)
+## Phase 4: System Property Override
 
-The `-Dwanaku.home` system property is a JVM argument, so it cannot be passed through `start local` to child processes. This phase tests the system property by starting the router JAR directly with the property set.
+This phase tests the `-Dwanaku.home` system property by starting the router JAR with the property set.
 
-**Note:** This phase requires the router to have been deployed (extracted) by a previous `start local` run. The extracted router lives under `${HOME}/.wanaku/local/wanaku-barn-backend/quarkus-app/` (from Phase 2) or `${CUSTOM_HOME_DIR}/local/wanaku-barn-backend/quarkus-app/` (from Phase 3).
-
-### Test 4.1: Locate the extracted router JAR
+### Test 4.1: Verify the router JAR is available
 
 ```bash
-# Try the default location first; fall back to the custom home if needed
-ROUTER_QUARKUS_APP="${HOME}/.wanaku/local/wanaku-barn-backend/quarkus-app"
-if [ ! -f "${ROUTER_QUARKUS_APP}/quarkus-run.jar" ]; then
-  ROUTER_QUARKUS_APP="${CUSTOM_HOME_DIR}/local/wanaku-barn-backend/quarkus-app"
-fi
-
-if [ -f "${ROUTER_QUARKUS_APP}/quarkus-run.jar" ]; then
-  echo "PASS: router JAR found at ${ROUTER_QUARKUS_APP}/quarkus-run.jar"
+if [ -f "${ROUTER_JAR}" ]; then
+  echo "PASS: router JAR found at ${ROUTER_JAR}"
 else
-  echo "FAIL: router JAR not found in any expected location"
-  echo "  Checked: ${HOME}/.wanaku/local/wanaku-barn-backend/quarkus-app/"
-  echo "  Checked: ${CUSTOM_HOME_DIR}/local/wanaku-barn-backend/quarkus-app/"
+  echo "FAIL: router JAR not found at ${ROUTER_JAR}"
   exit 1
 fi
 ```
@@ -459,12 +412,12 @@ fi
 ### Test 4.2: Start router with -Dwanaku.home system property
 
 ```bash
-cd "${ROUTER_QUARKUS_APP}"
-java -Dquarkus.profile=local \
-     -Dwanaku.home="${CUSTOM_HOME_DIR_SYSPROP}" \
-     -Dquarkus.oidc.enabled=false \
-     -Dquarkus.oidc-proxy.enabled=false \
-     -jar quarkus-run.jar &
+unset WANAKU_HOME
+
+WANAKU_HTTP_AUTH=none java -Dquarkus.profile=local \
+  -Dquarkus.http.port="${WANAKU_ROUTER_PORT}" \
+  -Dwanaku.home="${CUSTOM_HOME_DIR_SYSPROP}" \
+  -jar "${ROUTER_JAR}" &
 ROUTER_PID=$!
 echo "Router started with PID ${ROUTER_PID} and -Dwanaku.home=${CUSTOM_HOME_DIR_SYSPROP}"
 ```
@@ -552,12 +505,10 @@ mkdir -p "${PRECEDENCE_SYSPROP_DIR}"
 
 export WANAKU_HOME="${PRECEDENCE_ENVVAR_DIR}"
 
-cd "${ROUTER_QUARKUS_APP}"
-java -Dquarkus.profile=local \
-     -Dwanaku.home="${PRECEDENCE_SYSPROP_DIR}" \
-     -Dquarkus.oidc.enabled=false \
-     -Dquarkus.oidc-proxy.enabled=false \
-     -jar quarkus-run.jar &
+WANAKU_HTTP_AUTH=none java -Dquarkus.profile=local \
+  -Dquarkus.http.port="${WANAKU_ROUTER_PORT}" \
+  -Dwanaku.home="${PRECEDENCE_SYSPROP_DIR}" \
+  -jar "${ROUTER_JAR}" &
 ROUTER_PID=$!
 echo "Router started with PID ${ROUTER_PID}"
 echo "  WANAKU_HOME=${WANAKU_HOME} (env var -- should be ignored)"
@@ -764,11 +715,9 @@ chmod 000 "${UNWRITABLE_DIR}"
 
 export WANAKU_HOME="${UNWRITABLE_DIR}"
 
-cd "${ROUTER_QUARKUS_APP}"
-java -Dquarkus.profile=local \
-     -Dquarkus.oidc.enabled=false \
-     -Dquarkus.oidc-proxy.enabled=false \
-     -jar quarkus-run.jar > /tmp/wanaku-unwritable-output-$$.log 2>&1 &
+WANAKU_HTTP_AUTH=none java -Dquarkus.profile=local \
+  -Dquarkus.http.port="${WANAKU_ROUTER_PORT}" \
+  -jar "${ROUTER_JAR}" > /tmp/wanaku-unwritable-output-$$.log 2>&1 &
 ROUTER_PID=$!
 
 # Wait briefly for the process to fail
@@ -805,11 +754,9 @@ When `WANAKU_HOME` is empty, `WanakuHome.get()` should fall through to the defau
 ```bash
 export WANAKU_HOME=""
 
-cd "${ROUTER_QUARKUS_APP}"
-java -Dquarkus.profile=local \
-     -Dquarkus.oidc.enabled=false \
-     -Dquarkus.oidc-proxy.enabled=false \
-     -jar quarkus-run.jar &
+WANAKU_HTTP_AUTH=none java -Dquarkus.profile=local \
+  -Dquarkus.http.port="${WANAKU_ROUTER_PORT}" \
+  -jar "${ROUTER_JAR}" &
 ROUTER_PID=$!
 
 MAX_RETRIES=30
@@ -891,26 +838,23 @@ echo "PASS: test environment variables cleared"
 | 0 | 0.3 | Create temporary test directories | Critical |
 | 0 | 0.4 | Verify no conflict with default home | Critical |
 | 1 | 1.1 | Verify build artifacts exist | Critical |
-| 2 | 2.1 | Start local with default home | Critical |
+| 1 | 1.2 | Re-augment the backend to disable OIDC | Critical |
+| 2 | 2.1 | Start the router with default home | Critical |
 | 2 | 2.2 | Wait for router health (default) | Critical |
 | 2 | 2.3 | Verify default Infinispan data directory | Critical |
 | 2 | 2.4 | Verify default log file | High |
-| 2 | 2.5 | Verify CLI local directory (default) | High |
-| 2 | 2.6 | Verify CLI cache directory (default) | Medium |
-| 2 | 2.7 | Stop default instance | Critical |
-| 2 | 2.8 | Verify default process is gone | High |
-| 3 | 3.1 | Start local with WANAKU_HOME | Critical |
+| 2 | 2.5 | Stop default instance | Critical |
+| 2 | 2.6 | Verify default process is gone | High |
+| 3 | 3.1 | Start the router with WANAKU_HOME | Critical |
 | 3 | 3.2 | Wait for router health (env var) | Critical |
 | 3 | 3.3 | Verify Infinispan data under custom home | Critical |
 | 3 | 3.4 | Verify log file under custom home | High |
-| 3 | 3.5 | Verify CLI local dir under custom home | High |
-| 3 | 3.6 | Verify CLI cache dir under custom home | Medium |
-| 3 | 3.7 | CLI connects with custom home | High |
-| 3 | 3.8 | Router persists data at custom location | Critical |
-| 3 | 3.9 | Verify log file has content | Medium |
-| 3 | 3.10 | Stop custom-home instance | Critical |
-| 3 | 3.11 | Verify custom-home process is gone | High |
-| 4 | 4.1 | Locate extracted router JAR | Critical |
+| 3 | 3.5 | CLI connects with custom home | High |
+| 3 | 3.6 | Router persists data at custom location | Critical |
+| 3 | 3.7 | Verify log file has content | Medium |
+| 3 | 3.8 | Stop custom-home instance | Critical |
+| 3 | 3.9 | Verify custom-home process is gone | High |
+| 4 | 4.1 | Verify the router JAR is available | Critical |
 | 4 | 4.2 | Start router with -Dwanaku.home | Critical |
 | 4 | 4.3 | Wait for router health (sys prop) | Critical |
 | 4 | 4.4 | Verify Infinispan data under sys prop path | Critical |

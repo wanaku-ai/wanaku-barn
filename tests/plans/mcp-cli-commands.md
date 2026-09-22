@@ -37,18 +37,9 @@ export MCP_SERVER_URI="${MCP_SERVER_URI:-http://localhost:8080/public/mcp/}"
 
 ### MCP server setup
 
-An MCP server must be running and accessible at `MCP_SERVER_URI`. Start the Wanaku stack locally:
-
-```bash
-# Build first
-mvn -DskipTests -Pdist clean package
-
-# Start the local stack (auth disabled automatically)
-VERSION=$(cat core/core-util/target/classes/version.txt)
-java -jar apps/wanaku-cli/target/quarkus-app/quarkus-run.jar start local \
-  --local-dist apps/wanaku-barn-backend/target/distributions/wanaku-barn-backend-${VERSION}.zip \
-  --local-dist capabilities/tools/wanaku-tool-service-http/target/distributions/wanaku-tool-service-http-${VERSION}.zip
-```
+An MCP server must be running and accessible at `MCP_SERVER_URI`. Follow
+[common/start-backend.md](common/start-backend.md) to build, re-augment and start the Wanaku backend locally with
+authentication disabled.
 
 Wait for the router health check (curl is used here specifically to test HTTP-level readiness):
 
@@ -58,7 +49,7 @@ curl -sf http://localhost:8080/q/health/ready > /dev/null && echo "READY" || ech
 
 ### Known limitations for local testing
 
-- **No resource providers in `wanaku start local`:** The local start command only supports tool services (`service-http`, `service-exec`, etc.). Resource providers (like `performancestaticfile`) are not available locally. Resource read tests (Phase 12) require a deployed environment.
+- **No capabilities started locally:** Only the backend is started by the common steps. Tool services and resource providers (like `performancestaticfile`) must be started separately. Resource read tests (Phase 12) require a deployed environment.
 - **Prompts are not registered by default:** No prompt providers ship with the base installation. Prompt list/get tests will return empty results locally.
 - **MCP endpoint path:** The public MCP endpoint is `/public/mcp/` (not `/mcp`). The `wanaku mcp` commands only support Streamable HTTP; the legacy `/public/mcp/sse` endpoint is rejected with a migration hint.
 

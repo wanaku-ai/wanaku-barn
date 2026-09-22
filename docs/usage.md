@@ -199,14 +199,6 @@ This is useful for:
 
 ### Disabling Authentication
 
-**Using the CLI (default for local):**
-
-```shell
-wanaku start local
-```
-
-The `wanaku start local` command automatically disables authentication, so no additional configuration is needed.
-
 **Using an environment variable:**
 
 ```shell
@@ -331,66 +323,14 @@ java "-Djavax.net.ssl.trustStore=my-truststore.p12" "-Djavax.net.ssl.trustStoreP
 
 ## Installing and Running the Router
 
-There are three ways to run the router. They work similarly, with the distinction that some of them may come with more
-services by default — continue reading the documentation below for details.
+The router can be deployed on a cluster either through the Wanaku Operator or manually. For local development
+without Keycloak, see [Running Without Authentication](#running-without-authentication).
 
 > [!IMPORTANT]
 > For production deployments with authentication, the router needs to be configured for secure access and control of its
 > resources. Make sure you read the section [Securing the Wanaku MCP Router](#securing-the-wanaku-mcp-router) **before**
 > running or deploying the router. For local development or testing, you can
 > [run without authentication](#running-without-authentication).
-
-### Installing and Running Wanaku Locally Using "Wanaku Start Local"
-
-You can use the Wanaku CLI to start a small/simplified local instance. After downloading the CLI, simply run
-`wanaku start local` and the CLI should download, deploy and start Wanaku with the main server, a file provider
-and an HTTP provider.
-
-```shell
-wanaku start local
-```
-
-The local runner disables authentication by default, so **Keycloak is not required**. The router and all
-downstream MCP servers will start without authentication.
-
-If that is successful, open your browser at <http://localhost:8080>, and you should have access to the UI.
-
-> [!NOTE]
-> You can use the command line to enable more services by using the `--services` option. Use the `--help` to see the details.
-
-#### Running with the Camel Integration Capability
-
-The [Camel Integration Capability](https://github.com/wanaku-ai/camel-integration-capability) (CIC) lets you
-expose Apache Camel routes as MCP tools. You can supply routes in two ways: from local YAML files or from a
-service catalog.
-
-**Using Camel route files:**
-
-```shell
-wanaku start local \
-  --camel-routes file:///path/to/routes.camel.yaml \
-  --camel-rules file:///path/to/rules.yaml
-```
-
-`--camel-routes` and `--camel-rules` must both be provided when using route files.
-
-**Using a service catalog:**
-
-```shell
-wanaku start local \
-  --service-catalog my-catalog \
-  --service-catalog-system ftp
-```
-
-`--service-catalog` and `--service-catalog-system` must both be provided when using service catalogs.
-
-> [!NOTE]
-> The two modes are mutually exclusive — you can use route files **or** a service catalog, but not both at the same time.
-
-The `--fail-fast` flag (enabled by default) causes the CIC to fail immediately if route loading encounters an
-error. Disable it with `--fail-fast=false` if you want the service to start regardless.
-
-When any CIC option is provided, the `camel-integration` service is automatically added to the launch list.
 
 ### Installing and Running Wanaku on OpenShift or Kubernetes Using the Wanaku Operator
 

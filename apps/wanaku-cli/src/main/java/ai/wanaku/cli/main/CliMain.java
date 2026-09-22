@@ -17,7 +17,6 @@ import ai.wanaku.cli.main.commands.namespaces.Namespaces;
 import ai.wanaku.cli.main.commands.prompts.Prompts;
 import ai.wanaku.cli.main.commands.resources.Resources;
 import ai.wanaku.cli.main.commands.service.Service;
-import ai.wanaku.cli.main.commands.start.Start;
 import ai.wanaku.cli.main.commands.tools.Tools;
 import ai.wanaku.cli.main.support.WanakuExceptionHandler;
 import ai.wanaku.core.util.VersionHelper;
@@ -31,7 +30,6 @@ import picocli.CommandLine;
             Forwards.class,
             Resources.class,
             Prompts.class,
-            Start.class,
             Tools.class,
             Namespaces.class,
             Mcp.class,
