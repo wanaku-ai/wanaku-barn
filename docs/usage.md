@@ -298,9 +298,35 @@ source ~/.bashrc
 ```
 
 > **Note:** If you are using `zsh`, replace `~/.bashrc` with `~/.zshrc`.
->
-> [!TIP]
-> The `get-wanaku.sh` script auto-detects your OS and architecture, downloads the latest release, verifies the checksum, and installs to `$HOME/bin`. You can override the install directory with `WANAKU_INSTALL_DIR=/usr/local/bin`.
+
+### Installing with `get-wanaku.sh`
+
+```shell
+curl -fsSL https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/main/get-wanaku.sh | bash
+```
+
+The script detects your OS and architecture, downloads the release archive, verifies its SHA-256 checksum, and installs the `wanaku` and `wanaku-cli` commands to `$HOME/bin`.
+
+- **Linux x86_64 and macOS arm64:** installs the native binary. Java is not required.
+- **Other platforms:** installs the Java-based distribution under `$HOME/bin/wanaku-java`, with small `wanaku`/`wanaku-cli` launchers. Requires Java 21 or later (taken from `JAVA_HOME` if set, otherwise from `PATH`).
+
+Prerequisites: `bash`, `curl`, `unzip`, and `sha256sum` or `shasum`. If the release's checksum file has no entry for the downloaded archive, the script prints a warning and skips verification. If the checksum does not match, it aborts.
+
+You can customize the installation with these environment variables:
+
+| Variable             | Default     | Description                                                                 |
+|----------------------|-------------|-----------------------------------------------------------------------------|
+| `WANAKU_INSTALL_DIR` | `$HOME/bin` | Installation directory (must be writable by the current user)               |
+| `WANAKU_VERSION`     | latest      | Release tag to install (for example, `v0.2.0`). Avoids a GitHub API call.   |
+| `WANAKU_FORCE_JAVA`  | `false`     | Set to `true` to install the Java-based distribution on any platform        |
+
+For example:
+
+```shell
+curl -fsSL https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/main/get-wanaku.sh | WANAKU_VERSION=v0.2.0 WANAKU_INSTALL_DIR="$HOME/.local/bin" bash
+```
+
+Running the script again upgrades or replaces an existing installation in the same directory.
 
 Verify the installation:
 
