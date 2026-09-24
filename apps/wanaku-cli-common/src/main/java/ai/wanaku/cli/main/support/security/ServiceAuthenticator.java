@@ -58,7 +58,7 @@ public class ServiceAuthenticator {
 
         renewToken(config);
 
-        LOG.info("Received token with a lifetime of {} seconds", accessToken.getLifetime());
+        LOG.debug("Received token with a lifetime of {} seconds", accessToken.getLifetime());
     }
 
     /**
@@ -205,7 +205,7 @@ public class ServiceAuthenticator {
                 Duration.between(creationTime, Instant.now()).getSeconds();
 
         if (elapsedSeconds >= (accessToken.getLifetime() - 30)) {
-            LOG.info("The token is about to expire. Renewing token to prevent that from happening ...");
+            LOG.debug("The token is about to expire. Renewing token to prevent that from happening ...");
             renewToken(config);
         }
 

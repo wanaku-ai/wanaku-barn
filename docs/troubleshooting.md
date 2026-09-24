@@ -86,18 +86,16 @@ When the router has authentication enabled, the CLI requires an active session. 
 **Fix:**
 
 ```shell
-# Log in first (through the router OIDC proxy)
+# Log in against Keycloak with the client oauth2-proxy accepts (wanaku-mcp-router)
+export WANAKU_CLIENT_SECRET=<wanaku-mcp-router secret>
 wanaku auth login \
-  --auth-server http://localhost:8080 \
-  --username alice \
-  --password
-
-# Or log in directly against Keycloak (bypasses the router)
-wanaku auth login \
-  --auth-server http://keycloak-host \
+  --auth-server http://localhost:8543 \
   --realm wanaku \
   --username alice \
   --password
+
+# Then target the management proxy, not the backend port
+wanaku tools list --host http://localhost:4181
 
 # For routers running without authentication, use --no-auth
 wanaku tools list --no-auth

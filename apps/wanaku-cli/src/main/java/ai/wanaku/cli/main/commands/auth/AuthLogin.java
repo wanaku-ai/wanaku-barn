@@ -9,11 +9,20 @@ import ai.wanaku.cli.main.support.security.ServiceAuthenticator;
 import ai.wanaku.cli.main.support.security.TokenEndpoint;
 import picocli.CommandLine;
 
-@CommandLine.Command(name = "login", description = "Interactive authentication login")
+@CommandLine.Command(
+        name = "login",
+        description = "Authenticate against Keycloak (password grant, local development only) or store an API token")
 public class AuthLogin extends BaseCommand {
 
-    private static final String DEFAULT_AUTH_SERVER = "http://localhost:8080";
-    private static final String DEFAULT_CLIENT_ID = "admin-cli";
+    static final String DEFAULT_AUTH_SERVER = "http://localhost:8543";
+    static final String DEFAULT_REALM = "wanaku";
+    /**
+     * The Keycloak client the oauth2-proxy instances in front of Wanaku are configured with. Tokens issued
+     * to this client carry the audience the proxies accept; tokens from other clients (e.g. {@code admin-cli})
+     * are rejected with 401/403.
+     */
+    static final String DEFAULT_CLIENT_ID = "wanaku-mcp-router";
+
     private static final String DEFAULT_AUTH_MODE = "token";
 
     @CommandLine.ArgGroup(exclusive = true, multiplicity = "1")
@@ -46,23 +55,27 @@ public class AuthLogin extends BaseCommand {
 
     @CommandLine.Option(
             names = {"--auth-server"},
-            description = "Authentication server URL (Wanaku or Keycloak)")
+            description = "Keycloak base URL, or a full OIDC issuer URL (default: " + DEFAULT_AUTH_SERVER + ")")
     private String authServerUrl;
 
     @CommandLine.Option(
             names = {"--realm"},
-            description = "Authentication realm (e.g. 'wanaku'). When omitted, uses the router OIDC proxy.")
+            description = "Keycloak realm (default: " + DEFAULT_REALM
+                    + "). Ignored when --auth-server already points at a realm.")
     private String realm;
 
     @CommandLine.Option(
             names = {"--client-id"},
-            description = "OAuth2 client ID",
+            description = "OAuth2 client ID. Must be a client whose tokens the oauth2-proxy in front of Wanaku accepts "
+                    + "(default: " + DEFAULT_CLIENT_ID + ")",
             defaultValue = DEFAULT_CLIENT_ID)
     private String clientId;
 
     @CommandLine.Option(
             names = {"--client-secret"},
-            description = "OAuth2 client secret (required for confidential clients)")
+            description = "OAuth2 client secret, required for confidential clients such as " + DEFAULT_CLIENT_ID
+                    + " (env: WANAKU_CLIENT_SECRET)",
+            defaultValue = "${env:WANAKU_CLIENT_SECRET}")
     private String clientSecret;
 
     @Override
@@ -82,6 +95,10 @@ public class AuthLogin extends BaseCommand {
         }
 
         String serverUrl = authServerUrl != null ? authServerUrl : DEFAULT_AUTH_SERVER;
+        String effectiveRealm = realm != null ? realm.strip() : DEFAULT_REALM;
+        if (effectiveRealm.isEmpty() || serverUrl.contains("/realms/")) {
+            effectiveRealm = null;
+        }
 
         try {
             printer.printInfoMessage("Authenticating with username and password...");
@@ -90,7 +107,7 @@ public class AuthLogin extends BaseCommand {
             config.setSecret(clientSecret);
             config.setUsername(authMode.credentials.username);
             config.setPassword(authMode.credentials.password);
-            config.setTokenEndpoint(TokenEndpoint.forDiscovery(serverUrl, realm));
+            config.setTokenEndpoint(TokenEndpoint.forDiscovery(serverUrl, effectiveRealm));
             ServiceAuthenticator serviceAuthenticator = new ServiceAuthenticator(config, insecure);
 
             credentialStore.storeApiToken(serviceAuthenticator.currentValidAccessToken());
@@ -98,16 +115,27 @@ public class AuthLogin extends BaseCommand {
             credentialStore.storeTokenExpiry(serviceAuthenticator.getTokenExpiryEpochSeconds());
             credentialStore.storeClientId(clientId);
             credentialStore.storeClientSecret(clientSecret);
-            credentialStore.storeRealm(realm != null && realm.isBlank() ? null : realm);
+            credentialStore.storeRealm(effectiveRealm);
 
-            credentialStore.storeAuthMode("token");
+            credentialStore.storeAuthMode(DEFAULT_AUTH_MODE);
             credentialStore.storeAuthServerUrl(serverUrl);
 
             printer.printSuccessMessage("Successfully authenticated and stored credentials");
             return EXIT_OK;
         } catch (Exception e) {
-            printer.printErrorMessage("Authentication failed: " + e.getMessage());
+            printer.printErrorMessage("Authentication failed: " + e.getMessage() + "\n\n" + loginHint());
             return EXIT_ERROR;
         }
+    }
+
+    private String loginHint() {
+        return "Check that:\n"
+                + "  - --auth-server points at Keycloak (default " + DEFAULT_AUTH_SERVER + "), not at Wanaku\n"
+                + "  - the realm '" + (realm != null ? realm : DEFAULT_REALM)
+                + "' exists and the user was created in it\n"
+                + "  - the client '" + clientId + "' has 'Direct access grants' enabled\n"
+                + "  - a confidential client (such as " + DEFAULT_CLIENT_ID + ") is given its secret via "
+                + "--client-secret or WANAKU_CLIENT_SECRET\n"
+                + "Alternatively store a token obtained elsewhere with: wanaku auth login --api-token <token>";
     }
 }

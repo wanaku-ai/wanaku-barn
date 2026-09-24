@@ -32,19 +32,22 @@ public final class TokenEndpoint {
     }
 
     /**
-     * Constructs a discovery URL using the Keycloak-native realm path when a realm is provided,
-     * or falls back to the Quarkus OIDC proxy path otherwise.
+     * Constructs the OIDC issuer URL used for discovery.
      *
-     * @param baseUrl The base URL of the authentication server.
-     * @param realm   The authentication realm, or {@code null} if not applicable.
-     * @return The complete discovery URL.
+     * <p>When the base URL already points at a Keycloak realm (contains {@code /realms/}) it is
+     * used as-is, so callers can pass a full issuer URL. Otherwise the Keycloak realm path
+     * {@code /realms/<realm>} is appended. A blank realm means the base URL is the issuer.</p>
+     *
+     * @param baseUrl The base URL of the authentication server (Keycloak) or the issuer URL.
+     * @param realm   The authentication realm, or {@code null} when the base URL is the issuer.
+     * @return The issuer URL to use for OIDC discovery.
      */
     public static String forDiscovery(String baseUrl, String realm) {
         String url = stripTrailingSlash(baseUrl);
-        if (realm != null && !realm.isBlank()) {
-            return url + "/realms/" + realm.strip();
+        if (url.contains("/realms/") || realm == null || realm.isBlank()) {
+            return url;
         }
-        return url + "/q/oidc/";
+        return url + "/realms/" + realm.strip();
     }
 
     private static String stripTrailingSlash(String url) {

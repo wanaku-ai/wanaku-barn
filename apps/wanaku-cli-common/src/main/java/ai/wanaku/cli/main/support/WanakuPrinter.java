@@ -341,7 +341,7 @@ public class WanakuPrinter extends DefaultPrinter {
      */
     public void printErrorMessage(String message) {
         if (message != null) {
-            printStyledMessage(message, ERROR_STYLE);
+            printDiagnosticMessage(message, ERROR_STYLE);
         }
     }
 
@@ -354,7 +354,7 @@ public class WanakuPrinter extends DefaultPrinter {
      */
     public void printWarningMessage(String message) {
         if (message != null) {
-            printStyledMessage(message, WARNING_STYLE);
+            printDiagnosticMessage(message, WARNING_STYLE);
         }
     }
 
@@ -368,6 +368,27 @@ public class WanakuPrinter extends DefaultPrinter {
     public void printInfoMessage(String message) {
         if (message != null) {
             printStyledMessage(message, INFO_STYLE);
+        }
+    }
+
+    /**
+     * Prints a raw value intended for consumption by scripts.
+     *
+     * <p>In plain mode the value is written exactly as given, without styling or a trailing
+     * line break, so that captured output (e.g. {@code $(wanaku ...)}) contains only the value.
+     * Otherwise it is printed as an informational message. Null values are silently ignored.</p>
+     *
+     * @param value the value to print, null values are ignored
+     */
+    public void printValue(String value) {
+        if (value == null) {
+            return;
+        }
+        if (plainMode) {
+            terminal.writer().print(value);
+            terminal.flush();
+        } else {
+            printInfoMessage(value);
         }
     }
 
@@ -580,6 +601,23 @@ public class WanakuPrinter extends DefaultPrinter {
      * @param message the message to print
      * @param style the styling to apply to the message
      */
+    /**
+     * Prints an error or warning. In plain mode these go to {@code System.err}, so that a parent
+     * process capturing stdout (e.g. {@code TOKEN=$(wanaku auth token --get --unmask --plain)})
+     * receives only the data and never a diagnostic message.
+     *
+     * @param message the message to print
+     * @param style the styling to apply when not in plain mode
+     */
+    private void printDiagnosticMessage(String message, AttributedStyle style) {
+        if (plainMode) {
+            System.err.println(message);
+            System.err.flush();
+        } else {
+            printStyledMessage(message, style);
+        }
+    }
+
     private void printStyledMessage(String message, AttributedStyle style) {
         if (plainMode) {
             terminal.writer().println(message);

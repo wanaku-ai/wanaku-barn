@@ -107,7 +107,9 @@ ensure_valid_token() {
 
   echo "INFO: token refresh failed, performing full re-login"
   echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
-    --auth-server "${WANAKU_ROUTER_URL}" \
+    --auth-server "${KEYCLOAK_URL}" \
+    --realm wanaku \
+    --client-secret "${WANAKU_CLIENT_SECRET}" \
     --username "${WANAKU_TEST_USER}" \
     --password \
     --plain 2>&1

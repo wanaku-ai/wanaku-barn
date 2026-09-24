@@ -42,6 +42,17 @@ public class AuthStatus extends BaseCommand {
             printer.printInfoMessage("Auth Server: " + authServerUrl);
         }
 
+        String realm = credentialStore.getRealm();
+        if (realm != null) {
+            printer.printInfoMessage("Realm: " + realm);
+        }
+
+        String clientId = credentialStore.getClientId();
+        if (clientId != null) {
+            printer.printInfoMessage("Client ID: " + clientId
+                    + (StringHelper.isNotEmpty(credentialStore.getClientSecret()) ? " (confidential)" : ""));
+        }
+
         String refreshToken = credentialStore.getRefreshToken();
         if (refreshToken != null) {
             String maskedRefreshToken = maskToken(refreshToken);

@@ -126,8 +126,8 @@ public class AuthenticationInterceptor implements ClientRequestFilter {
         }
 
         if (clientId == null || clientId.trim().isEmpty()) {
-            // Fall back to default client ID for backwards compatibility
-            clientId = "admin-cli";
+            LOG.warn("No client ID stored for token refresh, run 'wanaku auth login' again");
+            return false;
         }
 
         String realm = credentialStore.getRealm();
@@ -141,10 +141,10 @@ public class AuthenticationInterceptor implements ClientRequestFilter {
             credentialStore.storeRefreshToken(result.getRefreshToken());
             credentialStore.storeTokenExpiry(result.getExpiryEpochSeconds());
 
-            LOG.info("Successfully refreshed access token");
+            LOG.debug("Successfully refreshed access token");
             return true;
         } catch (TokenRefresher.TokenRefreshException e) {
-            LOG.error("Failed to refresh token: {}", e.getMessage());
+            LOG.warn("Failed to refresh token: {}", e.getMessage());
             return false;
         }
     }

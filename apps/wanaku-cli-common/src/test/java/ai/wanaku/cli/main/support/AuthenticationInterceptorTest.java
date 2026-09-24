@@ -267,4 +267,47 @@ class AuthenticationInterceptorTest {
         verify(mockRefresher).refresh(refreshToken, authServerUrl, clientId, null, null);
         assertEquals("Bearer " + newToken, headers.getFirst(HttpHeaders.AUTHORIZATION));
     }
+
+    @Test
+    void shouldPassStoredClientSecretWhenRefreshingConfidentialClient() throws Exception {
+        String refreshToken = "refresh-token";
+        String authServerUrl = "http://localhost:8543";
+        String clientId = "wanaku-mcp-router";
+        String clientSecret = "router-secret";
+
+        credentialStore.storeApiToken("old-token");
+        credentialStore.storeRefreshToken(refreshToken);
+        credentialStore.storeAuthServerUrl(authServerUrl);
+        credentialStore.storeClientId(clientId);
+        credentialStore.storeClientSecret(clientSecret);
+        credentialStore.storeRealm("wanaku");
+        credentialStore.storeAuthMode("token");
+        credentialStore.storeTokenExpiry(Instant.now().getEpochSecond() - 60);
+
+        TokenRefresher mockRefresher = mock(TokenRefresher.class);
+        when(mockRefresher.refresh(refreshToken, authServerUrl, clientId, clientSecret, "wanaku"))
+                .thenReturn(new RefreshResult(
+                        "new-token", refreshToken, Instant.now().getEpochSecond() + 300));
+
+        new AuthenticationInterceptor(credentialStore, mockRefresher, false).filter(requestContext);
+
+        verify(mockRefresher).refresh(refreshToken, authServerUrl, clientId, clientSecret, "wanaku");
+        assertEquals("Bearer new-token", headers.getFirst(HttpHeaders.AUTHORIZATION));
+    }
+
+    @Test
+    void shouldNotFallBackToLegacyClientIdWhenNoneIsStored() throws Exception {
+        credentialStore.storeApiToken("old-token");
+        credentialStore.storeRefreshToken("refresh-token");
+        credentialStore.storeAuthServerUrl("http://localhost:8543");
+        credentialStore.storeAuthMode("token");
+        credentialStore.storeTokenExpiry(Instant.now().getEpochSecond() - 60);
+
+        TokenRefresher mockRefresher = mock(TokenRefresher.class);
+
+        new AuthenticationInterceptor(credentialStore, mockRefresher, false).filter(requestContext);
+
+        verify(mockRefresher, never()).refresh(any(), any(), any(), any(), any());
+        assertEquals("Bearer old-token", headers.getFirst(HttpHeaders.AUTHORIZATION));
+    }
 }

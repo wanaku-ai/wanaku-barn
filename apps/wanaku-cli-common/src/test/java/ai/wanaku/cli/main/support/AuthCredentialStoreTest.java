@@ -199,4 +199,20 @@ class AuthCredentialStoreTest {
                 FileSystems.getDefault().supportedFileAttributeViews().contains("posix"),
                 "POSIX file permissions are not supported on this filesystem");
     }
+
+    @Test
+    void shouldStoreAndRetrieveClientSecret() {
+        credentialStore.storeClientSecret("router-secret");
+
+        assertEquals("router-secret", credentialStore.getClientSecret());
+    }
+
+    @Test
+    void shouldClearClientSecretWhenBlank() {
+        credentialStore.storeClientSecret("router-secret");
+
+        credentialStore.storeClientSecret("   ");
+
+        assertNull(credentialStore.getClientSecret());
+    }
 }

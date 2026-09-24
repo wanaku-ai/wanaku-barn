@@ -166,7 +166,8 @@ public class AuthToken extends BaseCommand {
         }
 
         if (StringHelper.isEmpty(clientId)) {
-            clientId = "admin-cli";
+            System.err.println("Token expired and no client ID is stored. Run 'wanaku auth login' again.");
+            return false;
         }
 
         String realm = credentialStore.getRealm();

@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -69,6 +70,32 @@ class WanakuPrinterPlainModeTest {
         String output = outputStream.toString();
         assertTrue(output.contains("name"), "Output must contain column header 'name'");
         assertTrue(output.contains("description"), "Output must contain column header 'description'");
+    }
+
+    @Test
+    void printValueWritesExactValueWithoutLineBreak() {
+        printer.printValue("test-token-value");
+
+        assertEquals("test-token-value", outputStream.toString());
+    }
+
+    @Test
+    void diagnosticsGoToStderrSoStdoutCarriesOnlyData() {
+        java.io.PrintStream originalErr = System.err;
+        ByteArrayOutputStream errStream = new ByteArrayOutputStream();
+        System.setErr(new java.io.PrintStream(errStream, true));
+        try {
+            printer.printWarningMessage("refresh failed");
+            printer.printErrorMessage("boom");
+            printer.printValue("the-token");
+        } finally {
+            System.setErr(originalErr);
+        }
+
+        assertEquals("the-token", outputStream.toString(), "stdout must contain only the value");
+        String err = errStream.toString();
+        assertTrue(err.contains("refresh failed"), "warning must go to stderr, got: " + err);
+        assertTrue(err.contains("boom"), "error must go to stderr, got: " + err);
     }
 
     @Test

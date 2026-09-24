@@ -12,6 +12,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public final class ResponseHelper {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    static final String AUTH_HINT = "Possible causes:\n"
+            + "  - No credentials stored: run 'wanaku auth login' (or pass --token)\n"
+            + "  - The token expired and could not be refreshed: run 'wanaku auth login' again\n"
+            + "  - The token was issued for a client the auth proxy does not accept: log in with\n"
+            + "    --client-id wanaku-mcp-router --client-secret <secret> (or another client the proxy trusts)\n"
+            + "  - The user lacks the role required by the management proxy (e.g. 'admin')\n"
+            + "  - The server runs without authentication: use --no-auth";
+
     private ResponseHelper() {}
 
     public static int handleNotFound(
@@ -47,6 +55,14 @@ public final class ResponseHelper {
             if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()) {
                 message = String.format(
                         "The requested resource was not found: %s%s",
+                        response.getStatusInfo().getReasonPhrase(),
+                        responseBody.isEmpty() ? "" : "\nDetails: " + responseBody);
+                printer.printErrorMessage(message);
+            } else if (response.getStatus() == Response.Status.UNAUTHORIZED.getStatusCode()
+                    || response.getStatus() == Response.Status.FORBIDDEN.getStatusCode()) {
+                message = String.format(
+                        "Authentication rejected by the server (status: %d, reason: %s)%s\n\n" + AUTH_HINT,
+                        response.getStatus(),
                         response.getStatusInfo().getReasonPhrase(),
                         responseBody.isEmpty() ? "" : "\nDetails: " + responseBody);
                 printer.printErrorMessage(message);

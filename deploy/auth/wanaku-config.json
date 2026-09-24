@@ -926,6 +926,22 @@
         "token.response.type.bearer.lower-case": "false"
       },
       "authenticationFlowBindingOverrides": {},
+      "protocolMappers": [
+        {
+          "name": "wanaku-mcp-router-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "id.token.claim": "false",
+            "lightweight.claim": "false",
+            "introspection.token.claim": "true",
+            "access.token.claim": "true",
+            "included.custom.audience": "wanaku-mcp-router",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ],
       "fullScopeAllowed": true,
       "nodeReRegistrationTimeout": -1,
       "defaultClientScopes": [

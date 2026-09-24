@@ -55,12 +55,14 @@ class AuthTokenTest {
         }
         if (scenario.startsWith("refresh-")) {
             credentialStore.storeRefreshToken("refresh-token");
-            credentialStore.storeAuthServerUrl("http://localhost:8080");
+            credentialStore.storeAuthServerUrl("http://localhost:8543");
+            // The client used at login is always stored: there is no fallback to a legacy client id.
+            credentialStore.storeClientId("wanaku-mcp-router");
             if (scenario.equals("refresh-failure")) {
-                when(refresher.refresh("refresh-token", "http://localhost:8080", "admin-cli", null, null))
+                when(refresher.refresh("refresh-token", "http://localhost:8543", "wanaku-mcp-router", null, null))
                         .thenThrow(new TokenRefresher.TokenRefreshException("Refresh failed"));
             } else {
-                when(refresher.refresh("refresh-token", "http://localhost:8080", "admin-cli", null, null))
+                when(refresher.refresh("refresh-token", "http://localhost:8543", "wanaku-mcp-router", null, null))
                         .thenReturn(new RefreshResult(
                                 "test-token", "refresh-token", Instant.now().getEpochSecond() + 300));
             }

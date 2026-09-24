@@ -756,73 +756,77 @@ The Streamable HTTP endpoint can be accessed on the path `/mcp/`.
 
 ## CLI Authentication
 
-The Wanaku CLI supports authentication to securely interact with the Wanaku MCP Router API. Authentication credentials are stored locally and automatically included in API requests.
+Wanaku is protected by [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy): one proxy instance sits in
+front of the management API (port `4181` by default) and another in front of the MCP endpoint (port `4180`). Both
+validate bearer tokens issued by Keycloak. The CLI talks to the management proxy, so every request must carry a
+token that the proxy accepts. The CLI stores that token locally and adds it to each request automatically.
 
-### Authentication Modes
+### Which Keycloak client to use
 
-The CLI currently supports the following authentication modes:
+The bundled realm defines several clients. They have distinct roles, and only some of them produce tokens that the
+oauth2-proxy instances accept:
 
-- **token** (default): Use an API token for authentication via Bearer token
-- **username** and **password**
+| Client | Used by | Token accepted by oauth2-proxy? |
+|--------|---------|---------------------------------|
+| `wanaku-mcp-router` | oauth2-proxy itself, and the `wanaku` CLI password login | Yes. Confidential client: needs its secret. Direct access grants enabled for local development. |
+| `mcp-client` | MCP clients such as MCP Inspector (browser OAuth flow) | Yes. Public client, no password grant. |
+| `admin-cli` | `wanaku-keycloak-admin` against the Keycloak `master` realm | No. Its tokens lack the router audience. |
+| `wanaku-service` | Downstream capabilities and services (client credentials) | Yes. Not meant for interactive users. |
+
+> [!NOTE]
+> The CLI used to default to `admin-cli`. Tokens issued to that client are rejected by oauth2-proxy with
+> `401`/`403`, so the default is now `wanaku-mcp-router`. If you still have credentials from an older login,
+> run `wanaku auth logout` and log in again.
 
 ### Authentication Commands
 
 #### Login
 
-Store authentication credentials for use with subsequent CLI commands:
+The password grant is intended for local development only. Create the user in the `wanaku` realm first (for
+example with `wanaku-keycloak-admin users add`), and obtain the `wanaku-mcp-router` client secret from Keycloak
+(or with `wanaku-keycloak-admin credentials show --client-id wanaku-mcp-router --show-secret --plain`).
 
 ```shell
-wanaku auth login --api-token <your-api-token>
+export WANAKU_CLIENT_SECRET=<wanaku-mcp-router secret>
+
+wanaku auth login --username alice --password
 ```
 
-**Options:**
+This authenticates against Keycloak at `http://localhost:8543`, realm `wanaku`, client `wanaku-mcp-router`.
+All of these can be overridden:
 
-- `--api-token <token>`: API token for authentication
-- `--auth-server <url>`: Authentication server URL (optional)
-- `--username <username>`: Username for password-based login
-- `--password <password>`: Password for password-based login (interactive)
-- `--realm <realm>`: Keycloak realm for direct Keycloak authentication (optional; when omitted, uses the router OIDC proxy)
-- `--client-id <client-id>`: OAuth2 client ID (default: `admin-cli`)
-- `--mode <mode>`: Authentication mode - `token` or `oauth2` (default: `token`)
+```shell
+wanaku auth login \
+  --auth-server https://keycloak.example.com \
+  --realm wanaku \
+  --client-id wanaku-mcp-router \
+  --client-secret <secret> \
+  --username alice \
+  --password
+```
 
-**Discovery URL behavior:**
-
-- When `--realm` is provided, the CLI constructs a Keycloak-native OIDC discovery URL: `<auth-server>/realms/<realm>/.well-known/openid-configuration`
-- When `--realm` is omitted (or blank), the CLI falls back to the Wanaku router OIDC proxy path: `<auth-server>/q/oidc/.well-known/openid-configuration`
-- This allows `wanaku auth login` to work directly against a Keycloak instance (e.g. `--auth-server http://keycloak-host --realm wanaku`) as well as through the router's OIDC proxy.
-
-**Example:**
+If you already have a token (for example one obtained with `curl` or from another tool), store it directly:
 
 ```shell
 wanaku auth login --api-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-With custom authentication server:
+**Options:**
+
+- `--username <username>` / `--password`: Password-based login. `--password` prompts interactively (pipe the value through stdin in scripts).
+- `--api-token <token>`: Store an existing bearer token instead of logging in.
+- `--auth-server <url>`: Keycloak base URL, or a full OIDC issuer URL such as `https://keycloak.example.com/realms/wanaku` (default: `http://localhost:8543`)
+- `--realm <realm>`: Keycloak realm (default: `wanaku`). Ignored when `--auth-server` already points at a realm.
+- `--client-id <client-id>`: OAuth2 client ID (default: `wanaku-mcp-router`). Must be a client whose tokens the oauth2-proxy accepts.
+- `--client-secret <secret>`: Client secret for confidential clients. Also read from the `WANAKU_CLIENT_SECRET` environment variable.
+
+The CLI resolves the token endpoint through OIDC discovery at `<auth-server>/realms/<realm>/.well-known/openid-configuration`.
+Refresh tokens are used automatically when the access token is about to expire.
+
+Once logged in, point the commands at the management proxy:
 
 ```shell
-wanaku auth login \
-  --api-token eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9... \
-  --auth-server https://keycloak.example.com \
-  --mode token
-```
-
-With username/password directly against Keycloak:
-
-```shell
-wanaku auth login \
---auth-server http://keycloak-host \
---realm wanaku \
---username alice \
---password
-```
-
-With username/password through the router's OIDC proxy:
-
-```shell
-wanaku auth login \
---auth-server http://localhost:8080 \
---username alice \
---password
+wanaku tools list --host http://localhost:4181
 ```
 
 #### Status
@@ -849,7 +853,10 @@ Authentication Status:
 =====================
 Mode: token
 API Token: eyJh***VCJ9
-Auth Server: https://keycloak.example.com
+Auth Server: http://localhost:8543
+Realm: wanaku
+Client ID: wanaku-mcp-router (confidential)
+Refresh Token: eyJh***abcd
 Credentials File: /Users/username/.wanaku/credentials
 Has Credentials: true
 ```
@@ -881,7 +888,8 @@ wanaku auth token --get --unmask
 To extract the token programmatically (for example, in a script or test helper), combine `--unmask` with `--plain` and capture stdout:
 
 ```shell
-TOKEN=$(wanaku auth token --get --unmask --plain)
+TOKEN=$(wanaku auth token --get --unmask --plain) || wanaku auth login --username alice --password
+curl -H "Authorization: Bearer $TOKEN" http://localhost:4181/api/v1/tools
 ```
 
 On success, stdout contains only the token and a final newline. If no valid token is available, the command returns exit code 1 and leaves stdout empty. Error messages and application logs go to stderr. Check the exit code before you use the token.
@@ -934,8 +942,12 @@ The credentials file is a Java properties file containing:
 
 - `api.token`: The API bearer token
 - `refresh.token`: OAuth2 refresh token (when applicable)
-- `auth.mode`: The authentication mode (token, oauth2, etc.)
-- `auth.server.url`: The authentication server URL
+- `token.expiry`: Access token expiry (epoch seconds), used to decide when to refresh
+- `auth.mode`: The authentication mode (`token`)
+- `auth.server.url`: The Keycloak (or issuer) URL used for login and refresh
+- `auth.realm`: The Keycloak realm (absent when `auth.server.url` is a full issuer URL)
+- `client.id`: The OAuth2 client used for login and refresh
+- `client.secret`: The client secret, only for confidential clients
 
 > [!CAUTION]
 > The credentials file contains sensitive authentication tokens. Ensure proper file permissions are set to prevent unauthorized access.
@@ -945,27 +957,28 @@ The credentials file is a Java properties file containing:
 
 The CLI authentication process works as follows:
 
-1. **Login**: User provides API token via `wanaku auth login --api-token <token>`
-2. **Storage**: Token is stored in `~/.wanaku/credentials`
-3. **Auto-Injection**: The CLI automatically reads the token and adds it as a Bearer token to the `Authorization` header for all API requests
-4. **Validation**: The Wanaku Router validates the token on each request
-5. **Logout**: User can clear credentials via `wanaku auth logout`
+1. **Login**: The user authenticates with `wanaku auth login` (password grant against Keycloak, or `--api-token`)
+2. **Storage**: Access token, refresh token, expiry and client details are stored in `~/.wanaku/credentials`
+3. **Auto-Injection**: The CLI adds the token as a Bearer token to the `Authorization` header of every API request, refreshing it first when it is about to expire
+4. **Validation**: oauth2-proxy validates the token (signature, expiry and audience) before forwarding the request to Wanaku
+5. **Logout**: The user clears credentials via `wanaku auth logout`
 
 ### Troubleshooting Authentication
 
 #### Token Not Working
 
-If you receive authentication errors:
+If you receive `401`/`403` errors from the management proxy:
 
-1. Check token validity:
+1. Check what is stored:
 
    ```shell
    wanaku auth status
    ```
 
-2. Verify the token hasn't expired
-3. Ensure you're using the correct authentication server URL
-4. Try logging in again with a fresh token
+2. Verify the token was issued to a client the proxy accepts (`Client ID` should be `wanaku-mcp-router`, not `admin-cli`)
+3. Verify `--host` points at the management proxy (`http://localhost:4181`), not at the unprotected backend port
+4. If the management proxy restricts access by role, verify the user has that role (for example `admin`)
+5. Log in again with fresh credentials, or use `--no-auth` when Wanaku runs without oauth2-proxy
 
 #### Clear and Reset
 
@@ -2550,18 +2563,18 @@ This section provides solutions to common issues you may encounter while using W
    - Verify the `wanaku-mcp-router` client is configured
    - Confirm user accounts have been created
 
-3. Clear stored credentials and re-authenticate:
+3. Clear stored credentials and re-authenticate against Keycloak with the `wanaku-mcp-router` client:
 
    ```shell
-   rm ~/.wanaku/credentials
-   wanaku auth login \
-     --auth-server http://localhost:8080 \
+   wanaku auth logout
+   WANAKU_CLIENT_SECRET=<secret> wanaku auth login \
+     --auth-server http://localhost:8543 \
      --username alice \
      --password
    ```
 
-4. Verify the router can reach Keycloak:
-   - Check the `auth.server` configuration property
+4. Verify oauth2-proxy can reach Keycloak:
+   - Check the `OAUTH2_PROXY_OIDC_ISSUER_URL` (and, when discovery is skipped, the redeem and JWKS URLs)
    - Ensure network connectivity between components
 
 #### Token expired errors
@@ -2573,11 +2586,10 @@ This section provides solutions to common issues you may encounter while using W
 
 **Solutions:**
 
-1. Re-authenticate with the router:
+1. The CLI refreshes access tokens automatically. When the refresh token has also expired, log in again:
 
    ```shell
-   wanaku auth login \
-     --auth-server http://localhost:8080 \
+   WANAKU_CLIENT_SECRET=<secret> wanaku auth login \
      --username alice \
      --password
    ```

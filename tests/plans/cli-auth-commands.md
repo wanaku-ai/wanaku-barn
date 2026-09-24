@@ -55,6 +55,9 @@ export WANAKU_ROUTER_URL="${WANAKU_ROUTER_URL:-}"
 export WANAKU_TEST_USER="${WANAKU_TEST_USER:-alice}"
 export WANAKU_TEST_PASS="${WANAKU_TEST_PASS:-secretpass}"
 export WANAKU_REALM="${WANAKU_REALM:-wanaku}"
+# Secret of the confidential wanaku-mcp-router client (the only client with direct access grants whose
+# tokens oauth2-proxy accepts). Retrieved in Phase 1 with wanaku-keycloak-admin.
+export WANAKU_CLIENT_SECRET="${WANAKU_CLIENT_SECRET:-}"
 # Isolate credentials per test run to avoid contention (see #1697)
 export WANAKU_CREDENTIALS="${WANAKU_CREDENTIALS:-/tmp/wanaku-creds-auth-$$}"
 export CREDENTIALS_FILE="${WANAKU_CREDENTIALS}"
@@ -77,6 +80,7 @@ Follow [common/namespace-setup.md](common/namespace-setup.md) before Phase 1 to 
 | `WANAKU_TEST_USER` | `alice` | Username for auth login tests (created by keycloak-setup.md) |
 | `WANAKU_TEST_PASS` | `secretpass` | Password for auth login tests |
 | `WANAKU_REALM` | `wanaku` | Keycloak realm name for direct login tests |
+| `WANAKU_CLIENT_SECRET` | _(set by setup)_ | Secret of the `wanaku-mcp-router` client, read automatically by `wanaku auth login` |
 | `WANAKU_CREDENTIALS` | `/tmp/wanaku-creds-auth-$$` | Isolated credentials file path (see [#1697](https://github.com/wanaku-ai/wanaku/issues/1697)) |
 | `CREDENTIALS_FILE` | `${WANAKU_CREDENTIALS}` | Alias for direct file access in test assertions |
 | `TEST_USERNAME` | `testuser-811` | Username for test user CRUD operations |
@@ -538,7 +542,8 @@ OUTPUT=$(wanaku-keycloak-admin credentials show \
   --show-secret \
   --plain 2>&1)
 
-ORIGINAL_SECRET=$(echo "${OUTPUT}" | grep "Client Secret:" | sed 's/.*Client Secret: //')
+# With --show-secret --plain only the secret is written to stdout
+ORIGINAL_SECRET="${OUTPUT}"
 
 if [ -n "${ORIGINAL_SECRET}" ] && [ "${ORIGINAL_SECRET}" != "null" ]; then
   echo "PASS: secret retrieved (length: ${#ORIGINAL_SECRET})"
@@ -601,7 +606,7 @@ ORIGINAL_OUTPUT=$(wanaku-keycloak-admin credentials show \
   --client-id "${TEST_CLIENT_ID}" \
   --show-secret \
   --plain 2>&1)
-ORIGINAL_SECRET=$(echo "${ORIGINAL_OUTPUT}" | grep "Client Secret:" | sed 's/.*Client Secret: //')
+ORIGINAL_SECRET="${ORIGINAL_OUTPUT}"
 
 # Regenerate
 OUTPUT=$(wanaku-keycloak-admin credentials regenerate \
@@ -631,7 +636,7 @@ NEW_OUTPUT=$(wanaku-keycloak-admin credentials show \
   --client-id "${TEST_CLIENT_ID}" \
   --show-secret \
   --plain 2>&1)
-NEW_SECRET=$(echo "${NEW_OUTPUT}" | grep "Client Secret:" | sed 's/.*Client Secret: //')
+NEW_SECRET="${NEW_OUTPUT}"
 
 if [ -z "${ORIGINAL_SECRET}" ] || [ -z "${NEW_SECRET}" ]; then
   echo "FAIL: could not compare secrets (original='${ORIGINAL_SECRET}', new='${NEW_SECRET}')"
@@ -852,6 +857,7 @@ echo "PASS: credentials cleared before auth login tests"
 OUTPUT=$(echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
   --auth-server "${KEYCLOAK_URL}" \
   --realm "${WANAKU_REALM}" \
+  --client-secret "${WANAKU_CLIENT_SECRET}" \
   --username "${WANAKU_TEST_USER}" \
   --password \
   --plain 2>&1)
@@ -934,80 +940,125 @@ fi
 
 ---
 
-## Phase 13: Auth Login — Router OIDC Proxy (without --realm)
+## Phase 13: Token Accepted by the Management Proxy (oauth2-proxy)
 
-These tests authenticate via the router's OIDC proxy. If `WANAKU_ROUTER_URL` is not set, skip this phase.
+The router no longer exposes an OIDC proxy of its own: an oauth2-proxy instance in front of the management API validates
+bearer tokens issued by Keycloak and accepts only tokens whose audience matches the `wanaku-mcp-router` client (or the
+extra audiences it is configured with). These tests verify that the token stored by Phase 12 is accepted, and that a
+token from the wrong client is rejected. If `WANAKU_ROUTER_URL` is not set, skip this phase.
 
-### Test 13.1: Verify router is available
+### Test 13.1: Verify the management proxy is available
 
 ```bash
 if [ -z "${WANAKU_ROUTER_URL}" ]; then
-  echo "SKIP: WANAKU_ROUTER_URL not set -- skipping router proxy login tests"
+  echo "SKIP: WANAKU_ROUTER_URL not set -- skipping management proxy tests"
   exit 0
 fi
 
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WANAKU_ROUTER_URL}/q/health" 2>/dev/null || echo "000")
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${WANAKU_ROUTER_URL}/healthz" 2>/dev/null || echo "000")
 if [ "${HTTP_CODE}" = "200" ]; then
-  echo "PASS: router is healthy at ${WANAKU_ROUTER_URL}"
+  echo "PASS: management proxy is healthy at ${WANAKU_ROUTER_URL}"
 else
-  echo "FAIL: router not healthy at ${WANAKU_ROUTER_URL} (HTTP ${HTTP_CODE})"
+  echo "FAIL: management proxy not healthy at ${WANAKU_ROUTER_URL} (HTTP ${HTTP_CODE})"
   exit 1
 fi
 ```
 
-### Test 13.2: Clear credentials before router proxy login
+### Test 13.2: Stored token is accepted by the management proxy
+
+```bash
+OUTPUT=$(${WANAKU_CLI:-wanaku} tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
+EXIT_CODE=$?
+
+if [ "${EXIT_CODE}" -ne 0 ] || echo "${OUTPUT}" | grep -q "Authentication rejected"; then
+  echo "FAIL: token from wanaku-mcp-router login was rejected by the management proxy"
+  echo "${OUTPUT}"
+  exit 1
+fi
+
+echo "PASS: token issued to wanaku-mcp-router is accepted by the management proxy"
+```
+
+### Test 13.3: Raw token from `auth token --get --unmask --plain` works with curl
+
+```bash
+TOKEN=$(${WANAKU_CLI:-wanaku} auth token --get --unmask --plain 2>/dev/null)
+
+if [ -z "${TOKEN}" ] || echo "${TOKEN}" | grep -q " "; then
+  echo "FAIL: captured token is empty or contains more than the token value: '${TOKEN}'"
+  exit 1
+fi
+
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TOKEN}" \
+  "${WANAKU_ROUTER_URL}/api/v1/tools" 2>/dev/null || echo "000")
+
+if [ "${HTTP_CODE}" = "200" ]; then
+  echo "PASS: raw token accepted by the management proxy (HTTP 200)"
+else
+  echo "FAIL: raw token rejected by the management proxy (HTTP ${HTTP_CODE})"
+  exit 1
+fi
+```
+
+### Test 13.4: Token from a client the proxy does not trust is rejected with guidance
+
+```bash
+ORIGINAL_CREDENTIALS="${WANAKU_CREDENTIALS}"
+export WANAKU_CREDENTIALS="${ORIGINAL_CREDENTIALS}-admin-cli"
+
+echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
+  --auth-server "${KEYCLOAK_URL}" \
+  --realm "${WANAKU_REALM}" \
+  --client-id admin-cli \
+  --username "${WANAKU_TEST_USER}" \
+  --password \
+  --plain > /dev/null 2>&1
+
+OUTPUT=$(${WANAKU_CLI:-wanaku} tools list --host "${WANAKU_ROUTER_URL}" --plain 2>&1)
+EXIT_CODE=$?
+
+rm -f "${WANAKU_CREDENTIALS}"
+export WANAKU_CREDENTIALS="${ORIGINAL_CREDENTIALS}"
+
+if [ "${EXIT_CODE}" -eq 0 ]; then
+  echo "FAIL: admin-cli token was unexpectedly accepted by the management proxy"
+  exit 1
+fi
+
+if echo "${OUTPUT}" | grep -q "Authentication rejected" && echo "${OUTPUT}" | grep -q "wanaku-mcp-router"; then
+  echo "PASS: admin-cli token rejected and the CLI points to the correct client"
+else
+  echo "FAIL: rejection message does not guide the user (output: ${OUTPUT})"
+  exit 1
+fi
+```
+
+### Test 13.5: Login with a full issuer URL does not persist a realm
 
 ```bash
 rm -f "${CREDENTIALS_FILE}"
-echo "PASS: credentials cleared before router proxy login test"
-```
 
-### Test 13.3: Login without --realm succeeds (router OIDC proxy)
-
-```bash
 OUTPUT=$(echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
-  --auth-server "${WANAKU_ROUTER_URL}" \
+  --auth-server "${KEYCLOAK_URL}/realms/${WANAKU_REALM}" \
+  --client-secret "${WANAKU_CLIENT_SECRET}" \
   --username "${WANAKU_TEST_USER}" \
   --password \
   --plain 2>&1)
 EXIT_CODE=$?
 
 if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: auth login without --realm failed (exit code ${EXIT_CODE})"
+  echo "FAIL: auth login with an issuer URL failed (exit code ${EXIT_CODE})"
   echo "${OUTPUT}"
   exit 1
 fi
 
-echo "PASS: auth login without --realm succeeded (router OIDC proxy)"
-```
-
-### Test 13.4: Realm is NOT persisted when --realm is omitted
-
-```bash
-if [ ! -f "${CREDENTIALS_FILE}" ]; then
-  echo "FAIL: credentials file not created after login"
-  exit 1
-fi
-
 STORED_REALM=$(grep "^auth.realm=" "${CREDENTIALS_FILE}" 2>/dev/null || true)
-
-if [ -z "${STORED_REALM}" ]; then
-  echo "PASS: no realm entry in credentials file (expected for router proxy login)"
-else
-  echo "FAIL: realm unexpectedly persisted: ${STORED_REALM}"
-  exit 1
-fi
-```
-
-### Test 13.5: API token is stored after router proxy login
-
-```bash
 STORED_TOKEN=$(grep "^api.token=" "${CREDENTIALS_FILE}" | sed 's/^api.token=//')
 
-if [ -n "${STORED_TOKEN}" ]; then
-  echo "PASS: API token stored after router proxy login (length: ${#STORED_TOKEN})"
+if [ -z "${STORED_REALM}" ] && [ -n "${STORED_TOKEN}" ]; then
+  echo "PASS: token stored and no realm entry when --auth-server is a full issuer URL"
 else
-  echo "FAIL: API token not found in credentials file after router proxy login"
+  echo "FAIL: unexpected credentials (realm: '${STORED_REALM}', token length: ${#STORED_TOKEN})"
   exit 1
 fi
 ```
@@ -1024,6 +1075,7 @@ rm -f "${CREDENTIALS_FILE}"
 OUTPUT=$(echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
   --auth-server "${KEYCLOAK_URL}" \
   --realm "${WANAKU_REALM}" \
+  --client-secret "${WANAKU_CLIENT_SECRET}" \
   --username "${WANAKU_TEST_USER}" \
   --password \
   --plain 2>&1)
@@ -1044,14 +1096,9 @@ else
 fi
 ```
 
-### Test 14.2: Re-login without --realm clears the stored realm
+### Test 14.2: Re-login with an issuer URL clears the stored realm
 
 ```bash
-if [ -z "${WANAKU_ROUTER_URL}" ]; then
-  echo "SKIP: WANAKU_ROUTER_URL not set -- skipping realm-clear test"
-  exit 0
-fi
-
 # First verify realm is currently stored
 BEFORE_REALM=$(grep "^auth.realm=" "${CREDENTIALS_FILE}" 2>/dev/null || true)
 if [ -z "${BEFORE_REALM}" ]; then
@@ -1060,23 +1107,24 @@ if [ -z "${BEFORE_REALM}" ]; then
 fi
 
 OUTPUT=$(echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
-  --auth-server "${WANAKU_ROUTER_URL}" \
+  --auth-server "${KEYCLOAK_URL}/realms/${WANAKU_REALM}" \
+  --client-secret "${WANAKU_CLIENT_SECRET}" \
   --username "${WANAKU_TEST_USER}" \
   --password \
   --plain 2>&1)
 EXIT_CODE=$?
 
 if [ "${EXIT_CODE}" -ne 0 ]; then
-  echo "FAIL: auth login without --realm failed (exit code ${EXIT_CODE})"
+  echo "FAIL: auth login with an issuer URL failed (exit code ${EXIT_CODE})"
   echo "${OUTPUT}"
   exit 1
 fi
 
 AFTER_REALM=$(grep "^auth.realm=" "${CREDENTIALS_FILE}" 2>/dev/null || true)
 if [ -z "${AFTER_REALM}" ]; then
-  echo "PASS: stored realm cleared after login without --realm"
+  echo "PASS: stored realm cleared after login with an issuer URL"
 else
-  echo "FAIL: realm still present after login without --realm: ${AFTER_REALM}"
+  echo "FAIL: realm still present after login with an issuer URL: ${AFTER_REALM}"
   exit 1
 fi
 ```
@@ -1093,6 +1141,7 @@ rm -f "${CREDENTIALS_FILE}"
 OUTPUT=$(echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
   --auth-server "${KEYCLOAK_URL}" \
   --realm "${WANAKU_REALM}" \
+  --client-secret "${WANAKU_CLIENT_SECRET}" \
   --username "${WANAKU_TEST_USER}" \
   --password \
   --plain 2>&1)
@@ -1175,6 +1224,7 @@ fi
 OUTPUT=$(echo "wrong-password-99999" | ${WANAKU_CLI:-wanaku} auth login \
   --auth-server "${KEYCLOAK_URL}" \
   --realm "${WANAKU_REALM}" \
+  --client-secret "${WANAKU_CLIENT_SECRET}" \
   --username "${WANAKU_TEST_USER}" \
   --password \
   --plain 2>&1)
@@ -1341,7 +1391,7 @@ fi
 ### Step 17.5: Remove auth login test user (idempotent)
 
 ```bash
-${WANAKU_CLI:-wanaku} admin users remove \
+wanaku-keycloak-admin users remove \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
@@ -1460,24 +1510,24 @@ fi
 
 ---
 
-## Phase 19: Auth Probe WARN Logging (#1490)
+## Phase 19: Stored Token Always Sent (#86)
 
-This phase verifies that the OIDC auth probe failure is logged at WARN level.
+The CLI no longer probes the OIDC well-known endpoint to decide whether to send credentials: a stored token is
+always sent, because an auth proxy in front of the router blocks such probes. This phase verifies that an
+unreachable host fails with a connection error and not with an authentication-related message.
 
-### Test 19.1: Probe failure against unreachable host produces WARN
+### Test 19.1: Unreachable host reports a connection error, never an auth probe warning
 
 ```bash
-OUTPUT=$(wanaku tools list --host "http://localhost:59999" --token "dummy-token" --plain 2>&1)
+OUTPUT=$(${WANAKU_CLI:-wanaku} tools list --host "http://localhost:59999" --token "dummy-token" --plain 2>&1)
 
-if echo "${OUTPUT}" | grep -qi "WARN.*Could not reach OIDC endpoint"; then
-  echo "PASS: OIDC probe failure logged at WARN level (fix for #1490 confirmed)"
-elif echo "${OUTPUT}" | grep -qi "Could not reach OIDC endpoint"; then
-  echo "PASS: OIDC probe failure message present in output"
-elif echo "${OUTPUT}" | grep -q "authentication headers will not be sent"; then
-  echo "PASS: WARN message with consequence detail found"
+if echo "${OUTPUT}" | grep -qi "OIDC endpoint\|authentication headers will not be sent"; then
+  echo "FAIL: legacy auth probe message found in output: ${OUTPUT}"
+  exit 1
+elif echo "${OUTPUT}" | grep -qi "Unable to connect"; then
+  echo "PASS: unreachable host reported as a connection error"
 else
-  echo "WARN: probe failure message not found in CLI output -- may require Quarkus log configuration"
-  echo "INFO: output was: ${OUTPUT}"
+  echo "WARN: unexpected output for unreachable host: ${OUTPUT}"
 fi
 ```
 
@@ -1547,11 +1597,11 @@ fi
 | 10 | 10.1–10.4 | Credentials remove (delete secondary, primary, verify, non-existent) | Critical |
 | 11 | 11.1–11.5 | Negative tests — admin commands (wrong creds, unreachable, missing args) | High |
 | 12 | 12.1–12.8 | Auth login — direct Keycloak with --realm (login, credential persistence, auth status) | Critical |
-| 13 | 13.1–13.5 | Auth login — router OIDC proxy without --realm (login, no realm persisted, token stored) | Critical |
+| 13 | 13.1–13.5 | Token accepted by the management proxy (oauth2-proxy), admin-cli token rejected, issuer URL login | Critical |
 | 14 | 14.1–14.2 | Realm persistence — overwrite and clear lifecycle | High |
 | 15 | 15.1–15.2 | Token refresh with stored realm (forced expiry, realm preserved) | Critical |
 | 16 | 16.1–16.6 | Negative tests — auth login (invalid realm, wrong creds, unreachable, missing username, blank realm) | High |
 | 17 | 17.1–17.5 | Cleanup (admin users/clients, auth credentials, auth login test user) | Critical |
 | 18 | 18.1–18.6 | CLI --token flag verification (tools, resources, prompts, capabilities, --no-auth) | Critical |
-| 19 | 19.1 | Auth probe WARN logging on unreachable host | High |
+| 19 | 19.1 | Stored token always sent, no legacy auth probe on unreachable host | High |
 | 20 | 20.1–20.2 | Admin UI PKCE (code_challenge in redirect, no PKCE error) | Critical |

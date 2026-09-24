@@ -5,6 +5,7 @@ import java.net.URI;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ai.wanaku.core.util.StringHelper;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationGrant;
 import com.nimbusds.oauth2.sdk.GeneralException;
@@ -21,8 +22,6 @@ import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.token.AccessToken;
 import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
-
-import ai.wanaku.core.util.StringHelper;
 
 /**
  * Handles OAuth2 token refresh using stored refresh tokens.
@@ -69,9 +68,9 @@ public class TokenRefresher {
      * Refreshes an access token using a refresh token.
      *
      * @param refreshTokenValue the refresh token value
-     * @param authServerUrl the authentication server URL (e.g., http://localhost:8080)
+     * @param authServerUrl the Keycloak base URL or issuer URL (e.g., http://localhost:8543)
      * @param clientId the OAuth2 client ID
-     * @param realm the authentication realm, or null to use the router OIDC proxy
+     * @param realm the Keycloak realm, or null when the auth server URL is already the issuer URL
      * @return the refresh result containing new tokens and expiry
      * @throws TokenRefreshException if the refresh fails
      */
@@ -83,10 +82,10 @@ public class TokenRefresher {
      * Refreshes an access token using a refresh token with optional client secret.
      *
      * @param refreshTokenValue the refresh token value
-     * @param authServerUrl the authentication server URL (e.g., http://localhost:8080)
+     * @param authServerUrl the Keycloak base URL or issuer URL (e.g., http://localhost:8543)
      * @param clientId the OAuth2 client ID
      * @param clientSecret the client secret for confidential clients, or null for public clients
-     * @param realm the authentication realm, or null to use the router OIDC proxy
+     * @param realm the Keycloak realm, or null when the auth server URL is already the issuer URL
      * @return the refresh result containing new tokens and expiry
      * @throws TokenRefreshException if the refresh fails
      */
@@ -100,7 +99,11 @@ public class TokenRefresher {
 
             TokenRequest request;
             if (StringHelper.isNotEmpty(clientSecret)) {
-                request = new TokenRequest(tokenEndpoint, new ClientSecretPost(clientID, new Secret(clientSecret)), refreshTokenGrant, null);
+                request = new TokenRequest(
+                        tokenEndpoint,
+                        new ClientSecretPost(clientID, new Secret(clientSecret)),
+                        refreshTokenGrant,
+                        null);
             } else {
                 request = new TokenRequest(tokenEndpoint, clientID, refreshTokenGrant, null);
             }

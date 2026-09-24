@@ -46,18 +46,20 @@ If you installed via `get-wanaku.sh`, the CLI is placed in `$HOME/bin` which may
 ## Basic Usage
 
 ```shell
-# Authenticate with the router OIDC proxy
+# Authenticate against Keycloak (local development). Wanaku sits behind oauth2-proxy,
+# which only accepts tokens issued to the wanaku-mcp-router client, so its secret is required.
+export WANAKU_CLIENT_SECRET=<wanaku-mcp-router secret>
 wanaku auth login \
-  --auth-server http://localhost:8080 \
-  --username alice \
-  --password
-
-# Or authenticate directly against Keycloak
-wanaku auth login \
-  --auth-server http://keycloak-host \
+  --auth-server http://localhost:8543 \
   --realm wanaku \
   --username alice \
   --password
+
+# Or store a token obtained elsewhere
+wanaku auth login --api-token <token>
+
+# Commands go through the management proxy (port 4181)
+wanaku tools list --host http://localhost:4181
 
 # List available tools
 wanaku tools list

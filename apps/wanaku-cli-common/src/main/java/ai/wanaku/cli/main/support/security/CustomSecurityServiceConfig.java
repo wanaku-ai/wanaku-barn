@@ -2,7 +2,6 @@ package ai.wanaku.cli.main.support.security;
 
 public class CustomSecurityServiceConfig implements SecurityServiceConfig {
     private String clientId;
-    private String clientSecret;
     private String secret;
     private String tokenEndpoint;
     private String username;
@@ -10,14 +9,6 @@ public class CustomSecurityServiceConfig implements SecurityServiceConfig {
 
     public void setClientId(String clientId) {
         this.clientId = clientId;
-    }
-
-    public String getClientSecret() {
-        return clientSecret;
-    }
-
-    public void setClientSecret(String clientSecret) {
-        this.clientSecret = clientSecret;
     }
 
     public void setSecret(String secret) {
