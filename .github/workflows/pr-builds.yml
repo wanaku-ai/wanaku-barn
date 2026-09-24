@@ -23,7 +23,7 @@ on:
       - jbang-catalog.json
       - Makefile
       - LICENSE
-      - CLAUDE.md
+      - AGENTS.md
       - CONTRIBUTING.md
       - jreleaser.yml
       - glama.json
