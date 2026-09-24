@@ -60,6 +60,11 @@ public class AuthLogin extends BaseCommand {
             defaultValue = DEFAULT_CLIENT_ID)
     private String clientId;
 
+    @CommandLine.Option(
+            names = {"--client-secret"},
+            description = "OAuth2 client secret (required for confidential clients)")
+    private String clientSecret;
+
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {
         AuthCredentialStore credentialStore = new AuthCredentialStore();
@@ -82,6 +87,7 @@ public class AuthLogin extends BaseCommand {
             printer.printInfoMessage("Authenticating with username and password...");
             CustomSecurityServiceConfig config = new CustomSecurityServiceConfig();
             config.setClientId(clientId);
+            config.setSecret(clientSecret);
             config.setUsername(authMode.credentials.username);
             config.setPassword(authMode.credentials.password);
             config.setTokenEndpoint(TokenEndpoint.forDiscovery(serverUrl, realm));
@@ -91,6 +97,7 @@ public class AuthLogin extends BaseCommand {
             credentialStore.storeRefreshToken(serviceAuthenticator.currentValidRefreshToken());
             credentialStore.storeTokenExpiry(serviceAuthenticator.getTokenExpiryEpochSeconds());
             credentialStore.storeClientId(clientId);
+            credentialStore.storeClientSecret(clientSecret);
             credentialStore.storeRealm(realm != null && realm.isBlank() ? null : realm);
 
             credentialStore.storeAuthMode("token");

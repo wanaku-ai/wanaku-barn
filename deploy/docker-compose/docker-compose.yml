@@ -1,11 +1,18 @@
 # =============================================================================
 # WARNING: development / evaluation use only — DO NOT use this file in production.
 # It ships well-known, insecure default credentials:
-#   - Keycloak admin:    admin / admin
-#   - OIDC client secret for "wanaku-service": defaults to "mypasswd" (override WANAKU_SERVICE_SECRET)
-# Before any non-local deployment you MUST rotate the Keycloak admin password and set a strong
-# WANAKU_SERVICE_SECRET environment variable. When set, it is applied to both the Keycloak realm
-# import and the capability services below; it defaults to "mypasswd" for local development only.
+#   - Keycloak admin:             admin / admin
+#   - OIDC client secret for "wanaku-service":    defaults to "mypasswd"    (override WANAKU_SERVICE_SECRET)
+#   - OIDC client secret for "wanaku-mcp-router": defaults to "wanaku-router-secret" (override WANAKU_MCP_ROUTER_SECRET)
+# Before any non-local deployment you MUST rotate the Keycloak admin password and set strong
+# WANAKU_SERVICE_SECRET and WANAKU_MCP_ROUTER_SECRET environment variables. When set, they are
+# applied to the Keycloak realm import; both default to simple values for local development only.
+#
+# To log in with the CLI against the wanaku-mcp-router client:
+#   wanaku auth login --auth-server=http://localhost:8543 --realm=wanaku \
+#     --client-id=wanaku-mcp-router \
+#     --client-secret=${WANAKU_MCP_ROUTER_SECRET:-wanaku-router-secret} \
+#     --username=<user> --password=<password>
 # =============================================================================
 services:
   otel-collector:
@@ -32,8 +39,9 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_HTTP_PORT: 8080
       KC_HEALTH_ENABLED: "true"
-      # Substituted into the wanaku-service client secret during realm import.
+      # Substituted into client secrets during realm import.
       WANAKU_SERVICE_SECRET: ${WANAKU_SERVICE_SECRET:-mypasswd}
+      WANAKU_MCP_ROUTER_SECRET: ${WANAKU_MCP_ROUTER_SECRET:-wanaku-router-secret}
     ports:
       - "8543:8080"
     volumes:

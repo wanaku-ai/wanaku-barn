@@ -58,8 +58,10 @@ Note: If omitted, all tools are listed. Label matching is case-sensitive.
         try {
             WanakuResponse<List<ToolReference>> response = toolsService.list(labelExpression);
             List<ToolReference> list = response.data();
-            list.stream().filter(t -> t.getNamespace() == null).forEach(t -> t.setNamespace("default"));
-            printer.printTable(list, "name", "namespace", "type", "uri", "labels");
+            if (list != null) {
+                list.stream().filter(t -> t.getNamespace() == null).forEach(t -> t.setNamespace("default"));
+                printer.printTable(list, "name", "namespace", "type", "uri", "labels");
+            }
         } catch (WebApplicationException ex) {
             Response response = ex.getResponse();
             commonResponseErrorHandler(response);

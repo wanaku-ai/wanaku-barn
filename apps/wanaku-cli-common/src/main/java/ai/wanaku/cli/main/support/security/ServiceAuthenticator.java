@@ -15,6 +15,8 @@ import com.nimbusds.oauth2.sdk.ResourceOwnerPasswordCredentialsGrant;
 import com.nimbusds.oauth2.sdk.TokenErrorResponse;
 import com.nimbusds.oauth2.sdk.TokenRequest;
 import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
+import com.nimbusds.oauth2.sdk.auth.ClientSecretPost;
 import com.nimbusds.oauth2.sdk.auth.Secret;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.id.ClientID;
@@ -79,16 +81,32 @@ public class ServiceAuthenticator {
         final URI tokenEndpoint = resolveTokenEndpointUri(config);
         ClientID clientID = new ClientID(config.getClientId());
 
+        // Use client secret authentication when a secret is configured (confidential client).
+        // Pass null for public clients so only client_id is sent.
+        ClientAuthentication clientAuth = null;
+        String secret = config.getSecret();
+        if (secret != null && !secret.isBlank()) {
+            clientAuth = new ClientSecretPost(clientID, new Secret(secret));
+        }
+
         TokenRequest request;
         if (refreshToken == null) {
             // Construct the password grant from the username and password
             AuthorizationGrant passwordGrant =
                     new ResourceOwnerPasswordCredentialsGrant(config.getUsername(), new Secret(config.getPassword()));
 
-            request = new TokenRequest(tokenEndpoint, clientID, passwordGrant, null);
+            if (clientAuth != null) {
+                request = new TokenRequest(tokenEndpoint, clientAuth, passwordGrant, null);
+            } else {
+                request = new TokenRequest(tokenEndpoint, clientID, passwordGrant, null);
+            }
         } else {
             AuthorizationGrant refreshTokenGrant = new RefreshTokenGrant(refreshToken);
-            request = new TokenRequest(tokenEndpoint, clientID, refreshTokenGrant, null);
+            if (clientAuth != null) {
+                request = new TokenRequest(tokenEndpoint, clientAuth, refreshTokenGrant, null);
+            } else {
+                request = new TokenRequest(tokenEndpoint, clientID, refreshTokenGrant, null);
+            }
         }
 
         return request;

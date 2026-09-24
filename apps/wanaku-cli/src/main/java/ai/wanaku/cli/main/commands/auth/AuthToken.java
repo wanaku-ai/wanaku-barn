@@ -171,10 +171,11 @@ public class AuthToken extends BaseCommand {
         }
 
         String realm = credentialStore.getRealm();
+        String clientSecret = credentialStore.getClientSecret();
 
         try {
             TokenRefresher refresher = tokenRefresher != null ? tokenRefresher : new TokenRefresher(insecure);
-            RefreshResult result = refresher.refresh(refreshToken, authServerUrl, clientId, realm);
+            RefreshResult result = refresher.refresh(refreshToken, authServerUrl, clientId, clientSecret, realm);
 
             credentialStore.storeApiToken(result.getAccessToken());
             credentialStore.storeRefreshToken(result.getRefreshToken());

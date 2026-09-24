@@ -879,6 +879,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
+      "secret": "${WANAKU_MCP_ROUTER_SECRET:wanaku-router-secret}",
       "redirectUris": [
         "http://localhost:8080/*",
         "*"
