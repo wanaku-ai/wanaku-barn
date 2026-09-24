@@ -254,8 +254,7 @@ class AuthTokenTest {
             WanakuPrinter.setPlainMode(false);
         }
 
-        String output = captured.toString().trim();
-        assertTrue(output.contains(token), "Plain-mode output must contain the full token value, got: " + output);
+        assertEquals(token, captured.toString(), "Plain-mode output must be exactly the token, without line breaks");
     }
 
     @Test
@@ -330,7 +329,6 @@ class AuthTokenTest {
             WanakuPrinter.setPlainMode(false);
         }
 
-        String output = captured.toString().trim();
-        assertTrue(output.contains(token), "Expected full unmasked token in plain-mode output, got: " + output);
+        assertEquals(token, captured.toString(), "Expected exactly the unmasked token in plain-mode output");
     }
 }

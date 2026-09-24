@@ -884,6 +884,8 @@ To extract the token programmatically (for example, in a script or test helper),
 TOKEN=$(wanaku auth token --get --unmask --plain)
 ```
 
+In plain mode the output contains only the token value, with no trailing line break.
+
 You can also set or clear the stored token directly:
 
 ```shell

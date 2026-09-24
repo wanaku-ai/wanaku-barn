@@ -108,7 +108,7 @@ class AuthCommandsTest {
         int result = authToken.doCall(terminal, printer);
 
         assertEquals(EXIT_OK, result);
-        verify(printer).printInfoMessage("test-token-123456789");
+        verify(printer).printValue("test-token-123456789");
     }
 
     @Test

@@ -80,7 +80,7 @@ public class AuthToken extends BaseCommand {
             String apiToken = getValidAccessToken(printer);
             if (StringHelper.isNotEmpty(apiToken)) {
                 if (operation.getOptions.unmask) {
-                    printer.printInfoMessage(apiToken.trim());
+                    printer.printValue(apiToken.trim());
                 } else {
                     String maskedToken = maskToken(apiToken);
                     printer.printInfoMessage("Current API token: " + maskedToken);
