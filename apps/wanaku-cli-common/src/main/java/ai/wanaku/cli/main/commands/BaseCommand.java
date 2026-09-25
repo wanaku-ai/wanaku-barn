@@ -61,7 +61,7 @@ public abstract class BaseCommand implements Callable<Integer> {
     @CommandLine.Option(
             names = {"--plain"},
             description = "Route output through stdout so it can be captured by a parent process")
-    boolean plain = false;
+    protected boolean plain = false;
 
     /**
      * Creates an HttpClient instance, optionally configured for insecure SSL.
@@ -91,7 +91,9 @@ public abstract class BaseCommand implements Callable<Integer> {
     }
 
     protected String getAuthTokenOverride() {
-        return authOptions != null ? authOptions.authTokenOverride.trim() : null;
+        return authOptions != null && authOptions.authTokenOverride != null
+                ? authOptions.authTokenOverride.trim()
+                : null;
     }
 
     protected boolean isNoAuth() {
@@ -175,7 +177,7 @@ public abstract class BaseCommand implements Callable<Integer> {
         try (Terminal terminal = WanakuPrinter.terminalInstance()) {
             WanakuPrinter printer = new WanakuPrinter(null, terminal);
             if (insecure) {
-                printer.printWarningMessage(
+                System.err.println(
                         "WARNING: TLS certificate verification is disabled. This is insecure and should only be used for development.");
             }
             return doCall(terminal, printer);

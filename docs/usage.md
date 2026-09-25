@@ -884,6 +884,8 @@ To extract the token programmatically (for example, in a script or test helper),
 TOKEN=$(wanaku auth token --get --unmask --plain)
 ```
 
+On success, stdout contains only the token and a final newline. If no valid token is available, the command returns exit code 1 and leaves stdout empty. Error messages and application logs go to stderr. Check the exit code before you use the token.
+
 You can also set or clear the stored token directly:
 
 ```shell
@@ -1106,6 +1108,13 @@ wanaku-keycloak-admin credentials remove --admin-username admin --admin-password
 
 > **Note:** The `--show-secret` flag is required to display client secrets. Without it, `credentials show` will print a warning instead. Use with caution as secrets may leak into logs or shell history.
 
+To capture only the secret in a script, add `--plain` with `--show-secret`. This writes the secret alone to standard output. Errors use standard error, and the command returns a non-zero status if it cannot return a secret:
+
+```shell
+CLIENT_SECRET=$(wanaku-keycloak-admin credentials show --admin-username admin --admin-password admin \
+  --client-id my-service --show-secret --plain)
+```
+
 ### Realm Management
 
 ```shell
@@ -1157,6 +1166,10 @@ Wanaku classifies downstream MCP servers into the following types:
 - `multi-capability`: these MCP servers provide both MCP tools and MCP resources.
 
 ## Managing MCP Tools
+
+For `wanaku mcp` commands, pass the complete MCP endpoint with `--uri`. The CLI sends this URI to the MCP server without adding or changing a path. For example, use `--uri http://localhost:4180/team/mcp` for the `team` namespace. A bare server origin, such as `--uri http://localhost:4180`, is not expanded to a namespace endpoint; use it only when the server accepts MCP requests at its root.
+
+These commands use MCP protocol version `2025-11-25`. They start with the `initialize` request and skip protocol discovery.
 
 An MCP (Model Context Protocol) tool enables Large Language Models (LLMs) to execute tasks beyond their inherent capabilities by
 using external functions.

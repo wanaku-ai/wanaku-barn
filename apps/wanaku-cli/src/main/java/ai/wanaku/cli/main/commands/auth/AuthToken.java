@@ -77,16 +77,17 @@ public class AuthToken extends BaseCommand {
         }
 
         if (operation.getOptions != null) {
-            String apiToken = getValidAccessToken(printer);
+            String apiToken = getValidAccessToken();
             if (StringHelper.isNotEmpty(apiToken)) {
                 if (operation.getOptions.unmask) {
-                    printer.printInfoMessage(apiToken.trim());
+                    System.out.println(apiToken.trim());
                 } else {
                     String maskedToken = maskToken(apiToken);
                     printer.printInfoMessage("Current API token: " + maskedToken);
                 }
             } else {
-                printer.printInfoMessage("No API token is currently set");
+                System.err.println("No valid API token is available. Run 'wanaku auth login' to log in.");
+                return EXIT_ERROR;
             }
             return EXIT_OK;
         }
@@ -109,17 +110,16 @@ public class AuthToken extends BaseCommand {
      * (such as the test plan's {@code ensure_valid_token} helper) can detect the failure
      * and perform a full re-login instead of sending an expired token.
      *
-     * @param printer the printer for warning messages
      * @return a valid access token, or null if unavailable or expired beyond recovery
      */
-    private String getValidAccessToken(WanakuPrinter printer) {
+    private String getValidAccessToken() {
         String apiToken = credentialStore.getApiToken();
         if (StringHelper.isEmpty(apiToken)) {
             return null;
         }
 
         if (isTokenExpiredOrExpiring()) {
-            if (tryRefreshToken(printer)) {
+            if (tryRefreshToken()) {
                 apiToken = credentialStore.getApiToken();
             } else {
                 return null;
@@ -150,10 +150,9 @@ public class AuthToken extends BaseCommand {
     /**
      * Attempts to refresh the access token using the stored refresh token.
      *
-     * @param printer the printer for warning messages
      * @return true if refresh was successful, false otherwise
      */
-    private boolean tryRefreshToken(WanakuPrinter printer) {
+    private boolean tryRefreshToken() {
         String refreshToken = credentialStore.getRefreshToken();
         String authServerUrl = credentialStore.getAuthServerUrl();
         String clientId = credentialStore.getClientId();
@@ -183,7 +182,7 @@ public class AuthToken extends BaseCommand {
 
             return true;
         } catch (TokenRefresher.TokenRefreshException e) {
-            printer.printWarningMessage("Token refresh failed, returning existing token: " + e.getMessage());
+            System.err.println("Token refresh failed: " + e.getMessage());
             return false;
         }
     }

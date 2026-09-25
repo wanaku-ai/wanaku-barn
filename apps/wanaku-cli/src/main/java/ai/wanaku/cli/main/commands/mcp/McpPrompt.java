@@ -80,6 +80,6 @@ public class McpPrompt extends BaseCommand {
         if (mcpClient != null) {
             return mcpClient;
         }
-        return ClientUtil.createClient(uri, getAuthTokenOverride());
+        return ClientUtil.createClient(uri, getAuthTokenOverride(), Mcp.PROTOCOL_VERSION);
     }
 }

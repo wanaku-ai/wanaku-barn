@@ -11,6 +11,8 @@ import picocli.CommandLine;
         subcommands = {McpTool.class, McpResource.class, McpPrompt.class})
 public class Mcp extends BaseCommand {
 
+    static final String PROTOCOL_VERSION = "2025-11-25";
+
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {
         CommandLine.usage(this, System.out);

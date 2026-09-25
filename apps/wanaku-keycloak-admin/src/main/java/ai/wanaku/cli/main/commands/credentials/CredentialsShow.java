@@ -9,7 +9,10 @@ import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.cli.main.support.keycloak.KeycloakAdminClient;
 import picocli.CommandLine;
 
-@CommandLine.Command(name = "show", description = "Show current secret for a service client")
+@CommandLine.Command(
+        name = "show",
+        description =
+                "Show current secret for a service client; use --plain with --show-secret to capture only the secret")
 public class CredentialsShow extends BaseAdminCommand {
 
     @RegisterForReflection
@@ -36,6 +39,7 @@ public class CredentialsShow extends BaseAdminCommand {
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {
+        boolean secretOutput = plain && showSecret;
         try {
             KeycloakAdminClient client = createAdminClient();
             List<Map<String, Object>> clients = client.listClients(realm);
@@ -46,8 +50,23 @@ public class CredentialsShow extends BaseAdminCommand {
                     .orElse(null);
 
             if (matched == null) {
-                printer.printErrorMessage("Client '" + clientId + "' not found");
+                String message = "Client '" + clientId + "' not found";
+                if (secretOutput) {
+                    System.err.println(message);
+                } else {
+                    printer.printErrorMessage(message);
+                }
                 return EXIT_ERROR;
+            }
+
+            if (secretOutput) {
+                String secret = client.getClientSecret(realm, clientId);
+                if (secret == null || secret.isBlank()) {
+                    System.err.println("No secret found for client '" + clientId + "'");
+                    return EXIT_ERROR;
+                }
+                System.out.println(secret);
+                return EXIT_OK;
             }
 
             ClientDetail detail = new ClientDetail(
@@ -69,7 +88,11 @@ public class CredentialsShow extends BaseAdminCommand {
             }
             return EXIT_OK;
         } catch (KeycloakAdminClient.KeycloakAdminException e) {
-            printer.printErrorMessage(e.getMessage());
+            if (secretOutput) {
+                System.err.println(e.getMessage());
+            } else {
+                printer.printErrorMessage(e.getMessage());
+            }
             return EXIT_ERROR;
         }
     }

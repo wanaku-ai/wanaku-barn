@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -112,24 +114,32 @@ class McpToolListTest {
         assertTrue(message.contains("MCP server is not running"));
     }
 
-    @Test
-    @DisplayName("Should forward auth token to MCP client")
-    void shouldForwardAuthToken() throws Exception {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "http://localhost:9999/mcp",
+                "http://localhost:4180",
+                "http://localhost:4180/team/mcp",
+                "http://localhost:4180/team/mcp?x=a%2Fb",
+                "http://localhost:4180/"
+            })
+    @DisplayName("Should forward auth token and endpoint unchanged to MCP client")
+    void shouldForwardAuthTokenAndEndpointUnchanged(String address) throws Exception {
         McpClient tokenClient = mock(McpClient.class);
         when(tokenClient.listTools()).thenReturn(Collections.emptyList());
 
         McpToolList cmd = new McpToolList();
-        new CommandLine(cmd).parseArgs("--uri", "http://localhost:9999/mcp/sse", "--token", "my-secret-token");
+        new CommandLine(cmd).parseArgs("--uri", address, "--token", "my-secret-token");
 
         try (MockedStatic<ClientUtil> clientUtil = mockStatic(ClientUtil.class)) {
             clientUtil
-                    .when(() -> ClientUtil.createClient("http://localhost:9999/mcp/sse", "my-secret-token"))
+                    .when(() -> ClientUtil.createClient(address, "my-secret-token", "2025-11-25"))
                     .thenReturn(tokenClient);
 
             Integer result = cmd.doCall(null, mock(WanakuPrinter.class));
             assertEquals(BaseCommand.EXIT_OK, result);
 
-            clientUtil.verify(() -> ClientUtil.createClient("http://localhost:9999/mcp/sse", "my-secret-token"));
+            clientUtil.verify(() -> ClientUtil.createClient(address, "my-secret-token", "2025-11-25"));
         }
     }
 }

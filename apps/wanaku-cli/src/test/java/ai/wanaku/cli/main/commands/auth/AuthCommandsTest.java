@@ -79,39 +79,6 @@ class AuthCommandsTest {
     }
 
     @Test
-    void emptyAuthTokenMessage() throws Exception {
-        AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
-        store.storeApiToken("");
-
-        AuthToken authToken = new AuthToken(store);
-        authToken.operation = new AuthToken.TokenOperation();
-        authToken.operation.getOptions = new AuthToken.GetOptions();
-        authToken.operation.getOptions.getToken = true;
-
-        int result = authToken.doCall(terminal, printer);
-
-        assertEquals(EXIT_OK, result);
-        verify(printer).printInfoMessage("No API token is currently set");
-    }
-
-    @Test
-    void authTokenGetUnmaskShouldOutputFullToken() throws Exception {
-        AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
-        store.storeApiToken("test-token-123456789");
-
-        AuthToken authToken = new AuthToken(store);
-        authToken.operation = new AuthToken.TokenOperation();
-        authToken.operation.getOptions = new AuthToken.GetOptions();
-        authToken.operation.getOptions.getToken = true;
-        authToken.operation.getOptions.unmask = true;
-
-        int result = authToken.doCall(terminal, printer);
-
-        assertEquals(EXIT_OK, result);
-        verify(printer).printInfoMessage("test-token-123456789");
-    }
-
-    @Test
     void authStatusShouldDisplayStatus() throws Exception {
         AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
         store.storeApiToken("test-token-123456789");

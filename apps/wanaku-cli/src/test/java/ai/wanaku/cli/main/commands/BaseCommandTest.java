@@ -5,13 +5,26 @@ import javax.net.ssl.SSLContext;
 import java.net.http.HttpClient;
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.support.WanakuPrinter;
+import picocli.CommandLine;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class BaseCommandTest {
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void authenticationOptionsPreserveTokenOverride(boolean noAuth) {
+        TestCommand command = new TestCommand();
+        new CommandLine(command).parseArgs(noAuth ? new String[] {"--no-auth"} : new String[] {"--token", " token\n"});
+        assertEquals(noAuth, command.isNoAuth());
+        assertEquals(noAuth ? null : "token", command.getAuthTokenOverride());
+    }
 
     /** Minimal concrete subclass used to exercise {@link BaseCommand} behaviour. */
     private static class TestCommand extends BaseCommand {

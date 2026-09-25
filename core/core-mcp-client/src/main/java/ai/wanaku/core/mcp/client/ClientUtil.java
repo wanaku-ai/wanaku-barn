@@ -26,14 +26,30 @@ public class ClientUtil {
     }
 
     public static McpClient createClient(String address, String token) {
+        return createClient(address, token, null);
+    }
+
+    /**
+     * Creates a client with an optional protocol version to skip protocol discovery.
+     *
+     * @param address the Streamable HTTP endpoint
+     * @param token the bearer token, or null for unauthenticated calls
+     * @param protocolVersion the MCP version, or null for automatic detection
+     * @return the initialized MCP client
+     */
+    public static McpClient createClient(String address, String token, String protocolVersion) {
         String normalizedToken = token != null ? token.trim() : null;
         McpHeadersSupplier tokenHeaders = (normalizedToken != null && !normalizedToken.isEmpty())
                 ? callContext -> Map.of("Authorization", "Bearer " + normalizedToken)
                 : null;
-        return createClient(address, tokenHeaders);
+        return createClient(address, tokenHeaders, protocolVersion);
     }
 
     public static McpClient createClient(String address, McpHeadersSupplier headersSupplier) {
+        return createClient(address, headersSupplier, null);
+    }
+
+    private static McpClient createClient(String address, McpHeadersSupplier headersSupplier, String protocolVersion) {
         if (isLegacySseAddress(address)) {
             throw new IllegalArgumentException("Legacy SSE MCP endpoints are no longer supported: " + address
                     + ". Use the Streamable HTTP endpoint instead (for example, replace '/mcp/sse' with '/mcp/').");
@@ -46,7 +62,10 @@ public class ClientUtil {
                 .customHeaders(combineHeaders(headersSupplier))
                 .build();
 
-        return new DefaultMcpClient.Builder().transport(transport).build();
+        return new DefaultMcpClient.Builder()
+                .transport(transport)
+                .protocolVersion(protocolVersion)
+                .build();
     }
 
     /**
