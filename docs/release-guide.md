@@ -58,6 +58,11 @@ To release early builds, run:
 gh workflow run early-access -f currentDevelopmentVersion=$(cat core/core-util/target/classes/version.txt)
 ```
 
+Early builds only produce the Linux x86_64 native executables. The `early-access` workflow sets the
+`WANAKU_EARLY_ACCESS` environment variable when running JReleaser, and the release page template
+(`src/jreleaser/changelog.tpl`) uses it to omit the macOS (aarch64) CLI download link, which is only
+published by the `release-artifacts` workflow.
+
 ## Manual Release Process
 
 ### Prepare the environment

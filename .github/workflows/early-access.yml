@@ -69,7 +69,8 @@ jobs:
 
       - name: Run JReleaser (Linux)
         uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5 # v2.5.0
-        env:
+        env:          
+          WANAKU_EARLY_ACCESS: 'true'
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JRELEASER_PROJECT_VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
           JRELEASER_PROJECT_SNAPSHOT_LABEL: early-access
