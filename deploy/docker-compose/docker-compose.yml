@@ -74,13 +74,8 @@ services:
     image: quay.io/wanaku/wanaku-barn-backend:latest
     environment:
       QUARKUS_HTTP_HOST: 0.0.0.0
-      AUTH_SERVER: http://localhost:8543
-      AUTH_PROXY: http://localhost:8080
       QUARKUS_OTEL_SDK_DISABLED: "false"
       QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317
-    depends_on:
-      keycloak:
-        condition: service_healthy
     network_mode: host
     volumes:
       - wanaku-router:/home/jboss/.wanaku/router

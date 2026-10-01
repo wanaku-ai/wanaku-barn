@@ -12,11 +12,13 @@ The backend is responsible for:
 
 - Managing tool and resource registrations (persistence)
 - Providing HTTP management API for configuration
-- Handling authentication and authorization
 - Managing multiple MCP namespaces
 - Serving service catalogs and data stores
 - Routes tool invocations to appropriate tool services via MCP
 - Routes resource read requests to appropriate providers via MCP
+
+Authentication and authorization are not handled by the backend: they are delegated to the Wanaku Governed
+Execution Proxy (GEP) and its oauth2 proxy.
 
 ## Key Features
 
@@ -25,7 +27,6 @@ The backend is responsible for:
 - **MCP Communication**: Communication with downstream MCP servers via MCP protocol
 - **Management API**: REST API for configuration
 - **Web UI**: React-based administration interface (Praxis plugin)
-- **Authentication**: OIDC integration via Keycloak
 - **Service Discovery**: Automatic registration and health monitoring of downstream MCP servers
 - **Data Persistence**: Infinispan-based storage for router state
 
@@ -65,10 +66,6 @@ Key configuration properties (see [Configuration Guide](../../docs/configuration
 ```properties
 # HTTP
 quarkus.http.port=8080
-
-# Authentication
-auth.server=http://localhost:8543
-quarkus.oidc.client-id=wanaku-mcp-router
 
 # Persistence
 wanaku.persistence.infinispan.base-folder=${wanaku.home}/router/

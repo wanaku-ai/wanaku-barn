@@ -6,9 +6,6 @@ import io.smallrye.config.WithDefault;
 @ConfigMapping(prefix = "wanaku.router")
 public interface WanakuRouterConfig {
 
-    @WithDefault("keycloak")
-    String httpAuth();
-
     HealthCheckConfig healthCheck();
 
     interface HealthCheckConfig {

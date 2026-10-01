@@ -4,9 +4,7 @@ import jakarta.inject.Inject;
 
 import java.util.List;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
 import ai.wanaku.backend.core.persistence.api.ServiceRegistry;
-import ai.wanaku.backend.support.NoOidcTestProfile;
 import ai.wanaku.capabilities.sdk.api.types.discovery.ActivityRecord;
 import ai.wanaku.capabilities.sdk.api.types.discovery.ServiceState;
 import ai.wanaku.capabilities.sdk.api.types.discovery.StandardMessages;
@@ -25,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @QuarkusTest
-@TestProfile(NoOidcTestProfile.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class ServiceRegistryTest {

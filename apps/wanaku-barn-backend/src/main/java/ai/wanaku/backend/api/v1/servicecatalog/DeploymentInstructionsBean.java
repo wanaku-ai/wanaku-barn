@@ -8,11 +8,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -28,8 +27,6 @@ public class DeploymentInstructionsBean {
     private static final String TYPE_CIC = "camel-integration-capability";
     private static final String TYPE_NATIVE = "native";
     private static final String TEMPLATES_PATH = "templates/deployment/";
-
-    private static final String AUTH_NONE = "none";
 
     static final String TEMPLATE_LOCAL_CIC = "local-cic";
     static final String TEMPLATE_LOCAL_NATIVE = "local-native";
@@ -50,9 +47,6 @@ public class DeploymentInstructionsBean {
 
     @Inject
     ServiceCatalogBean serviceCatalogBean;
-
-    @ConfigProperty(name = "wanaku.http.auth", defaultValue = "keycloak")
-    String httpAuth;
 
     private final Map<String, String> templates = new HashMap<>();
 
@@ -79,18 +73,8 @@ public class DeploymentInstructionsBean {
         }
     }
 
-    private boolean isNoAuth() {
-        return AUTH_NONE.equalsIgnoreCase(httpAuth);
-    }
-
-    private void addIfAuthEnabled(List<PlaceholderDefinition> placeholders, PlaceholderDefinition... defs) {
-        if (!isNoAuth()) {
-            placeholders.addAll(Arrays.asList(defs));
-        }
-    }
-
     private String renderTemplate(String templateKey, String catalogName, String systemName) {
-        String authOptions = isNoAuth() ? "" : AUTH_OPTIONS.getOrDefault(templateKey, "");
+        String authOptions = AUTH_OPTIONS.getOrDefault(templateKey, "");
         return templates
                 .get(templateKey)
                 .replace("{{catalogName}}", catalogName)
@@ -199,7 +183,7 @@ public class DeploymentInstructionsBean {
                     "URL of the Wanaku router (use host.docker.internal for local router)",
                     "http://host.docker.internal:8080",
                     "url"));
-            addIfAuthEnabled(
+            Collections.addAll(
                     placeholders,
                     new PlaceholderDefinition(
                             "token-endpoint",
@@ -210,7 +194,7 @@ public class DeploymentInstructionsBean {
                     new PlaceholderDefinition(
                             "client-secret", "Client Secret", "OIDC client secret for service authentication", ""));
         } else {
-            addIfAuthEnabled(
+            Collections.addAll(
                     placeholders,
                     new PlaceholderDefinition(
                             "auth-server", "Auth Server", "Address of the authentication server", "http://", "url"),
@@ -227,7 +211,7 @@ public class DeploymentInstructionsBean {
 
     private List<PlaceholderDefinition> getKubernetesPlaceholders() {
         List<PlaceholderDefinition> placeholders = new ArrayList<>();
-        addIfAuthEnabled(
+        Collections.addAll(
                 placeholders,
                 new PlaceholderDefinition(
                         "auth-server-address",

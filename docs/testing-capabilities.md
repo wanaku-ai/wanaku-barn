@@ -28,7 +28,7 @@ Before deploying an MCP server to the Wanaku router, you can test it locally usi
 docker compose -f deploy/docker-compose/docker-compose-noauth.yml up
 ```
 
-This starts the router with authentication disabled. The router is available at `http://localhost:8080`.
+This starts the router without Keycloak. The router is available at `http://localhost:8080`.
 See [Running Without Authentication](usage.md#running-without-authentication) for other ways to start the router
 without Keycloak.
 

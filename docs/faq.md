@@ -50,12 +50,12 @@ Keycloak provides authentication and authorization for:
 
 - Java 21 or later
 - Maven 3.x
-- Keycloak instance (optional — can run via Podman/Docker, or set `wanaku.http.auth=none`)
+- Keycloak instance (optional — only needed by the Governed Execution Proxy; the Barn backend runs without it)
 
 **For production deployment:**
 
 - OpenShift or Kubernetes cluster (optional but recommended)
-- Keycloak instance (recommended for production; optional with `wanaku.http.auth=none`)
+- Keycloak instance (recommended for production, used by the Governed Execution Proxy)
 - Container runtime (Podman/Docker)
 
 ### Do I need to install Keycloak separately?
@@ -66,8 +66,8 @@ Keycloak is required only if you want to run Wanaku with authentication enabled.
 - Deploy Keycloak to OpenShift/Kubernetes (for production)
 - Use an existing Keycloak instance
 
-If you don't need authentication (e.g., for local development or testing), you can set `wanaku.http.auth=none`
-and skip the Keycloak setup entirely. See [Running Without Authentication](usage.md#running-without-authentication).
+The Barn backend itself does not require Keycloak: authentication is handled by the Governed Execution Proxy (GEP),
+so you can skip the Keycloak setup for local development or testing. See [Running Without Authentication](usage.md#running-without-authentication).
 
 ### Can I run Wanaku without Kubernetes?
 
@@ -156,7 +156,7 @@ Currently, all authenticated users have admin access to tools and resources. Fin
 
 ### Can I disable authentication for development?
 
-While not recommended for production, you can set `wanaku.http.auth=none` to disable authentication for development and testing.
+The Barn backend has no authentication of its own, so no flag is needed. Authentication is enforced by the Governed Execution Proxy (GEP); for development you can run the backend without it.
 
 ### How to skip certificate validation for development purposes
 

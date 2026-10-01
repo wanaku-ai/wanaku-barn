@@ -28,11 +28,7 @@ export default defineConfig({
 
   ...(isLocalhost ? {
     webServer: {
-      command: [
-        `java -Dquarkus.launch.rebuild=true -Dquarkus.oidc.enabled=false -Dquarkus.oidc-proxy.enabled=false -jar ${routerJar}`,
-        '&&',
-        `WANAKU_HTTP_AUTH=none java -jar ${routerJar}`,
-      ].join(' '),
+      command: `java -jar ${routerJar}`,
       url: `${routerUrl}/q/health/ready`,
       reuseExistingServer: true,
       timeout: 120_000,

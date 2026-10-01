@@ -69,9 +69,8 @@ Wanaku with authentication enabled. This section covers the basics of getting Ke
 production purposes.
 
 > [!NOTE]
-> Wanaku can also run **without authentication** by setting `wanaku.http.auth=none`. This is useful for local development,
-> testing, or air-gapped environments where an identity provider is not available. See
-> [Running Without Authentication](#running-without-authentication) for details.
+> The Barn backend itself does not enforce authentication: access control is delegated to the Wanaku Governed Execution
+> Proxy (GEP) and its oauth2 proxy. See [Running Without Authentication](#running-without-authentication) for details.
 
 ## Keycloak Setup for Wanaku
 
@@ -187,45 +186,25 @@ Finally, for security, you must regenerate the client secret for the `wanaku-ser
 
 ## Running Without Authentication
 
-Wanaku can run without authentication by setting `wanaku.http.auth=none` (or `WANAKU_HTTP_AUTH=none` via
-environment variable). This disables OIDC and permits access to all API endpoints, the admin UI, and MCP namespaces
-without requiring a Bearer token or a Keycloak instance.
-
-This is useful for:
-
-- **Local development and testing** — no need to set up Keycloak
-- **Air-gapped environments** — where an external identity provider is not available
-- **Quick prototyping** — get started with Wanaku immediately
-
-### Disabling Authentication
-
-**Using an environment variable:**
+The Barn backend does not perform authentication or authorization. It runs without Keycloak and without any
+auth-related flag (the former `wanaku.http.auth` / `WANAKU_HTTP_AUTH` setting has been removed). Authentication and
+authorization are handled by the Wanaku Governed Execution Proxy (GEP), which fronts the backend using the oauth2 proxy.
 
 ```shell
-export WANAKU_HTTP_AUTH=none
 java -jar quarkus-run.jar
 ```
 
-**Using a system property:**
-
-```shell
-java -Dwanaku.http.auth=none -jar quarkus-run.jar
-```
-
-**Using Docker Compose:**
-
-A dedicated compose file is provided at `deploy/docker-compose/docker-compose-noauth.yml` that runs the router
-without Keycloak:
+A compose file without Keycloak is provided at `deploy/docker-compose/docker-compose-noauth.yml`:
 
 ```shell
 docker compose -f deploy/docker-compose/docker-compose-noauth.yml up
 ```
 
-If you extend that compose file with downstream MCP servers, set `WANAKU_HTTP_AUTH=none` on those services as well.
+If you extend that compose file with downstream MCP servers, set `WANAKU_HTTP_AUTH=none` on those services.
 
 > [!WARNING]
-> Running without authentication disables all access control. Do not use it in production environments where
-> access control is required.
+> The backend exposes its APIs and admin UI without access control. Do not expose it directly in production; place it
+> behind the GEP.
 
 # Installing Wanaku
 
@@ -372,7 +351,7 @@ It automates the creation and configuration of all necessary resources, making i
 
 - Kubernetes 1.27+ or OpenShift 4.12+
 - `kubectl` or `oc` CLI, `helm` 3.x
-- Keycloak instance (see [Keycloak Setup](#keycloak-setup-for-wanaku)) or plan to use `wanaku.http.auth=none` for development
+- Keycloak instance (see [Keycloak Setup](#keycloak-setup-for-wanaku)) for the Governed Execution Proxy (optional for development)
 - Wanaku container image (optional)
 
 **Build the container image:**
@@ -655,30 +634,8 @@ The configuration varies depending on the component's role in the system.
 
 ### Wanaku Router Backend Security Configurations
 
-The backend service handles API operations and requires [OIDC configuration](https://quarkus.io/guides/security-oidc-configuration-properties-reference)
-with service credentials.
-Some of the configurations you may need to change are:
-
-```properties
-# Address of the Keycloak authentication server - adjust to your Keycloak instance
-auth.server=http://localhost:8543
-# Address used by the OIDC proxy -
-auth.proxy=http://localhost:${quarkus.http.port}
-
-# Client identifier configured in Keycloak for the backend service
-quarkus.oidc.client-id=wanaku-mcp-router
-
-# Avoid forcing HTTPS
-quarkus.oidc.resource-metadata.force-https-scheme=false
-```
-
-#### References
-
-As a reference for understanding what is going on under the hood, the following guides may be helpful:
-
-- [Secure MPC OIDC Proxy](https://quarkus.io/blog/secure-mcp-oidc-proxy/)
-- [Secure MCP Server OAuth 2](https://quarkus.io/blog/secure-mcp-server-oauth2/)
-- [Secure MCP SSE Server](https://quarkus.io/blog/secure-mcp-sse-server/)
+The Barn backend has no security configuration of its own. Authentication and authorization are enforced by the
+Wanaku Governed Execution Proxy (GEP) through the oauth2 proxy, so the backend must not be exposed directly.
 
 ### Downstream MCP Server Security Configurations
 

@@ -8,9 +8,7 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
 import io.restassured.response.Response;
-import ai.wanaku.backend.support.NoOidcTestProfile;
 import ai.wanaku.backend.support.WanakuRouterTest;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 
@@ -26,7 +24,6 @@ import org.junit.jupiter.api.Test;
  * Verifies the HTTP contract of the service catalog and service template validation endpoints.
  */
 @QuarkusTest
-@TestProfile(NoOidcTestProfile.class)
 public class ServiceValidationResourceTest extends WanakuRouterTest {
 
     private static final String CATALOG_PATH = "/api/v1/service-catalog/validate";

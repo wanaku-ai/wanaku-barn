@@ -12,7 +12,6 @@
     <name>Wanaku :: Apps :: Barn Backend</name>
 
     <properties>
-        <keycloak.docker.image>quay.io/keycloak/keycloak:26.7</keycloak.docker.image>
         <skipUI>false</skipUI>
     </properties>
 
@@ -133,14 +132,6 @@
 
         <dependency>
             <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-oidc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-keycloak-authorization</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-junit</artifactId>
             <scope>test</scope>
         </dependency>
@@ -174,11 +165,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-test-keycloak-server</artifactId>
-            <scope>test</scope>
-        </dependency>
 
     </dependencies>
 
@@ -201,7 +187,6 @@
                     <systemPropertyVariables>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
-                        <keycloak.docker.image>${keycloak.docker.image}</keycloak.docker.image>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
@@ -216,7 +201,6 @@
                         <native.image.path>${project.build.directory}/${project.build.finalName}-runner</native.image.path>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <maven.home>${maven.home}</maven.home>
-                        <keycloak.docker.image>${keycloak.docker.image}</keycloak.docker.image>
                     </systemPropertyVariables>
                 </configuration>
                 <executions>

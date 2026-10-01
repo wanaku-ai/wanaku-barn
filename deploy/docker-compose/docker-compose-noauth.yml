@@ -18,7 +18,6 @@ services:
   wanaku-router:
     image: quay.io/wanaku/wanaku-barn-backend:latest
     environment:
-      WANAKU_HTTP_AUTH: none
       QUARKUS_HTTP_HOST: 0.0.0.0
       QUARKUS_OTEL_SDK_DISABLED: "false"
       QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4317

@@ -4,9 +4,7 @@ import jakarta.inject.Inject;
 
 import java.util.List;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.TestProfile;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
-import ai.wanaku.backend.support.NoOidcTestProfile;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -27,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@TestProfile(NoOidcTestProfile.class)
 public class DataStoreRepositoryTest {
 
     @Inject

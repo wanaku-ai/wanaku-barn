@@ -117,62 +117,11 @@ Configuration for the main Wanaku Router Backend (`wanaku-barn-backend`), which 
 | `quarkus.mcp.server.server-info.version`           | The version of the server, taken from the project version.                                         |
 | `quarkus.mcp.server.client-logging.default-level`  | `debug` - The default logging level for MCP clients.                                               |
 
-### Authentication & Authorization (OIDC)
+### Authentication & Authorization
 
-| Property | Description |
-|-----------------------------------------|------------------------------------------------------------------------------------------|
-| `wanaku.http.auth` | `keycloak` - Controls authentication mode. Set to `none` to disable authentication entirely. Also settable via `WANAKU_HTTP_AUTH` environment variable. |
-| `auth.server` | The base address of the Keycloak authentication server (e.g., `http://localhost:8543`). |
-| `auth.proxy` | The public-facing address of the OIDC proxy (e.g., `http://localhost:8080`). |
-| `quarkus.oidc.auth-server-url` | The full URL to the Keycloak realm, derived from `auth.server`. |
-| `quarkus.oidc.client-id` | `wanaku-mcp-router` - The OIDC client ID for the router backend itself. |
-| `quarkus.oidc.application-type` | `hybrid` - Allows the backend to act as both a web app (for the admin UI) and a service. |
-| `quarkus.oidc.tls.verification` | `none` - Disables TLS verification for the OIDC provider (for development). |
-| `quarkus.oidc-proxy.enabled` | `true` - Enables the OIDC proxy feature, which simplifies OIDC integration. |
-| `quarkus.http.auth.permission.*.paths` | Defines path patterns for different security policies (`permit`, `authenticated`). |
-| `quarkus.http.auth.permission.*.policy` | Assigns a security policy to the corresponding path pattern. |
-| `quarkus.keycloak.policy-enforcer.enabled` | `false` - Disables Keycloak Authorization Services policy enforcement. Set to `true` to enable policy enforcement so that MCP endpoints (e.g., `/mcp`, `/mcp/sse`) can be protected as Authorization Resources in Keycloak, linked to permissions and policies so that JWT access tokens are only issued to users who meet the associated policy. |
-
-#### Running Without Authentication
-
-Set `wanaku.http.auth=none` (or export `WANAKU_HTTP_AUTH=none`) to run without Keycloak.
-No identity provider is required — all HTTP paths are opened via `policy=permit` automatically.
-
-```shell
-# Via environment variable (recommended for containers)
-WANAKU_HTTP_AUTH=none java -jar quarkus-run.jar
-
-# Via system property
-java -Dwanaku.http.auth=none -jar quarkus-run.jar
-```
-
-> [!IMPORTANT]
-> `wanaku.http.auth` is a **Wanaku-native** property. Users do not need to know that Wanaku is
-> built on Quarkus to configure authentication — the Quarkus implementation details stay hidden.
-
-<!-- -->
-
-> [!NOTE]
-> **How it works internally (`AuthConfigSource`):** When `wanaku.http.auth=none`, a custom
-> MicroProfile `ConfigSource` (ordinal 260) injects the following runtime overrides:
->
-> | Property injected | Value | Reason |
-> |---|---|---|
-> | `quarkus.oidc.enabled` | `false` | Disables OIDC entirely at runtime |
-> | `quarkus.oidc.discovery-enabled` | `false` | Prevents eager Keycloak connection at startup |
-> | `quarkus.oidc.resource-metadata.enabled` | `false` | Disables resource metadata endpoint |
-> | `quarkus.oidc.mcp.enabled` | `false` | Disables the MCP OIDC tenant |
-> | `quarkus.oidc.mcp.discovery-enabled` | `false` | Same, for the MCP OIDC tenant used by OidcProxy |
-> | `quarkus.oidc.mcp.resource-metadata.enabled` | `false` | Disables resource metadata for MCP tenant |
-> | `quarkus.oidc.ns-{0..9}.enabled` | `false` | Disables per-namespace OIDC tenants |
-> | `quarkus.oidc.ns-{0..9}.discovery-enabled` | `false` | Same, for per-namespace OIDC tenants |
-> | `quarkus.oidc.ns-{0..9}.resource-metadata.enabled` | `false` | Disables resource metadata for namespace tenants |
-> | `quarkus.oidc-proxy.enabled` | `false` | Disables the OIDC proxy |
-> | `quarkus.http.auth.permission.authenticated.policy` | `permit` | Opens management / data-store APIs |
-> | `quarkus.http.auth.permission.mcp-authenticated.policy` | `permit` | Opens MCP namespace endpoints |
-> | `quarkus.http.auth.permission.web.policy` | `permit` | Opens the admin web UI |
-
-See the [Usage Guide](usage.md#running-without-authentication) for end-to-end instructions.
+The Barn backend does not perform authentication or authorization itself. These concerns are handled by the
+Wanaku Governed Execution Proxy (GEP), which sits in front of the backend and uses the oauth2 proxy. No auth-related
+properties (such as `wanaku.http.auth`) are required to run the backend.
 
 ### Home Directory Resolution
 
@@ -384,40 +333,13 @@ QUARKUS_HTTP_PORT=8080
 
 ## Configuration Examples
 
-### Example: Router Backend Without Authentication (No Keycloak)
-
-The quickest way to run Wanaku locally without setting up an identity provider:
-
-```shell
-# Environment variable — no changes to any properties file needed
-export WANAKU_HTTP_AUTH=none
-java -jar quarkus-run.jar
-```
-
-Or equivalently via a `config/application.properties` override file:
-
-```properties
-wanaku.http.auth=none
-```
-
-This automatically opens all protected endpoints (`/api/v1/management/*`, `/mcp/*`, `/admin/*`, etc.)
-without requiring a token, while OIDC infrastructure stays initialized (preventing startup errors from
-the embedded OIDC proxy extension).
-
-### Example: Router Backend with Custom OIDC
+### Example: Router Backend
 
 ```properties
 # application.properties for router backend
 quarkus.http.port=8080
 quarkus.http.cors.enabled=true
 quarkus.http.cors.origins=http://localhost:3000,https://my-frontend.example.com
-
-auth.server=https://keycloak.example.com
-auth.proxy=https://wanaku.example.com
-
-quarkus.oidc.client-id=wanaku-mcp-router
-quarkus.oidc.application-type=hybrid
-quarkus.oidc.tls.verification=required
 
 wanaku.persistence.infinispan.base-folder=/var/lib/wanaku/data
 wanaku.infinispan.max-state-count=20
