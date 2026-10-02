@@ -20,7 +20,7 @@ import ai.wanaku.core.services.api.ServiceCatalogIndex;
 import ai.wanaku.core.services.api.ValidationIssue;
 import ai.wanaku.core.services.api.ValidationResult;
 import ai.wanaku.core.util.StringHelper;
-import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.Error;
 
 /**
  * Validates service catalog and service template packages against the structure described in
@@ -269,7 +269,7 @@ public class CatalogValidator {
             file = Files.createTempFile("wanaku-validate-", ".camel.yaml");
             Files.write(file, entries.get(path));
 
-            for (ValidationMessage message : YAML_VALIDATOR.validate(file.toFile())) {
+            for (Error message : YAML_VALIDATOR.validate(file.toFile())) {
                 errors.add(new ValidationIssue(issuePath(path, message), describe(message)));
             }
         } catch (Exception e) {
@@ -280,12 +280,12 @@ public class CatalogValidator {
         }
     }
 
-    private static String issuePath(String path, ValidationMessage message) {
+    private static String issuePath(String path, Error message) {
         String location = location(message);
         return location == null ? path : "%s#%s".formatted(path, location);
     }
 
-    private static String describe(ValidationMessage message) {
+    private static String describe(Error message) {
         String text = message.getMessage();
         String location = location(message);
 
@@ -295,11 +295,11 @@ public class CatalogValidator {
         }
 
         // Messages of type 'parser' are produced when the file cannot be read as YAML at all
-        String problem = "parser".equals(message.getType()) ? "Invalid YAML" : "Invalid Camel YAML DSL";
+        String problem = "parser".equals(message.getMessageKey()) ? "Invalid YAML" : "Invalid Camel YAML DSL";
         return "%s: %s".formatted(problem, text);
     }
 
-    private static String location(ValidationMessage message) {
+    private static String location(Error message) {
         if (message.getInstanceLocation() == null) {
             return null;
         }
