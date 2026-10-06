@@ -12,6 +12,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
@@ -74,7 +75,7 @@ public class ServiceTemplateResource {
                 summary.setName(index.getName());
                 summary.setIcon(index.getIcon());
                 summary.setDescription(index.getDescription());
-                summary.setServices(index.getServiceNames());
+                summary.setServices(sortedServiceNames(index));
                 boolean hasProps = index.hasServiceProperties();
                 if (!hasProps) {
                     try {
@@ -91,7 +92,20 @@ public class ServiceTemplateResource {
             }
         }
 
+        summaries.sort(Comparator.comparing(
+                ServiceTemplateSummary::getName, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)));
+
         return new WanakuResponse<>(summaries);
+    }
+
+    /**
+     * Returns the service names of the given index sorted alphabetically, so listings are
+     * stable and easy to scan.
+     */
+    private static List<String> sortedServiceNames(ServiceCatalogIndex index) {
+        return index.getServiceNames().stream()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     /**

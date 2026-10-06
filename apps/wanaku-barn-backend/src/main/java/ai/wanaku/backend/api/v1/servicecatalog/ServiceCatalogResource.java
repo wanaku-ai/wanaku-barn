@@ -13,6 +13,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,12 +72,20 @@ public class ServiceCatalogResource {
                 summary.put("name", index.getName());
                 summary.put("icon", index.getIcon());
                 summary.put("description", index.getDescription());
-                summary.put("services", index.getServiceNames());
+                summary.put(
+                        "services",
+                        index.getServiceNames().stream()
+                                .sorted(String.CASE_INSENSITIVE_ORDER)
+                                .toList());
                 summaries.add(summary);
             } catch (WanakuException e) {
                 LOG.warnf("Failed to parse catalog index for '%s': %s", ds.getName(), e.getMessage());
             }
         }
+
+        summaries.sort(Comparator.comparing(
+                (Map<String, Object> m) -> (String) m.get("name"),
+                Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)));
 
         return new WanakuResponse<>(summaries);
     }

@@ -94,6 +94,31 @@ class ServiceCatalogResourceTest {
     }
 
     @Test
+    void testListSortedAlphabetically() {
+        DataStore zeta = new DataStore();
+        zeta.setId("zeta-id");
+        zeta.setName("zeta.service.zip");
+        zeta.setData(createTestZipBase64("zeta-catalog", "Zeta service", "zeta-sys"));
+
+        DataStore alpha = new DataStore();
+        alpha.setId("alpha-id");
+        alpha.setName("alpha.service.zip");
+        alpha.setData(createTestZipBase64("alpha-catalog", "Alpha service", "sys-b", "sys-a"));
+
+        when(serviceCatalogBean.list(null)).thenReturn(List.of(zeta, alpha));
+        when(serviceCatalogBean.parseIndex(zeta)).thenReturn(ServiceCatalogIndex.fromBase64(zeta.getData()));
+        when(serviceCatalogBean.parseIndex(alpha)).thenReturn(ServiceCatalogIndex.fromBase64(alpha.getData()));
+
+        WanakuResponse<List<Map<String, Object>>> response = resource.list(null);
+        assertNotNull(response);
+        assertEquals(2, response.data().size());
+        assertEquals("alpha-catalog", response.data().get(0).get("name"));
+        assertEquals("zeta-catalog", response.data().get(1).get("name"));
+
+        assertEquals(List.of("sys-a", "sys-b"), response.data().get(0).get("services"));
+    }
+
+    @Test
     void testGetFound() {
         when(serviceCatalogBean.get("testservice")).thenReturn(testCatalog);
         when(serviceCatalogBean.parseIndex(testCatalog)).thenReturn(testIndex);
