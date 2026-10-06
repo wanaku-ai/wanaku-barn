@@ -365,8 +365,7 @@ There is a pre-built image in `quay.io/wanaku/wanaku-barn-backend:latest`
 ```shell
 kubectl create namespace wanaku
 helm install wanaku-operator ./apps/wanaku-operator/deploy/helm/wanaku-operator \
-  --namespace wanaku \
-  --set operatorNamespace=wanaku
+  --namespace wanaku
 ```
 
 **Deploy a router:**
@@ -378,8 +377,8 @@ kind: WanakuRouter
 metadata:
   name: wanaku-dev
 spec:
-  auth:
-    authServer: http://keycloak:8080
+  router:
+    enabled: true
 ```
 
 ```shell
@@ -387,32 +386,10 @@ kubectl apply -f wanaku-router.yaml -n wanaku
 kubectl wait wanakurouter/wanaku-dev --for=condition=Ready --timeout=120s
 ```
 
-**Deploy capabilities:**
-
-```yaml
-# wanaku-capabilities.yaml
-apiVersion: "wanaku.ai/v1alpha1"
-kind: WanakuCapability
-metadata:
-  name: wanaku-capabilities
-spec:
-  auth:
-    authServer: http://keycloak:8080
-  secrets:
-    oidcCredentialsSecret: wanaku-oidc-secret
-  routerRef: wanaku-dev
-  capabilities:
-    - name: wanaku-http
-      image: quay.io/wanaku/wanaku-tool-service-http:latest
-```
-
-```shell
-kubectl apply -f wanaku-capabilities.yaml -n wanaku
-kubectl wait wanakucapability/wanaku-capabilities --for=condition=Ready --timeout=120s
-```
-
-> [!TIP]
-> Complete sample CRs are in [apps/wanaku-operator/samples](https://github.com/wanaku-ai/wanaku/tree/main/apps/wanaku-operator/samples). For service catalog deployment via the operator, see the [Operator Guide](operator.md).
+The `WanakuCapability`, `WanakuCamelRoute` and `WanakuCamelCodeExecutionEngine` CRDs were removed.
+Deploy capability services (such as the Camel Integration Capability) as regular `Deployment`
+resources and register them with the router using `wanaku forwards add` — see
+[Forwarding other MCP servers via the MCP forwarder](#forwarding-other-mcp-servers-via-the-mcp-forwarder).
 
 ### Installing and Running Wanaku on OpenShift or Kubernetes (Manually)
 
@@ -425,8 +402,9 @@ without the operator. You can use the Helm chart directly:
    helm install wanaku-operator apps/wanaku-operator/deploy/helm/wanaku-operator --namespace <your-namespace>
    ```
 
-2. Create and apply a `WanakuRouter` custom resource for your environment (see [`deploy/kubernetes/wanaku-router.yaml`](https://github.com/wanaku-ai/wanaku/blob/main/deploy/kubernetes/wanaku-router.yaml) for an example)
-3. Create and apply a `WanakuCapability` custom resource for your capabilities (see [`deploy/kubernetes/wanaku-capabilities.yaml`](https://github.com/wanaku-ai/wanaku/blob/main/deploy/kubernetes/wanaku-capabilities.yaml) for an example)
+2. Create and apply a `WanakuRouter` custom resource for your environment (see the
+   [Operator Guide](operator.md) for the spec reference and examples)
+
 
 ### Configuring the Wanaku MCP Router
 
@@ -557,17 +535,27 @@ After having deployed Keycloak, then run the following command to get its route:
 kubectl get route keycloak -o jsonpath='{.spec.host}'
 ```
 
-Then install the operator and apply the custom resources with your OIDC configuration:
+Then install the operator and apply a router with your OIDC configuration:
 
 ```shell
 helm install wanaku-operator apps/wanaku-operator/deploy/helm/wanaku-operator --namespace <your-namespace>
 
-sed -e "s/oidc-url-replace/<your-keycloak-url>/g" \
-     deploy/kubernetes/wanaku-router.yaml | kubectl apply -f -
+cat <<'EOF2' | kubectl apply -f -
+apiVersion: "wanaku.ai/v1alpha1"
+kind: WanakuRouter
+metadata:
+  name: wanaku-dev
+spec:
+  router:
+    enabled: true
+  auth:
+    enabled: true
+    issuerUrl: <your-keycloak-url>/realms/wanaku
+    clientId: wanaku-mcp-router
+    secretName: wanaku-oidc-secret
+EOF2
+```
 
-sed -e "s/oidc-url-replace/<your-keycloak-url>/g" \
-    -e "s/replace-me-with-the-client-credentials-secret/<your-client-secret>/g" \
-     deploy/kubernetes/wanaku-capabilities.yaml | kubectl apply -f -
 ```
 
 # Securing the Wanaku MCP Router

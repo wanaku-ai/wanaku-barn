@@ -446,47 +446,14 @@ retry_until "router health live" \
 
 Follow [common/oidc-login-verification.md](common/oidc-login-verification.md) to verify end-to-end OIDC authentication through the router.
 
-### Step 3.5: Deploy WanakuCapability with OTEL enabled
+### Step 3.5: Deploy the HTTP capability with OTEL enabled
 
-```bash
-cat <<EOF | oc apply -n "${WANAKU_NAMESPACE}" -f -
-apiVersion: "wanaku.ai/v1alpha1"
-kind: WanakuCapability
-metadata:
-  name: wanaku-tracing-capabilities
-spec:
-  auth:
-    authServer: "http://keycloak:8080"
-    authProxy: "auto"
-  secrets:
-    oidcCredentialsSecret: "${WANAKU_OIDC_SECRET}"
-  routerRef: wanaku-tracing-router
-  capabilities:
-    - name: wanaku-http-tracing
-      image: ${WANAKU_CAPABILITY_HTTP_IMAGE}
-      imagePullPolicy: Always
-      env:
-        - name: QUARKUS_OTEL_SDK_DISABLED
-          value: "false"
-        - name: QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT
-          value: "http://otel-collector:4317"
-EOF
-```
+> The capability CRDs were removed. Deploy the capability service as a regular
+> `Deployment` (with the `QUARKUS_OTEL_SDK_DISABLED=false` and
+> `QUARKUS_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` env vars) and
+> register it with the router using `wanaku forwards add`.
 
-**Verification:**
 
-```bash
-oc wait wanakucapability/wanaku-tracing-capabilities \
-  --for=condition=Ready \
-  --timeout=120s \
-  -n "${WANAKU_NAMESPACE}"
-
-oc wait deployment/wanaku-http-tracing \
-  --for=condition=Available \
-  --timeout=120s \
-  -n "${WANAKU_NAMESPACE}"
-echo "PASS: capability deployment available"
-```
 
 ### Step 3.6: Verify capability has OTEL env vars
 

@@ -6,6 +6,7 @@ import java.util.Base64;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.DeploymentInstructions;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
@@ -18,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -80,20 +82,13 @@ class DeploymentInstructionsBeanTest {
     }
 
     @Test
-    void testKubernetesInstructions() {
+    void testKubernetesModelIsUnsupported() {
         when(serviceCatalogBean.get("testcatalog")).thenReturn(testCatalog);
         when(serviceCatalogBean.parseIndex(testCatalog)).thenReturn(testIndex);
 
-        DeploymentInstructions instructions = bean.generateInstructions("testcatalog", "kubernetes");
-        assertNotNull(instructions);
-
-        String instruction = instructions.systems().get(0).instruction();
-        assertTrue(instruction.contains("auth:"), "Instructions should contain auth section");
-        assertTrue(instruction.contains("authServer"), "Instructions should contain authServer");
-
-        boolean hasAuthPlaceholders = instructions.placeholders().stream()
-                .anyMatch(p -> "auth-server-address".equals(p.key()) || "credentials-secret".equals(p.key()));
-        assertTrue(hasAuthPlaceholders, "Should have auth placeholders");
+        // The kubernetes deployment model emitted WanakuCapability manifests, which the
+        // operator no longer supports; until a replacement exists it is not offered
+        assertThrows(WanakuException.class, () -> bean.generateInstructions("testcatalog", "kubernetes"));
     }
 
     private String createTestZipBase64(String name, String description, String... systems) {
