@@ -49,6 +49,7 @@ Contributors working on the project may want to refer to the [development versio
 - [Pre-release Usage Guide](docs/usage.md) - Pre-release usage guide
 - [Architecture](docs/architecture.md) - System architecture and components
 - [Building](docs/building.md) - Build and package the project
+- [Agent Skills](docs/agent-skills.md) - Skills that teach coding agents how to use Wanaku
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 - [Security](SECURITY.md) - Security policy and best practices
 
