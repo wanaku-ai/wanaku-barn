@@ -405,7 +405,6 @@ without the operator. You can use the Helm chart directly:
 2. Create and apply a `WanakuRouter` custom resource for your environment (see the
    [Operator Guide](operator.md) for the spec reference and examples)
 
-
 ### Configuring the Wanaku MCP Router
 
 Wanaku is built on [Quarkus](https://quarkus.io/) and uses `application.properties` files for configuration. Each
@@ -554,8 +553,6 @@ spec:
     clientId: wanaku-mcp-router
     secretName: wanaku-oidc-secret
 EOF2
-```
-
 ```
 
 # Securing the Wanaku MCP Router
