@@ -122,13 +122,13 @@ All properties can be overridden via `-D` flags on the command line.
 
 #### Data Store
 
-The router persists forwards in `~/.wanaku/router/`. If you see stale data between runs, clear it:
+The router persists forwards in `~/.wanaku/barn/`. If you see stale data between runs, clear it:
 
 ```bash
-rm -rf ~/.wanaku/router/forward/{data,index}/*
-rm -rf ~/.wanaku/router/namespace/{data,index}/*
-rm -rf ~/.wanaku/router/tool/{data,index}/*
-rm -rf ~/.wanaku/router/resource/{data,index}/*
+rm -rf ~/.wanaku/barn/forward/{data,index}/*
+rm -rf ~/.wanaku/barn/namespace/{data,index}/*
+rm -rf ~/.wanaku/barn/tool/{data,index}/*
+rm -rf ~/.wanaku/barn/resource/{data,index}/*
 ```
 
 ### 2. Full Baseline vs Patched Evaluation
@@ -246,7 +246,7 @@ tests/load/run-perf-test.sh \
 
 **Tools/resources not listed via SSE**: Check the namespace. The k6 scripts target `/public/mcp/sse`. If the forward registered with a non-public namespace, tools will only appear under the corresponding authenticated namespace endpoint (e.g., `/ns-9/mcp/sse`). Override with `-Dwanaku.mcp.service.namespace=public`.
 
-**Stale forward registrations**: The router persists forwards in `~/.wanaku/router/`. Clear the data store (see [Data Store](#data-store) above) and restart.
+**Stale forward registrations**: The router persists forwards in `~/.wanaku/barn/`. Clear the data store (see [Data Store](#data-store) above) and restart.
 
 **High latency at 500+ VUs**: Expected. The SSE transport creates a new connection per iteration. At high concurrency, connection queuing dominates. The median latency stays low but P95 increases significantly.
 

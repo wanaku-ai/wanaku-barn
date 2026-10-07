@@ -14,7 +14,7 @@ import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.core.util.WanakuHome;
 
 public class InfinispanConfigurationProvider {
-    @ConfigProperty(name = "wanaku.persistence.infinispan.base-folder", defaultValue = "${wanaku.home}/router/")
+    @ConfigProperty(name = "wanaku.persistence.infinispan.base-folder", defaultValue = "${wanaku.home}/barn/")
     String baseFolder;
 
     @ConfigProperty(name = "wanaku.persistence.infinispan.max-entries", defaultValue = "10000")

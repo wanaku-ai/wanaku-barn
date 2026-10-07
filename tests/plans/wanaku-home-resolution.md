@@ -215,12 +215,12 @@ done
 ### Test 2.3: Verify default Infinispan data directory exists
 
 ```bash
-DEFAULT_ROUTER_DATA="${HOME}/.wanaku/router"
+DEFAULT_BARN_DATA="${HOME}/.wanaku/barn"
 
-if [ -d "${DEFAULT_ROUTER_DATA}" ]; then
-  echo "PASS: default Infinispan data directory exists at ${DEFAULT_ROUTER_DATA}"
+if [ -d "${DEFAULT_BARN_DATA}" ]; then
+  echo "PASS: default Infinispan data directory exists at ${DEFAULT_BARN_DATA}"
 else
-  echo "FAIL: default Infinispan data directory not found at ${DEFAULT_ROUTER_DATA}"
+  echo "FAIL: default Infinispan data directory not found at ${DEFAULT_BARN_DATA}"
 fi
 ```
 
@@ -300,12 +300,12 @@ done
 ### Test 3.3: Verify Infinispan data directory under custom home
 
 ```bash
-CUSTOM_ROUTER_DATA="${CUSTOM_HOME_DIR}/router"
+CUSTOM_BARN_DATA="${CUSTOM_HOME_DIR}/barn"
 
-if [ -d "${CUSTOM_ROUTER_DATA}" ]; then
-  echo "PASS: Infinispan data directory created under custom home at ${CUSTOM_ROUTER_DATA}"
+if [ -d "${CUSTOM_BARN_DATA}" ]; then
+  echo "PASS: Infinispan data directory created under custom home at ${CUSTOM_BARN_DATA}"
 else
-  echo "FAIL: Infinispan data directory not found at ${CUSTOM_ROUTER_DATA}"
+  echo "FAIL: Infinispan data directory not found at ${CUSTOM_BARN_DATA}"
 fi
 ```
 
@@ -341,13 +341,13 @@ Verify the Infinispan store has content under the custom home by listing tools (
 java -jar ${CLI_JAR} tools list \
   --host "${WANAKU_ROUTER_URL}" --plain 2>&1
 
-# Verify data files exist under custom router directory
-CUSTOM_ROUTER_DATA="${CUSTOM_HOME_DIR}/router"
-FILE_COUNT=$(find "${CUSTOM_ROUTER_DATA}" -type f 2>/dev/null | wc -l | tr -d ' ')
+# Verify data files exist under custom barn directory
+CUSTOM_BARN_DATA="${CUSTOM_HOME_DIR}/barn"
+FILE_COUNT=$(find "${CUSTOM_BARN_DATA}" -type f 2>/dev/null | wc -l | tr -d ' ')
 if [ "${FILE_COUNT}" -gt 0 ]; then
   echo "PASS: Infinispan data files present under custom home (${FILE_COUNT} files)"
 else
-  echo "FAIL: no Infinispan data files found under ${CUSTOM_ROUTER_DATA}"
+  echo "FAIL: no Infinispan data files found under ${CUSTOM_BARN_DATA}"
 fi
 ```
 
@@ -445,12 +445,12 @@ done
 ### Test 4.4: Verify Infinispan data directory under system property path
 
 ```bash
-SYSPROP_ROUTER_DATA="${CUSTOM_HOME_DIR_SYSPROP}/router"
+SYSPROP_BARN_DATA="${CUSTOM_HOME_DIR_SYSPROP}/barn"
 
-if [ -d "${SYSPROP_ROUTER_DATA}" ]; then
-  echo "PASS: Infinispan data directory created at system property path ${SYSPROP_ROUTER_DATA}"
+if [ -d "${SYSPROP_BARN_DATA}" ]; then
+  echo "PASS: Infinispan data directory created at system property path ${SYSPROP_BARN_DATA}"
 else
-  echo "FAIL: Infinispan data directory not found at ${SYSPROP_ROUTER_DATA}"
+  echo "FAIL: Infinispan data directory not found at ${SYSPROP_BARN_DATA}"
 fi
 ```
 
@@ -538,18 +538,18 @@ done
 ### Test 5.3: Verify system property path has router data (wins)
 
 ```bash
-if [ -d "${PRECEDENCE_SYSPROP_DIR}/router" ]; then
+if [ -d "${PRECEDENCE_SYSPROP_DIR}/barn" ]; then
   echo "PASS: system property path has router data (precedence correct)"
 else
-  echo "FAIL: system property path ${PRECEDENCE_SYSPROP_DIR}/router not found"
+  echo "FAIL: system property path ${PRECEDENCE_SYSPROP_DIR}/barn not found"
 fi
 ```
 
 ### Test 5.4: Verify env var path does NOT have router data (loses)
 
 ```bash
-if [ -d "${PRECEDENCE_ENVVAR_DIR}/router" ]; then
-  echo "FAIL: env var path ${PRECEDENCE_ENVVAR_DIR}/router exists -- system property should have taken precedence"
+if [ -d "${PRECEDENCE_ENVVAR_DIR}/barn" ]; then
+  echo "FAIL: env var path ${PRECEDENCE_ENVVAR_DIR}/barn exists -- system property should have taken precedence"
 else
   echo "PASS: env var path does not have router data (system property took precedence)"
 fi
@@ -778,8 +778,8 @@ else
 fi
 
 # Verify it used the default path
-DEFAULT_ROUTER_DATA="${HOME}/.wanaku/router"
-if [ -d "${DEFAULT_ROUTER_DATA}" ]; then
+DEFAULT_BARN_DATA="${HOME}/.wanaku/barn"
+if [ -d "${DEFAULT_BARN_DATA}" ]; then
   echo "PASS: default router data directory exists (empty env var ignored)"
 else
   echo "FAIL: default router data directory not found"

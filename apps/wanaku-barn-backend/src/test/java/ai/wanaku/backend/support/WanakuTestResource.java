@@ -9,7 +9,7 @@ public class WanakuTestResource implements QuarkusTestResourceLifecycleManager {
     @Override
     public Map<String, String> start() {
         Map<String, String> conf = new HashMap<>();
-        conf.put("wanaku.persistence.infinispan.base-folder", "target/wanaku/router");
+        conf.put("wanaku.persistence.infinispan.base-folder", "target/wanaku/barn");
         conf.put("wanaku.persistence.infinispan.file-store", "false");
         conf.put("quarkus.log.console.enable", "false");
         conf.put("quarkus.log.file.enable", "true");

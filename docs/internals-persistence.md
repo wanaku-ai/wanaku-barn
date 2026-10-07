@@ -365,7 +365,7 @@ public abstract class AbstractWanakuSerializationContextInitializer
 public class InfinispanConfigurationProvider {
 
     @ConfigProperty(name = "wanaku.persistence.infinispan.base-folder",
-                   defaultValue = "${wanaku.home}/router/")
+                   defaultValue = "${wanaku.home}/barn/")
     String baseFolder;
 
     @Produces

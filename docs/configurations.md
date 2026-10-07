@@ -156,9 +156,15 @@ java -Dwanaku.home=/path/to/custom/home -jar quarkus-run.jar
 
 | Directory | Purpose |
 |-----------|---------|
-| `<home>/router/` | Infinispan data store (SoftIndexFileStore for tools, resources, namespaces) |
+| `<home>/barn/` | Infinispan data store (SoftIndexFileStore for tools, resources, namespaces) |
 | `<home>/local/logs/` | Router log file (`wanaku-router.log`) when running with the `local` Quarkus profile |
 | `<home>/credentials` | CLI credential store (0600 permissions) |
+
+> [!NOTE]
+> Older versions stored the Infinispan data under `<home>/router/`. If you have existing data there, move it to the
+> new location before starting Wanaku Barn (e.g., `mv ~/.wanaku/router ~/.wanaku/barn`), or keep using the old
+> location by setting `wanaku.persistence.infinispan.base-folder=${wanaku.home}/router/`.
+> Docker Compose and operator deployments keep their existing volumes, so no manual migration is needed there.
 
 #### Behavior with direct JVM start
 
@@ -185,7 +191,7 @@ These `wanaku.router.health-check.*` properties control the periodic health prob
 
 | Property                                    | Description                                                                   |
 |---------------------------------------------|-------------------------------------------------------------------------------|
-| `wanaku.persistence.infinispan.base-folder` | Where to store Infinispan files (defaults to `${wanaku.home}/router/`). |
+| `wanaku.persistence.infinispan.base-folder` | Where to store Infinispan files (defaults to `${wanaku.home}/barn/`). |
 | `wanaku.infinispan.max-state-count`         | `10` - The maximum number of historical states to keep for each service.      |
 
 ### Namespaces
