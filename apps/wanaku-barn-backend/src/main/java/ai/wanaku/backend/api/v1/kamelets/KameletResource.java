@@ -9,6 +9,7 @@ import java.util.List;
 import ai.wanaku.backend.api.v1.kamelets.model.KameletDefinition;
 import ai.wanaku.backend.api.v1.kamelets.model.KameletSummary;
 import ai.wanaku.backend.api.v1.kamelets.model.KameletUpload;
+import ai.wanaku.backend.audit.Audited;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 
 /** Thin REST transport for remote native Kamelet resources. */
@@ -26,6 +27,7 @@ public class KameletResource implements KameletService {
      * @param upload definition
      * @return selected metadata */
     @Override
+    @Audited(operation = "kamelet.upload", targetType = "kamelet", targetField = "name")
     public WanakuResponse<KameletSummary> upload(@Valid KameletUpload upload) {
         return new WanakuResponse<>(bean.upload(upload));
     }
@@ -52,6 +54,7 @@ public class KameletResource implements KameletService {
      * @param name native name
      * @return empty success response */
     @Override
+    @Audited(operation = "kamelet.remove", targetType = "kamelet")
     public WanakuResponse<Void> remove(String name) {
         bean.remove(name);
         return new WanakuResponse<>();

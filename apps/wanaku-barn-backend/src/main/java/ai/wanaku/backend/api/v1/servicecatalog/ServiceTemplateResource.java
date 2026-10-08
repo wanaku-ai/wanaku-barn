@@ -18,6 +18,8 @@ import java.util.Map;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
 import ai.wanaku.backend.api.v1.exceptions.ServiceTemplateNotFoundException;
+import ai.wanaku.backend.audit.AuditContext;
+import ai.wanaku.backend.audit.Audited;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -40,6 +42,9 @@ import ai.wanaku.core.util.StringHelper;
 @Consumes(MediaType.APPLICATION_JSON)
 public class ServiceTemplateResource {
     private static final Logger LOG = Logger.getLogger(ServiceTemplateResource.class);
+
+    @Inject
+    AuditContext auditContext;
 
     @Inject
     ServiceTemplateBean serviceTemplateBean;
@@ -184,8 +189,10 @@ public class ServiceTemplateResource {
      */
     @Path("/deploy")
     @POST
+    @Audited(operation = "service_template.deploy", targetType = "service_template", targetField = "name")
     public WanakuResponse<DataStore> deploy(DataStore dataStore) {
         LOG.debugf("REST: Deploying service template: %s", dataStore.getName());
+        auditContext.setTarget(dataStore.getName());
         DataStore result = serviceTemplateBean.deploy(dataStore);
         return new WanakuResponse<>(result);
     }
@@ -218,6 +225,7 @@ public class ServiceTemplateResource {
      */
     @Path("/remove")
     @DELETE
+    @Audited(operation = "service_template.remove", targetType = "service_template")
     public WanakuResponse<Void> remove(@QueryParam("name") String name) {
         LOG.debugf("REST: Removing service template: %s", name);
 
@@ -262,8 +270,10 @@ public class ServiceTemplateResource {
      */
     @Path("/instantiate")
     @POST
+    @Audited(operation = "service_template.instantiate", targetType = "service_template")
     public WanakuResponse<DataStore> instantiate(TemplateInstantiationRequest request) {
         LOG.debugf("REST: Instantiating template: %s", request.getTemplateName());
+        auditContext.setTarget(request.getTemplateName());
 
         if (StringHelper.isBlank(request.getTemplateName())) {
             throw new WanakuException("Template name is required");

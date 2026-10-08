@@ -18,6 +18,8 @@ import jakarta.ws.rs.core.MediaType;
 import java.util.List;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestResponse;
+import ai.wanaku.backend.audit.AuditContext;
+import ai.wanaku.backend.audit.Audited;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -39,6 +41,9 @@ public class DataStoresResource {
     @Inject
     DataStoresBean dataStoresBean;
 
+    @Inject
+    AuditContext auditContext;
+
     /**
      * Add a new data store entry.
      * POST /api/v1/data-store
@@ -47,6 +52,7 @@ public class DataStoresResource {
      * @return response with the created data store and its revision in the {@code ETag} header
      */
     @POST
+    @Audited(operation = "data_store.create", targetType = "data_store")
     public RestResponse<WanakuResponse<DataStoreRecord>> add(DataStore dataStore) {
         LOG.debugf("REST: Adding data store: %s", dataStore);
         DataStoreRecord result = record(dataStoresBean.add(dataStore));
@@ -67,11 +73,13 @@ public class DataStoresResource {
      * @return HTTP 200 with the new revision in the {@code ETag} header
      */
     @PUT
+    @Audited(operation = "data_store.update", targetType = "data_store")
     public RestResponse<WanakuResponse<Void>> update(
             @HeaderParam(HttpHeaders.IF_MATCH) String ifMatch,
             @QueryParam("expectedRevision") Long expectedRevision,
             DataStore dataStore) {
         LOG.debugf("REST: Updating data store: %s", dataStore);
+        auditContext.setTarget(dataStore.getId());
         DataStore stored = dataStoresBean.update(dataStore, expectedRevision(ifMatch, expectedRevision));
         return withEntityTag(new WanakuResponse<>(), record(stored));
     }
@@ -135,6 +143,7 @@ public class DataStoresResource {
      */
     @Path("/{id}")
     @DELETE
+    @Audited(operation = "data_store.delete", targetType = "data_store")
     public WanakuResponse<Void> removeById(
             @PathParam("id") String id,
             @HeaderParam(HttpHeaders.IF_MATCH) String ifMatch,
@@ -156,6 +165,7 @@ public class DataStoresResource {
      * @return HTTP 200 if removed, 404 if not found
      */
     @DELETE
+    @Audited(operation = "data_store.delete_by_name", targetType = "data_store")
     public WanakuResponse<Void> removeByName(@QueryParam("name") String name) {
         if (StringHelper.isEmpty(name)) {
             throw new WanakuException("The 'name' query parameter must be provided");
@@ -178,6 +188,7 @@ public class DataStoresResource {
      */
     @Path("/labels")
     @DELETE
+    @Audited(operation = "data_store.delete_by_labels", targetType = "data_store_selection")
     public WanakuResponse<Integer> removeIf(@QueryParam("labelExpression") String labelExpression) {
         LOG.debugf("REST: Removing data stores by label expression: %s", labelExpression);
         int removed = dataStoresBean.removeIf(labelExpression);
