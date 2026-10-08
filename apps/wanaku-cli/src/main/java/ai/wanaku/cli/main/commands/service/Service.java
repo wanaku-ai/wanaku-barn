@@ -15,7 +15,8 @@ import picocli.CommandLine;
             ServiceDeploy.class,
             ServiceTemplate.class,
             ServiceCatalog.class,
-            ServiceInstructions.class
+            ServiceInstructions.class,
+            ServiceVersions.class
         })
 public class Service extends BaseCommand {
     @Override

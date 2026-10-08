@@ -91,7 +91,7 @@ public class ServiceTemplateInitializer {
                     dataStore.setName(name);
                     dataStore.setData(Base64.getEncoder().encodeToString(zipBytes));
 
-                    serviceTemplateBean.deploy(dataStore);
+                    serviceTemplateBean.deploy(dataStore, CatalogLifecycle.ORIGIN_STARTUP, null);
                     loaded++;
                     LOG.infof("Deployed built-in service template: %s", name);
                     recordSeed(name, AuditEvent.DECISION_ALLOW, "seeded", "The built-in template was deployed.");

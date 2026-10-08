@@ -17,9 +17,11 @@ Barn records one administrative event for each request to these operations:
 | `data_store.delete_by_labels` | `DELETE /api/v1/data-store/labels?labelExpression={expression}` |
 | `service_catalog.deploy` | `POST /api/v1/service-catalog` |
 | `service_catalog.remove` | `DELETE /api/v1/service-catalog/{name}` |
+| `service_catalog.restore` | `POST /api/v1/service-catalog/{name}/versions/{version}/activate` |
 | `service_template.deploy` | `POST /api/v1/service-template/deploy` |
 | `service_template.remove` | `DELETE /api/v1/service-template/remove?name={name}` |
 | `service_template.instantiate` | `POST /api/v1/service-template/instantiate` |
+| `service_template.restore` | `POST /api/v1/service-template/versions/activate` |
 | `service_template.seed` | Startup: deployment of a built-in template |
 | `kamelet.upload` | `POST /api/v1/kamelets` |
 | `kamelet.remove` | `DELETE /api/v1/kamelets/{name}` |
@@ -52,7 +54,7 @@ These rules apply:
 | `protocol` | `http` for API requests, `startup` for built-in template seeding. |
 | `operation` | The operation, for example `service_catalog.deploy`. |
 | `target_type`, `target` | The type and the ID or name of the changed resource. Barn limits the target to 256 characters. |
-| `policy_revision` | The resulting revision, when the operation creates one (for example, a semantic router publication). |
+| `policy_revision` | The resulting version, when the operation creates one: the catalog or template version for deploys and restores, or the revision of a semantic router publication. |
 | `response_status` | The HTTP status of the response. |
 | `duration_ms` | The time to process the request. |
 | `attributes` | `http_method`, `revision` (the data store revision after a write), `count` (for bulk deletes) and `trace_id` (when OpenTelemetry is enabled). |

@@ -25,6 +25,7 @@ import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundExcept
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
+import ai.wanaku.core.services.api.CatalogVersion;
 import ai.wanaku.core.services.api.DeploymentInstructions;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
 import ai.wanaku.core.services.api.ValidationResult;
@@ -43,6 +44,9 @@ public class ServiceCatalogResource {
 
     @Inject
     ServiceCatalogBean serviceCatalogBean;
+
+    @Inject
+    CatalogLifecycle lifecycle;
 
     @Inject
     DeploymentInstructionsBean deploymentInstructionsBean;
@@ -166,10 +170,74 @@ public class ServiceCatalogResource {
      */
     @POST
     @Audited(operation = "service_catalog.deploy", targetType = "service_catalog", targetField = "name")
-    public WanakuResponse<DataStore> deploy(DataStore dataStore) {
+    public WanakuResponse<DataStore> deploy(@QueryParam("expectedVersion") Long expectedVersion, DataStore dataStore) {
         LOG.debugf("REST: Deploying service catalog: %s", dataStore.getName());
         auditContext.setTarget(dataStore.getName());
-        DataStore result = serviceCatalogBean.deploy(dataStore);
+        DataStore result = serviceCatalogBean.deploy(dataStore, CatalogLifecycle.ORIGIN_API, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
+        return new WanakuResponse<>(result);
+    }
+
+    /**
+     * List the versions of a service catalog, newest first.
+     * GET /api/v1/service-catalog/{name}/versions
+     *
+     * @param name the catalog name
+     * @return response with the version metadata
+     */
+    @Path("/{name}/versions")
+    @GET
+    public WanakuResponse<List<CatalogVersion>> versions(@PathParam("name") String name) {
+        return new WanakuResponse<>(lifecycle.versions(ServiceCatalogBean.LABEL_TYPE_VALUE, name));
+    }
+
+    /**
+     * Get the metadata of one version of a service catalog.
+     * GET /api/v1/service-catalog/{name}/versions/{version}
+     *
+     * @param name the catalog name
+     * @param version the version number
+     * @return response with the version metadata
+     */
+    @Path("/{name}/versions/{version}")
+    @GET
+    public WanakuResponse<CatalogVersion> version(@PathParam("name") String name, @PathParam("version") long version) {
+        return new WanakuResponse<>(lifecycle.version(ServiceCatalogBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Download the package of one version of a service catalog.
+     * GET /api/v1/service-catalog/{name}/versions/{version}/download
+     *
+     * @param name the catalog name
+     * @param version the version number
+     * @return response with a DataStore that contains the Base64-encoded ZIP
+     */
+    @Path("/{name}/versions/{version}/download")
+    @GET
+    public WanakuResponse<DataStore> downloadVersion(
+            @PathParam("name") String name, @PathParam("version") long version) {
+        return new WanakuResponse<>(lifecycle.content(ServiceCatalogBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Restore an earlier version of a service catalog. The restore creates a new version.
+     * POST /api/v1/service-catalog/{name}/versions/{version}/activate
+     *
+     * @param name the catalog name
+     * @param version the version to restore
+     * @param expectedVersion optional active version that the caller expects; a mismatch returns 409
+     * @return response with the catalog entry
+     */
+    @Path("/{name}/versions/{version}/activate")
+    @POST
+    @Audited(operation = "service_catalog.restore", targetType = "service_catalog")
+    public WanakuResponse<DataStore> activateVersion(
+            @PathParam("name") String name,
+            @PathParam("version") long version,
+            @QueryParam("expectedVersion") Long expectedVersion) {
+        DataStore result = lifecycle.restore(ServiceCatalogBean.LABEL_TYPE_VALUE, name, version, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
         return new WanakuResponse<>(result);
     }
 
