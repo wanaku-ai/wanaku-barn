@@ -33,13 +33,15 @@ Barn records one administrative event for each request to these operations:
 | `semantic_router.update` | `PUT /api/v1/semantic-routers/{id}` |
 | `semantic_router.remove` | `DELETE /api/v1/semantic-routers/{id}` |
 | `semantic_router.publish` | `POST /api/v1/semantic-routers/{id}/publish` |
+| `barn.export` | `GET /api/v1/management/export` |
+| `barn.import` | `POST /api/v1/management/import` |
 
 These rules apply:
 
 - Barn records the event after the outcome is known. Barn records successful and rejected requests.
 - Barn records one event for each request. An operation that calls another operation internally (for example, template instantiation deploys a catalog) records only the outer operation.
 - A bulk delete records one event. The `count` attribute contains the number of removed entries.
-- Barn does not record read operations, validation-only requests (`/validate`), or reads of the audit trail.
+- Barn does not record read operations, validation-only requests (`/validate`), or reads of the audit trail. The export is an exception: it reads all data, so Barn records it.
 
 ## Event Fields
 

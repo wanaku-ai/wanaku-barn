@@ -1,9 +1,7 @@
 package ai.wanaku.backend.api.v1.servicecatalog;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
 import java.security.MessageDigest;
@@ -21,13 +19,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.Cache;
 import org.infinispan.commons.api.query.Query;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.jboss.logging.Logger;
-import io.quarkus.runtime.StartupEvent;
 import io.quarkus.scheduler.Scheduled;
 import ai.wanaku.backend.api.v1.exceptions.InvalidPayloadException;
 import ai.wanaku.backend.audit.AuditEvent;
@@ -116,10 +114,11 @@ public class CatalogLifecycle {
     }
 
     /**
-     * Gives version 1 to the catalogs and templates that were stored before versioning existed.
-     * Runs before the built-in templates are seeded. Entries that already have a version are skipped.
+     * Gives version 1 to the catalogs and templates that were stored before versioning existed, and adds the
+     * catalog name label to entries that do not have it. Entries that are already migrated are skipped.
+     * Schema migration step 1 runs this method at startup, before the built-in templates are seeded.
      */
-    void migrateLegacyEntries(@Observes @Priority(1) StartupEvent event) {
+    public void migrateLegacyEntries() {
         for (String type : List.of(ServiceCatalogBean.LABEL_TYPE_VALUE, ServiceTemplateBean.LABEL_TYPE_VALUE)) {
             for (String stored : List.of(type, removedType(type))) {
                 for (DataStore entry : list(stored)) {
@@ -463,6 +462,53 @@ public class CatalogLifecycle {
             throw new DataStoreResourceNotFoundException("The entry %s does not exist".formatted(entry.getId()));
         }
         return stored;
+    }
+
+    /**
+     * Runs an action while no deploy, restore or removal can run.
+     *
+     * @param action the action
+     * @return the result of the action
+     */
+    public <T> T exclusive(Supplier<T> action) {
+        try {
+            lock.lock();
+            return action.get();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /** Returns all stored versions, including their content, for an export. */
+    public List<CatalogVersionRecord> allVersions() {
+        return versions().values().stream()
+                .sorted(Comparator.comparing(CatalogVersion::getType)
+                        .thenComparing(CatalogVersion::getName)
+                        .thenComparingLong(CatalogVersion::getVersion))
+                .toList();
+    }
+
+    /** Returns the version counters, for an export. */
+    public Map<String, Long> versionCounters() {
+        return new HashMap<>(counters());
+    }
+
+    /**
+     * Replaces all versions and version counters, for an import.
+     *
+     * @param records the versions
+     * @param counters the version counters, keyed by {@code <type>:<name>}
+     */
+    public void replaceVersions(List<CatalogVersionRecord> records, Map<String, Long> counters) {
+        try {
+            lock.lock();
+            versions().clear();
+            counters().clear();
+            records.forEach(record -> versions().put(record.key(), record));
+            counters().putAll(counters);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**

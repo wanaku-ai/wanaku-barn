@@ -129,6 +129,51 @@
           }
         }
       },
+      "BarnArchive" : {
+        "type" : "object",
+        "properties" : {
+          "formatVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "schemaVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "exportedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "dataStores" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DataStoreRecord"
+            }
+          },
+          "catalogVersions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CatalogVersionRecord"
+            }
+          },
+          "versionCounters" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "auditEvents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AuditEvent"
+            }
+          },
+          "auditSequence" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
       "CatalogVersion" : {
         "type" : "object",
         "properties" : {
@@ -169,6 +214,61 @@
           },
           "dataStoreName" : {
             "type" : "string"
+          }
+        }
+      },
+      "CatalogVersionRecord" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "activatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "checksum" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "actor" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "restoredFrom" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "dataStoreName" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "string"
+          },
+          "labels" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "rejected" : {
+            "type" : "boolean"
           }
         }
       },
@@ -989,6 +1089,17 @@
           }
         }
       },
+      "WanakuResponseBarnArchive" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/BarnArchive"
+          }
+        }
+      },
       "WanakuResponseCatalogVersion" : {
         "type" : "object",
         "properties" : {
@@ -1190,6 +1301,21 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ServiceTemplateSummary"
+            }
+          }
+        }
+      },
+      "WanakuResponseMapStringInteger" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int32"
             }
           }
         }
@@ -1896,6 +2022,71 @@
             "description" : "Kamelet revision not found"
           }
         }
+      }
+    },
+    "/api/v1/management/export" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "includeAudit",
+          "in" : "query",
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseBarnArchive"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Export",
+        "tags" : [ "Backup Resource" ]
+      }
+    },
+    "/api/v1/management/import" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "replace",
+          "in" : "query",
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BarnArchive"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseMapStringInteger"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          }
+        },
+        "summary" : "Import Archive",
+        "tags" : [ "Backup Resource" ]
       }
     },
     "/api/v1/management/info/version" : {

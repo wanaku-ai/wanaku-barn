@@ -218,8 +218,8 @@ class CatalogVersioningTest {
         legacy.setLabels(Map.of("wanaku.type", "catalog"));
         String id = repository.persist(legacy).getId();
 
-        lifecycle.migrateLegacyEntries(null);
-        lifecycle.migrateLegacyEntries(null);
+        lifecycle.migrateLegacyEntries();
+        lifecycle.migrateLegacyEntries();
 
         List<CatalogVersion> history = lifecycle.versions("catalog", "legacy");
         assertThat(history).hasSize(1);
