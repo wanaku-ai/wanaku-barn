@@ -18,7 +18,7 @@ The persistence layer follows a layered architecture:
 ├─────────────────────────────────────┤
 │    Infinispan Embedded Cache        │
 ├─────────────────────────────────────┤
-│      SingleFileStore (Disk)         │
+│    SoftIndexFileStore (Disk)        │
 └─────────────────────────────────────┘
 ```
 
@@ -28,7 +28,8 @@ The persistence layer follows a layered architecture:
 - Infinispan embedded cache with file-based persistence
 - Protocol Buffers (proto3) for serialization
 - CDI for dependency injection
-- Thread-safe operations with ReentrantLock
+- Thread-safe operations with ReentrantLock and conditional cache operations
+- No transactions: each write changes one entry. Operations that change more than one entry (for example, a catalog deploy) are serialized with a lock in one process, but are not atomic across a crash
 
 ## Entity Hierarchy
 
@@ -433,29 +434,47 @@ public class InfinispanConfigurationProvider {
                    defaultValue = "${wanaku.home}/router/")
     String baseFolder;
 
+    @ConfigProperty(name = "wanaku.persistence.infinispan.max-entries", defaultValue = "10000")
+    int maxEntries;
+
+    @ConfigProperty(name = "wanaku.persistence.infinispan.file-store", defaultValue = "true")
+    boolean fileStore;
+
     @Produces
     Configuration newConfiguration() {
-        String location = WanakuHome.expandPlaceholders(baseFolder);
-        Files.createDirectories(Paths.get(location));
+        ConfigurationBuilder builder = new ConfigurationBuilder();
+        builder.clustering()
+                .cacheMode(CacheMode.LOCAL)
+                .memory()
+                .storage(StorageType.HEAP)
+                .maxCount(maxEntries);
 
-        return new ConfigurationBuilder()
-            .clustering()
-            .cacheMode(CacheMode.LOCAL)
-            .persistence()
-            .passivation(false)
-            .addStore(SingleFileStoreConfigurationBuilder.class)
-            .location(location)
-            .build();
+        if (fileStore) {
+            String location = WanakuHome.expandPlaceholders(baseFolder);
+            builder.persistence()
+                    .passivation(false)
+                    .addSoftIndexFileStore()
+                    .dataLocation(location)
+                    .indexLocation(location)
+                    .shared(false)
+                    .preload(true)
+                    .purgeOnStartup(false);
+        }
+        return builder.build();
     }
 }
 ```
 
 **Configuration options:**
 
-- `CacheMode.LOCAL` - Single-node caching
-- `SingleFileStore` - File-based persistence
-- `passivation(false)` - All entries persisted to disk
-- Configurable storage location via property
+- `CacheMode.LOCAL` - Single-node caching. The caches are not shared between processes.
+- `StorageType.HEAP` with `maxCount` - The caches keep up to `wanaku.persistence.infinispan.max-entries` entries in memory. With the file store, entries removed from memory stay on disk.
+- `addSoftIndexFileStore()` - File-based persistence with the Infinispan SoftIndexFileStore.
+- `passivation(false)` - Write-through: every write goes to the store.
+- `preload(true)` - The store loads all entries into memory at startup.
+- `purgeOnStartup(false)` - The store keeps its content at startup.
+- `wanaku.persistence.infinispan.file-store=false` - Turns off disk persistence (used by the tests).
+- Configurable storage location via `wanaku.persistence.infinispan.base-folder`
 
 ### Repository Producer
 

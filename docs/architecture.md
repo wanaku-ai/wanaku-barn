@@ -324,7 +324,9 @@ graph LR
         Resources[Resource Definitions]
         Namespaces[Namespace Config]
         Services[Service Registry]
-        History[State History]
+        History[Service State History]
+        Versions[Catalog Versions]
+        Audit[Audit Events]
     end
 
     API --> Infinispan
@@ -334,6 +336,8 @@ graph LR
     Infinispan --> Namespaces
     Infinispan --> Services
     Infinispan --> History
+    Infinispan --> Versions
+    Infinispan --> Audit
 
     style Infinispan fill:#4A90E2
 ```
@@ -344,7 +348,9 @@ Wanaku uses Infinispan embedded data grid for persistence:
 - **Resource Definitions**: Registered resources with URIs and metadata
 - **Namespace Configuration**: Namespace settings and mappings
 - **Service Registry**: Active downstream MCP servers and their health status
-- **State History**: Historical snapshots for rollback and auditing (configurable retention)
+- **Service State History**: The recent states of each registered service (healthy, unhealthy, down). `wanaku.persistence.infinispan.max-state-count` limits the list. This history does not store configuration snapshots.
+- **Catalog Versions**: Immutable versions of service catalogs and templates, which you can restore. See [Version History](service-catalogs.md#version-history).
+- **Audit Events**: A durable record of changes to the managed resources. See [Barn Audit Trail](audit-trail.md).
 
 ### Extensibility Model
 
@@ -416,8 +422,8 @@ Leverage 300+ Camel components for rapid integration:
 
 - **Embedded**: No external database dependency for simple deployments
 - **Performance**: In-memory data grid with fast access
-- **Clustering**: Supports distributed deployments (future)
-- **ACID**: Transactional consistency for critical operations
+- **Clustering**: Supports distributed deployments (not used: Barn runs one process per data directory)
+- **Consistency**: Each write changes one entry atomically. Conditional writes (revision checks) prevent lost updates. Barn does not use transactions, so an operation that changes more than one entry is not atomic across a crash.
 
 ## Deployment Architectures
 

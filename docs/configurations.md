@@ -156,7 +156,7 @@ java -Dwanaku.home=/path/to/custom/home -jar quarkus-run.jar
 
 | Directory | Purpose |
 |-----------|---------|
-| `<home>/router/` | Infinispan data store (SoftIndexFileStore for tools, resources, namespaces) |
+| `<home>/router/` | Infinispan data store (SoftIndexFileStore) for data stores, service catalogs and templates, catalog versions, audit events and the service registry. See [Backup, Restore and Upgrade](backup-and-upgrade.md). |
 | `<home>/local/logs/` | Router log file (`wanaku-router.log`) when running with the `local` Quarkus profile |
 | `<home>/credentials` | CLI credential store (0600 permissions) |
 
@@ -186,7 +186,9 @@ These `wanaku.router.health-check.*` properties control the periodic health prob
 | Property                                    | Description                                                                   |
 |---------------------------------------------|-------------------------------------------------------------------------------|
 | `wanaku.persistence.infinispan.base-folder` | Where to store Infinispan files (defaults to `${wanaku.home}/router/`). |
-| `wanaku.infinispan.max-state-count`         | `10` - The maximum number of historical states to keep for each service.      |
+| `wanaku.persistence.infinispan.max-state-count` | `10` - The number of recent states to keep for each registered service. When the list grows past this value, Barn removes the oldest half. This setting does not apply to catalog versions. |
+| `wanaku.persistence.infinispan.max-entries` | `10000` - The maximum number of entries that each cache keeps in memory. With the file store, the other entries stay on disk. |
+| `wanaku.persistence.infinispan.file-store`  | `true` - Stores the caches on disk (SoftIndexFileStore). Set to `false` to keep the data in memory only. |
 
 ### Service Catalog Versions
 
@@ -357,7 +359,7 @@ quarkus.http.cors.enabled=true
 quarkus.http.cors.origins=http://localhost:3000,https://my-frontend.example.com
 
 wanaku.persistence.infinispan.base-folder=/var/lib/wanaku/data
-wanaku.infinispan.max-state-count=20
+wanaku.persistence.infinispan.max-state-count=20
 ```
 
 ### Example: Tool Service
