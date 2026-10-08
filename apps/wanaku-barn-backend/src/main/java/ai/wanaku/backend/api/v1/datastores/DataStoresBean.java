@@ -9,6 +9,7 @@ import java.util.List;
 import org.jboss.logging.Logger;
 import ai.wanaku.backend.common.LabelsAwareWanakuEntityBean;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
+import ai.wanaku.backend.core.persistence.api.RevisionConflictException;
 import ai.wanaku.backend.core.persistence.api.WanakuRepository;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException;
@@ -41,12 +42,9 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
      */
     public DataStore add(DataStore dataStore) {
         LOG.debugf("Adding data store: %s", dataStore);
-        if (!dataStoreRepository.findByName(dataStore.getName()).isEmpty()) {
-            throw EntityAlreadyExistsException.forName(dataStore.getName());
-        }
         if (dataStore.getId() != null) rejectProtected(dataStoreRepository.findById(dataStore.getId()));
         rejectProtected(dataStore);
-        return dataStoreRepository.persist(dataStore);
+        return dataStoreRepository.create(dataStore);
     }
 
     /**
@@ -56,6 +54,19 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
      * @throws DataStoreResourceNotFoundException if the data store doesn't exist
      */
     public void update(DataStore dataStore) throws WanakuException {
+        update(dataStore, null);
+    }
+
+    /**
+     * Update an existing data store entry when its revision matches.
+     *
+     * @param dataStore the data store to update
+     * @param expectedRevision the revision the caller read, or {@code null} to skip the check
+     * @return the stored data store
+     * @throws DataStoreResourceNotFoundException if the data store doesn't exist
+     * @throws RevisionConflictException if the stored revision is different from the expected revision
+     */
+    public DataStore update(DataStore dataStore, Long expectedRevision) throws WanakuException {
         LOG.debugf("Updating data store: %s", dataStore);
         if (dataStore.getId() == null) {
             throw new WanakuException("Cannot update data store without ID");
@@ -66,9 +77,11 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
         }
         rejectProtected(existing);
         rejectProtected(dataStore);
-        if (!dataStoreRepository.update(dataStore.getId(), dataStore)) {
+        DataStore stored = dataStoreRepository.update(dataStore.getId(), dataStore, expectedRevision);
+        if (stored == null) {
             throw notFound(dataStore.getId());
         }
+        return stored;
     }
 
     private static DataStoreResourceNotFoundException notFound(String id) {
@@ -130,10 +143,22 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
      * @return the number of entries removed
      */
     public int removeById(String id) {
+        return removeById(id, null);
+    }
+
+    /**
+     * Remove a data store by ID when its revision matches.
+     *
+     * @param id the ID of the data store to remove
+     * @param expectedRevision the revision the caller read, or {@code null} to skip the check
+     * @return the number of entries removed
+     * @throws RevisionConflictException if the stored revision is different from the expected revision
+     */
+    public int removeById(String id, Long expectedRevision) {
         LOG.debugf("Removing data store by ID: %s", id);
         rejectManagedName(id);
         rejectImmutable(dataStoreRepository.findById(id));
-        boolean removed = dataStoreRepository.deleteById(id);
+        boolean removed = dataStoreRepository.deleteById(id, expectedRevision);
         return removed ? 1 : 0;
     }
 

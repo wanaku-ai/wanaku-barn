@@ -1562,6 +1562,23 @@ The server sets these values. The server ignores metadata values in requests.
 Entries written by earlier versions show `revision` 0 and no timestamps until the next write.
 An update (`PUT /api/v1/data-store`) for an ID that does not exist returns HTTP 404.
 
+#### Concurrent Changes
+
+The data store API uses optimistic concurrency control to prevent lost updates:
+
+- `GET /api/v1/data-store/{id}`, `POST /api/v1/data-store` and `PUT /api/v1/data-store` return the revision in the `ETag` header, for example `ETag: "3"`.
+- To make an update or a delete conditional, send the revision that you read in the `If-Match` header or in the `expectedRevision` query parameter.
+- If the stored revision is different, the server returns HTTP 409 (Conflict) and does not change the entry.
+- If the entry does not exist, the server returns HTTP 404. The server checks existence before it checks the revision.
+- If `If-Match` and `expectedRevision` specify different revisions, or if `If-Match` is not a single numeric entity tag, the server returns HTTP 400.
+- Requests without a revision are not conditional. Earlier clients continue to work.
+- Entry names are unique. A create or a rename that uses the name of another entry returns HTTP 409.
+- Bulk deletes (by name or by label expression) are not conditional.
+
+The CLI commands `wanaku data-store label add` and `wanaku data-store label remove` send the revision that they read. If another client changes the entry first, the command fails and reports the conflict. Run the command again to apply the labels to the current entry.
+
+The server makes these checks in one Barn process. Barn does not support more than one process on the same store directory.
+
 ### Managing Labels on Data Stores
 
 Data stores support labels for organization and filtering, similar to tools and resources.

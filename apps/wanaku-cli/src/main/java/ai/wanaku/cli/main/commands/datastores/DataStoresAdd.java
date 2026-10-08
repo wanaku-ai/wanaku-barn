@@ -13,6 +13,7 @@ import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
 import ai.wanaku.cli.main.support.WanakuPrinter;
+import ai.wanaku.core.services.api.DataStoreRecord;
 import ai.wanaku.core.services.api.DataStoresService;
 import picocli.CommandLine;
 
@@ -77,7 +78,7 @@ public class DataStoresAdd extends BaseCommand {
         dataStoresService = initAuthenticatedService(DataStoresService.class, host);
 
         try {
-            WanakuResponse<DataStore> response = dataStoresService.add(dataStore);
+            WanakuResponse<DataStoreRecord> response = dataStoresService.add(dataStore);
             DataStore created = response.data();
 
             printer.printSuccessMessage(String.format(

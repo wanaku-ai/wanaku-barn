@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.jline.terminal.Terminal;
 import io.quarkus.runtime.annotations.RegisterForReflection;
-import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
 import ai.wanaku.cli.main.support.WanakuPrinter;
+import ai.wanaku.core.services.api.DataStoreRecord;
 import ai.wanaku.core.services.api.DataStoresService;
 import picocli.CommandLine;
 
@@ -56,8 +56,8 @@ Note: If omitted, all data stores are listed. Label matching is case-sensitive.
         dataStoresService = initAuthenticatedService(DataStoresService.class, host);
 
         try {
-            WanakuResponse<List<DataStore>> response = dataStoresService.list(labelExpression);
-            List<DataStore> dataStores = response.data();
+            WanakuResponse<List<DataStoreRecord>> response = dataStoresService.list(labelExpression);
+            List<DataStoreRecord> dataStores = response.data();
 
             if (dataStores == null || dataStores.isEmpty()) {
                 printer.printInfoMessage("No data stores found.");

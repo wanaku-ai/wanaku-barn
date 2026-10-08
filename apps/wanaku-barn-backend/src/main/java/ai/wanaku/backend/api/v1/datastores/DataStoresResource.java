@@ -5,16 +5,19 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 
 import java.util.List;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.RestResponse;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -41,27 +44,36 @@ public class DataStoresResource {
      * POST /api/v1/data-store
      *
      * @param dataStore the data store to add
-     * @return response with the created data store
+     * @return response with the created data store and its revision in the {@code ETag} header
      */
     @POST
-    public WanakuResponse<DataStoreRecord> add(DataStore dataStore) {
+    public RestResponse<WanakuResponse<DataStoreRecord>> add(DataStore dataStore) {
         LOG.debugf("REST: Adding data store: %s", dataStore);
-        DataStore result = dataStoresBean.add(dataStore);
-        return new WanakuResponse<>(record(result));
+        DataStoreRecord result = record(dataStoresBean.add(dataStore));
+        return withEntityTag(new WanakuResponse<>(result), result);
     }
 
     /**
      * Update an existing data store entry.
      * PUT /api/v1/data-store
+     * <p>
+     * Send the revision that was read in {@code If-Match} or {@code expectedRevision} to reject the update when
+     * the entry changed in between. Without a revision, the update replaces the entry unconditionally.
+     * </p>
      *
+     * @param ifMatch optional entity tag of the expected revision, for example {@code "3"}
+     * @param expectedRevision optional expected revision
      * @param dataStore the data store to update (must include ID)
-     * @return HTTP 200 if updated successfully
+     * @return HTTP 200 with the new revision in the {@code ETag} header
      */
     @PUT
-    public WanakuResponse<Void> update(DataStore dataStore) {
+    public RestResponse<WanakuResponse<Void>> update(
+            @HeaderParam(HttpHeaders.IF_MATCH) String ifMatch,
+            @QueryParam("expectedRevision") Long expectedRevision,
+            DataStore dataStore) {
         LOG.debugf("REST: Updating data store: %s", dataStore);
-        dataStoresBean.update(dataStore);
-        return new WanakuResponse<>();
+        DataStore stored = dataStoresBean.update(dataStore, expectedRevision(ifMatch, expectedRevision));
+        return withEntityTag(new WanakuResponse<>(), record(stored));
     }
 
     /**
@@ -98,17 +110,18 @@ public class DataStoresResource {
      * GET /api/v1/data-store/{id}
      *
      * @param id the ID of the data store
-     * @return response with the requested data store
+     * @return response with the requested data store and its revision in the {@code ETag} header
      */
     @Path("/{id}")
     @GET
-    public WanakuResponse<DataStoreRecord> getById(@PathParam("id") String id) {
+    public RestResponse<WanakuResponse<DataStoreRecord>> getById(@PathParam("id") String id) {
         LOG.debugf("REST: Getting data store by ID: %s", id);
         DataStore dataStore = dataStoresBean.findById(id);
         if (dataStore == null) {
             throw new DataStoreResourceNotFoundException("Data store not found with ID: %s".formatted(id));
         }
-        return new WanakuResponse<>(record(dataStore));
+        DataStoreRecord result = record(dataStore);
+        return withEntityTag(new WanakuResponse<>(result), result);
     }
 
     /**
@@ -116,13 +129,18 @@ public class DataStoresResource {
      * DELETE /api/v1/data-store/{id}
      *
      * @param id the ID of the data store to remove
-     * @return HTTP 200 if removed, 404 if not found
+     * @param ifMatch optional entity tag of the expected revision
+     * @param expectedRevision optional expected revision
+     * @return HTTP 200 if removed, 404 if not found, 409 if the revision does not match
      */
     @Path("/{id}")
     @DELETE
-    public WanakuResponse<Void> removeById(@PathParam("id") String id) {
+    public WanakuResponse<Void> removeById(
+            @PathParam("id") String id,
+            @HeaderParam(HttpHeaders.IF_MATCH) String ifMatch,
+            @QueryParam("expectedRevision") Long expectedRevision) {
         LOG.debugf("REST: Removing data store by ID: %s", id);
-        int deleteCount = dataStoresBean.removeById(id);
+        int deleteCount = dataStoresBean.removeById(id, expectedRevision(ifMatch, expectedRevision));
         if (deleteCount > 0) {
             return new WanakuResponse<>();
         } else {
@@ -164,6 +182,23 @@ public class DataStoresResource {
         LOG.debugf("REST: Removing data stores by label expression: %s", labelExpression);
         int removed = dataStoresBean.removeIf(labelExpression);
         return new WanakuResponse<>(removed);
+    }
+
+    /**
+     * Resolves the expected revision from the {@code If-Match} header and the {@code expectedRevision} parameter.
+     */
+    static Long expectedRevision(String ifMatch, Long expectedRevision) {
+        Long fromHeader = DataStoreRecord.parseEntityTag(ifMatch);
+        if (fromHeader != null && expectedRevision != null && !fromHeader.equals(expectedRevision)) {
+            throw new IllegalArgumentException("If-Match and expectedRevision specify different revisions");
+        }
+        return fromHeader != null ? fromHeader : expectedRevision;
+    }
+
+    private static <T> RestResponse<T> withEntityTag(T entity, DataStoreRecord stored) {
+        return RestResponse.ResponseBuilder.ok(entity)
+                .header(HttpHeaders.ETAG, DataStoreRecord.entityTag(stored.getRevision()))
+                .build();
     }
 
     private static DataStoreRecord record(DataStore dataStore) {

@@ -205,6 +205,25 @@ The repository applies these rules:
 
 The REST API returns the metadata fields in data store responses.
 
+### Optimistic Concurrency for Data Stores
+
+`DataStoreRepository` provides conditional operations:
+
+- `create(dataStore)` - Creates an entry. Throws `EntityAlreadyExistsException` if an entry has the same name or ID.
+- `update(id, dataStore, expectedRevision)` - Replaces an entry if the stored revision is equal to `expectedRevision`. Returns `null` if the entry does not exist. Throws `RevisionConflictException` if the revisions are different. Throws `EntityAlreadyExistsException` if a rename uses the name of another entry.
+- `deleteById(id, expectedRevision)` - Deletes an entry if the stored revision is equal to `expectedRevision`.
+
+A `null` expected revision skips the revision check.
+
+The repository uses these mechanisms:
+
+- The repositories are CDI singletons. All callers share one repository instance and one lock.
+- All data store writes hold the repository lock. Checks that read more than one entry, such as name uniqueness, are atomic in the JVM.
+- Writes that depend on the stored value use the conditional cache operations `replace(key, old, new)`, `remove(key, old)` and `putIfAbsent`.
+- Generic deletes (`deleteById`, `removeByFields`, `removeAll`, `removeIf`) also hold the lock. `removeIf` counts only the entries that it removed.
+
+The cache mode is `LOCAL` and the file store is not shared. These guarantees apply to one Barn process. Do not start more than one process on the same store directory.
+
 ### AbstractLabelAwareInfinispanRepository
 
 Extends base with label filtering:
@@ -438,18 +457,22 @@ public class InfinispanPersistenceConfiguration {
     Configuration configuration;
 
     @Produces
+    @Singleton
     DataStoreRepository dataStoreRepository() {
         return new InfinispanDataStoreRepository(cacheManager, configuration);
     }
 
     @Produces
-    ToolReferenceRepository toolReferenceRepository() {
-        return new InfinispanToolReferenceRepository(cacheManager, configuration);
+    @Singleton
+    ForwardReferenceRepository forwardReferenceRepository() {
+        return new InfinispanForwardReferenceRepository(cacheManager, configuration);
     }
 
     // Additional producers for each repository type
 }
 ```
+
+Annotate each producer with `@Singleton`. Without a scope, CDI creates a new repository for each injection point, and each instance has its own lock.
 
 ## Usage Patterns
 
@@ -570,7 +593,7 @@ When adding a new entity type:
 
 2. **Local Cache Mode**: Single-node operation. For distributed scenarios, change to `CacheMode.DIST_SYNC` or `REPL_SYNC`.
 
-3. **ReentrantLock**: Ensures thread-safe ID generation and updates. Lock is held only during cache operations.
+3. **ReentrantLock**: Each repository is a singleton with one lock. Writes and deletes hold the lock. Data store writes also use conditional cache operations and revision checks.
 
 4. **Ickle Queries**: Infinispan's query language for bulk operations. More efficient than iterating and removing individually.
 

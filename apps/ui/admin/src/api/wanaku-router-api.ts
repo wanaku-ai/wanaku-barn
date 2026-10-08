@@ -6,6 +6,7 @@
  */
 import type {
   DataStore,
+  DeleteApiV1DataStoreIdParams,
   DeleteApiV1DataStoreLabelsParams,
   DeleteApiV1DataStoreParams,
   DeleteApiV1ServiceTemplateRemoveParams,
@@ -22,6 +23,7 @@ import type {
   GetApiV1ServiceTemplateListParams,
   GetApiV1ServiceTemplatePropertiesParams,
   KameletUpload,
+  PutApiV1DataStoreParams,
   SemanticPreviewRequest,
   SemanticRouterDefinition,
   TemplateInstantiationRequest,
@@ -79,20 +81,36 @@ export type putApiV1DataStoreResponse =
   | putApiV1DataStoreResponseSuccess
   | putApiV1DataStoreResponseError;
 
-export const getPutApiV1DataStoreUrl = () => {
-  return `/api/v1/data-store`;
+export const getPutApiV1DataStoreUrl = (params?: PutApiV1DataStoreParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/data-store?${stringifiedParams}`
+    : `/api/v1/data-store`;
 };
 
 export const putApiV1DataStore = async (
   dataStore: DataStore,
+  params?: PutApiV1DataStoreParams,
   options?: RequestInit,
 ): Promise<putApiV1DataStoreResponse> => {
-  return customFetch<putApiV1DataStoreResponse>(getPutApiV1DataStoreUrl(), {
-    ...options,
-    method: "PUT",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(dataStore),
-  });
+  return customFetch<putApiV1DataStoreResponse>(
+    getPutApiV1DataStoreUrl(params),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(dataStore),
+    },
+  );
 };
 
 /**
@@ -284,16 +302,32 @@ export type deleteApiV1DataStoreIdResponseSuccess =
 export type deleteApiV1DataStoreIdResponse =
   deleteApiV1DataStoreIdResponseSuccess;
 
-export const getDeleteApiV1DataStoreIdUrl = (id: string) => {
-  return `/api/v1/data-store/${id}`;
+export const getDeleteApiV1DataStoreIdUrl = (
+  id: string,
+  params?: DeleteApiV1DataStoreIdParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/data-store/${id}?${stringifiedParams}`
+    : `/api/v1/data-store/${id}`;
 };
 
 export const deleteApiV1DataStoreId = async (
   id: string,
+  params?: DeleteApiV1DataStoreIdParams,
   options?: RequestInit,
 ): Promise<deleteApiV1DataStoreIdResponse> => {
   return customFetch<deleteApiV1DataStoreIdResponse>(
-    getDeleteApiV1DataStoreIdUrl(id),
+    getDeleteApiV1DataStoreIdUrl(id, params),
     {
       ...options,
       method: "DELETE",

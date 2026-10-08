@@ -19,6 +19,39 @@ public interface DataStoreRepository extends LabelAwareInfinispanRepository<Data
     DataStore persistIfAbsent(DataStore dataStore);
 
     /**
+     * Creates a new entry. The name and the identifier must be unique.
+     *
+     * @param dataStore the entry to create; an identifier is assigned when it has none
+     * @return the stored entry
+     * @throws ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException if an entry with the same
+     *         name or identifier exists
+     */
+    DataStore create(DataStore dataStore);
+
+    /**
+     * Replaces an existing entry when its revision matches. A changed name must not belong to another entry.
+     *
+     * @param id the identifier of the entry
+     * @param dataStore the new content
+     * @param expectedRevision the revision that the caller read, or {@code null} to skip the check
+     * @return the stored entry, or {@code null} when no entry has the identifier
+     * @throws RevisionConflictException if the stored revision is different from the expected revision
+     * @throws ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException if the new name belongs to
+     *         another entry
+     */
+    DataStore update(String id, DataStore dataStore, Long expectedRevision);
+
+    /**
+     * Deletes an entry when its revision matches.
+     *
+     * @param id the identifier of the entry
+     * @param expectedRevision the revision that the caller read, or {@code null} to skip the check
+     * @return true if the entry was deleted, false if no entry has the identifier
+     * @throws RevisionConflictException if the stored revision is different from the expected revision
+     */
+    boolean deleteById(String id, Long expectedRevision);
+
+    /**
      * Find all data stores with the given name.
      *
      * @param name the name to search for

@@ -52,6 +52,41 @@ public class DataStoreRecord extends DataStore {
         return copy;
     }
 
+    /**
+     * Formats a revision as a strong HTTP entity tag, for example {@code "3"}.
+     *
+     * @param revision the revision
+     * @return the quoted entity tag
+     */
+    public static String entityTag(long revision) {
+        return "\"" + revision + "\"";
+    }
+
+    /**
+     * Parses an {@code If-Match} value into an expected revision.
+     *
+     * @param value the header value; {@code null}, blank or {@code *} match any revision
+     * @return the expected revision, or {@code null} when any revision matches
+     * @throws IllegalArgumentException if the value is not a single numeric entity tag
+     */
+    public static Long parseEntityTag(String value) {
+        if (value == null || value.isBlank() || value.trim().equals("*")) {
+            return null;
+        }
+        String tag = value.trim();
+        if (tag.startsWith("W/")) {
+            tag = tag.substring(2);
+        }
+        if (tag.length() >= 2 && tag.startsWith("\"") && tag.endsWith("\"")) {
+            tag = tag.substring(1, tag.length() - 1);
+        }
+        try {
+            return Long.parseLong(tag);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid entity tag: %s".formatted(value));
+        }
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
