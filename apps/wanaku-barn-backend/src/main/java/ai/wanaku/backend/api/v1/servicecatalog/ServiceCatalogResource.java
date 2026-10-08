@@ -113,7 +113,7 @@ public class ServiceCatalogResource {
 
         DataStore catalog = serviceCatalogBean.get(name);
         if (catalog == null) {
-            throw new WanakuException("Service catalog not found: " + name);
+            throw new DataStoreResourceNotFoundException("Service catalog not found: " + name);
         }
 
         ServiceCatalogIndex index = serviceCatalogBean.parseIndex(catalog);
@@ -155,7 +155,7 @@ public class ServiceCatalogResource {
 
         DataStore catalog = serviceCatalogBean.get(name);
         if (catalog == null) {
-            throw new WanakuException("Service catalog not found: " + name);
+            throw new DataStoreResourceNotFoundException("Service catalog not found: " + name);
         }
 
         return new WanakuResponse<>(catalog);
@@ -176,6 +176,32 @@ public class ServiceCatalogResource {
         DataStore result = serviceCatalogBean.deploy(dataStore, CatalogLifecycle.ORIGIN_API, expectedVersion);
         auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
         return new WanakuResponse<>(result);
+    }
+
+    /**
+     * List the removed service catalogs. Removed catalogs keep their versions and can be restored.
+     * GET /api/v1/service-catalog/removed
+     *
+     * @return response with the name, removal time and active version of each removed catalog
+     */
+    @Path("/removed")
+    @GET
+    public WanakuResponse<List<Map<String, Object>>> removed() {
+        return new WanakuResponse<>(lifecycle.removedSummaries(ServiceCatalogBean.LABEL_TYPE_VALUE));
+    }
+
+    /**
+     * Restore a removed service catalog with its active version.
+     * POST /api/v1/service-catalog/{name}/restore
+     *
+     * @param name the catalog name
+     * @return response with the restored catalog entry
+     */
+    @Path("/{name}/restore")
+    @POST
+    @Audited(operation = "service_catalog.restore", targetType = "service_catalog")
+    public WanakuResponse<DataStore> restore(@PathParam("name") String name) {
+        return new WanakuResponse<>(lifecycle.restoreRemoved(ServiceCatalogBean.LABEL_TYPE_VALUE, name));
     }
 
     /**
@@ -231,7 +257,7 @@ public class ServiceCatalogResource {
      */
     @Path("/{name}/versions/{version}/activate")
     @POST
-    @Audited(operation = "service_catalog.restore", targetType = "service_catalog")
+    @Audited(operation = "service_catalog.activate_version", targetType = "service_catalog")
     public WanakuResponse<DataStore> activateVersion(
             @PathParam("name") String name,
             @PathParam("version") long version,

@@ -30,6 +30,7 @@ import type {
   PostApiV1ServiceCatalogNameVersionsVersionActivateParams,
   PostApiV1ServiceCatalogParams,
   PostApiV1ServiceTemplateDeployParams,
+  PostApiV1ServiceTemplateRestoreParams,
   PostApiV1ServiceTemplateVersionsActivateParams,
   PutApiV1DataStoreParams,
   SemanticPreviewRequest,
@@ -1769,6 +1770,37 @@ export const getApiV1ServiceCatalogInstructions = async (
 };
 
 /**
+ * @summary Removed
+ */
+export type getApiV1ServiceCatalogRemovedResponse200 = {
+  data: WanakuResponseListMapStringObject;
+  status: 200;
+};
+
+export type getApiV1ServiceCatalogRemovedResponseSuccess =
+  getApiV1ServiceCatalogRemovedResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceCatalogRemovedResponse =
+  getApiV1ServiceCatalogRemovedResponseSuccess;
+
+export const getGetApiV1ServiceCatalogRemovedUrl = () => {
+  return `/api/v1/service-catalog/removed`;
+};
+
+export const getApiV1ServiceCatalogRemoved = async (
+  options?: RequestInit,
+): Promise<getApiV1ServiceCatalogRemovedResponse> => {
+  return customFetch<getApiV1ServiceCatalogRemovedResponse>(
+    getGetApiV1ServiceCatalogRemovedUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
  * @summary Validate
  */
 export type postApiV1ServiceCatalogValidateResponse200 = {
@@ -1880,6 +1912,38 @@ export const getApiV1ServiceCatalogName = async (
     {
       ...options,
       method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Restore
+ */
+export type postApiV1ServiceCatalogNameRestoreResponse200 = {
+  data: WanakuResponseDataStore;
+  status: 200;
+};
+
+export type postApiV1ServiceCatalogNameRestoreResponseSuccess =
+  postApiV1ServiceCatalogNameRestoreResponse200 & {
+    headers: Headers;
+  };
+export type postApiV1ServiceCatalogNameRestoreResponse =
+  postApiV1ServiceCatalogNameRestoreResponseSuccess;
+
+export const getPostApiV1ServiceCatalogNameRestoreUrl = (name: string) => {
+  return `/api/v1/service-catalog/${name}/restore`;
+};
+
+export const postApiV1ServiceCatalogNameRestore = async (
+  name: string,
+  options?: RequestInit,
+): Promise<postApiV1ServiceCatalogNameRestoreResponse> => {
+  return customFetch<postApiV1ServiceCatalogNameRestoreResponse>(
+    getPostApiV1ServiceCatalogNameRestoreUrl(name),
+    {
+      ...options,
+      method: "POST",
     },
   );
 };
@@ -2373,6 +2437,83 @@ export const deleteApiV1ServiceTemplateRemove = async (
     {
       ...options,
       method: "DELETE",
+    },
+  );
+};
+
+/**
+ * @summary Removed
+ */
+export type getApiV1ServiceTemplateRemovedResponse200 = {
+  data: WanakuResponseListMapStringObject;
+  status: 200;
+};
+
+export type getApiV1ServiceTemplateRemovedResponseSuccess =
+  getApiV1ServiceTemplateRemovedResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceTemplateRemovedResponse =
+  getApiV1ServiceTemplateRemovedResponseSuccess;
+
+export const getGetApiV1ServiceTemplateRemovedUrl = () => {
+  return `/api/v1/service-template/removed`;
+};
+
+export const getApiV1ServiceTemplateRemoved = async (
+  options?: RequestInit,
+): Promise<getApiV1ServiceTemplateRemovedResponse> => {
+  return customFetch<getApiV1ServiceTemplateRemovedResponse>(
+    getGetApiV1ServiceTemplateRemovedUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Restore
+ */
+export type postApiV1ServiceTemplateRestoreResponse200 = {
+  data: WanakuResponseDataStore;
+  status: 200;
+};
+
+export type postApiV1ServiceTemplateRestoreResponseSuccess =
+  postApiV1ServiceTemplateRestoreResponse200 & {
+    headers: Headers;
+  };
+export type postApiV1ServiceTemplateRestoreResponse =
+  postApiV1ServiceTemplateRestoreResponseSuccess;
+
+export const getPostApiV1ServiceTemplateRestoreUrl = (
+  params?: PostApiV1ServiceTemplateRestoreParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-template/restore?${stringifiedParams}`
+    : `/api/v1/service-template/restore`;
+};
+
+export const postApiV1ServiceTemplateRestore = async (
+  params?: PostApiV1ServiceTemplateRestoreParams,
+  options?: RequestInit,
+): Promise<postApiV1ServiceTemplateRestoreResponse> => {
+  return customFetch<postApiV1ServiceTemplateRestoreResponse>(
+    getPostApiV1ServiceTemplateRestoreUrl(params),
+    {
+      ...options,
+      method: "POST",
     },
   );
 };

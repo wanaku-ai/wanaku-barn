@@ -200,9 +200,12 @@ class CatalogVersioningTest {
     }
 
     @Test
-    void versionNumbersContinueAfterRemoval() {
+    void versionNumbersContinueAfterRemovalAndRestore() {
         deploy("recreated", "first", null);
         given().delete("/api/v1/service-catalog/{name}", "recreated").then().statusCode(200);
+        given().post("/api/v1/service-catalog/{name}/restore", "recreated")
+                .then()
+                .statusCode(200);
 
         assertThat(deploy("recreated", "again", null).getString("data.labels.'wanaku.version'"))
                 .isEqualTo("2");
@@ -311,7 +314,7 @@ class CatalogVersioningTest {
                 .queryParam("target", "audited-version")
                 .get("/api/v1/audit/events")
                 .then()
-                .body("data.events[0].operation", equalTo("service_catalog.restore"))
+                .body("data.events[0].operation", equalTo("service_catalog.activate_version"))
                 .body("data.events[0].policy_revision", equalTo("2"))
                 .body("data.events[0].target", equalTo("audited-version"));
     }

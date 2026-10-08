@@ -203,6 +203,34 @@ public class ServiceTemplateResource {
     }
 
     /**
+     * List the removed service templates. Removed templates keep their versions and can be restored.
+     * GET /api/v1/service-template/removed
+     *
+     * @return response with the name, removal time and active version of each removed template
+     */
+    @Path("/removed")
+    @GET
+    public WanakuResponse<List<Map<String, Object>>> removed() {
+        return new WanakuResponse<>(lifecycle.removedSummaries(ServiceTemplateBean.LABEL_TYPE_VALUE));
+    }
+
+    /**
+     * Restore a removed service template with its active version.
+     * POST /api/v1/service-template/restore?name={name}
+     *
+     * @param name the template name
+     * @return response with the restored template entry
+     */
+    @Path("/restore")
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Audited(operation = "service_template.restore", targetType = "service_template")
+    public WanakuResponse<DataStore> restore(@QueryParam("name") String name) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.restoreRemoved(ServiceTemplateBean.LABEL_TYPE_VALUE, name));
+    }
+
+    /**
      * List the versions of a service template, newest first.
      * GET /api/v1/service-template/versions?name={name}
      *
@@ -260,7 +288,7 @@ public class ServiceTemplateResource {
     @Path("/versions/activate")
     @POST
     @Consumes(MediaType.WILDCARD)
-    @Audited(operation = "service_template.restore", targetType = "service_template")
+    @Audited(operation = "service_template.activate_version", targetType = "service_template")
     public WanakuResponse<DataStore> activateVersion(
             @QueryParam("name") String name,
             @QueryParam("version") long version,

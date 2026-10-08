@@ -223,8 +223,7 @@ public class WanakuServiceCatalogReconciler implements Reconciler<WanakuServiceC
         dataStore.setData(data);
 
         try {
-            ServiceCatalogService service = getOrCreateClient(routerBaseUrl);
-            service.deploy(dataStore);
+            deployOrRestore(getOrCreateClient(routerBaseUrl), name, dataStore);
         } catch (WebApplicationException e) {
             throw new WanakuException(
                     String.format(
@@ -233,6 +232,29 @@ public class WanakuServiceCatalogReconciler implements Reconciler<WanakuServiceC
                     e);
         } catch (Exception e) {
             throw new WanakuException("Failed to deploy service catalog '%s'".formatted(name), e);
+        }
+    }
+
+    /**
+     * Deploys a catalog. Barn keeps removed catalogs and rejects a deploy with the name of a removed catalog
+     * (HTTP 409). The resource declares that the catalog must exist, so the removed catalog is restored and the
+     * deploy is repeated.
+     */
+    static void deployOrRestore(ServiceCatalogService service, String name, DataStore dataStore) {
+        try {
+            service.deploy(dataStore);
+        } catch (WebApplicationException e) {
+            if (e.getResponse().getStatus() != 409) {
+                throw e;
+            }
+            try {
+                service.restore(name);
+            } catch (WebApplicationException restoreFailure) {
+                // The conflict has another cause: report the original deploy failure
+                throw e;
+            }
+            LOG.infof("Restored removed service catalog '%s' before deploying it", name);
+            service.deploy(dataStore);
         }
     }
 

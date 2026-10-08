@@ -22,6 +22,17 @@ class ServiceVersionsTest {
     }
 
     @Test
+    void removedAndRestoreCommandsAreRegistered() throws Exception {
+        CommandLine service = new CommandLine(new Service());
+        assertTrue(service.getSubcommands().keySet().containsAll(java.util.Set.of("removed", "restore")));
+
+        ServiceRestore restore = new ServiceRestore();
+        new CommandLine(restore).parseArgs("--name", "weather", "--template");
+        assertEquals("weather", field(restore, "name"));
+        assertEquals(true, field(restore, "template"));
+    }
+
+    @Test
     void restoreParsesItsOptions() throws Exception {
         ServiceVersionsRestore restore = new ServiceVersionsRestore();
         new CommandLine(restore)

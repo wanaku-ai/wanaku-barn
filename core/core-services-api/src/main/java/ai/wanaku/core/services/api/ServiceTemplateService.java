@@ -144,4 +144,14 @@ public interface ServiceTemplateService {
             @QueryParam("name") String name,
             @QueryParam("version") long version,
             @QueryParam("expectedVersion") Long expectedVersion);
+
+    @Path("/removed")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<List<Map<String, Object>>> removed();
+
+    @Path("/restore")
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> restore(@QueryParam("name") String name);
 }

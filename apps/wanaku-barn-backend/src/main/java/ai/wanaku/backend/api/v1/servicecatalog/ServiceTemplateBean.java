@@ -1,8 +1,6 @@
 package ai.wanaku.backend.api.v1.servicecatalog;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import java.io.IOException;
@@ -21,7 +19,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
 import ai.wanaku.backend.api.v1.exceptions.ServiceTemplateNotFoundException;
-import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.SafeZip;
@@ -54,9 +51,6 @@ public class ServiceTemplateBean {
     private static final Pattern SYSTEM_IDENTIFIER_PATTERN = Pattern.compile("[A-Za-z0-9._-]+");
 
     @Inject
-    Instance<DataStoreRepository> dataStoreRepositoryInstance;
-
-    @Inject
     ServiceCatalogBean serviceCatalogBean;
 
     @Inject
@@ -64,13 +58,6 @@ public class ServiceTemplateBean {
 
     @Inject
     CatalogLifecycle lifecycle;
-
-    private DataStoreRepository dataStoreRepository;
-
-    @PostConstruct
-    void init() {
-        dataStoreRepository = dataStoreRepositoryInstance.get();
-    }
 
     /**
      * List all service template entries, optionally filtered by search term.
@@ -138,19 +125,14 @@ public class ServiceTemplateBean {
     }
 
     /**
-     * Remove a service template by name.
+     * Remove a service template by name. The template and its versions are kept and can be restored.
      *
      * @param name the template name to remove
      * @return the number of entries removed
      */
     public int remove(String name) {
         LOG.debugf("Removing service template: %s", name);
-        DataStore template = get(name);
-        if (template == null) {
-            return 0;
-        }
-        boolean removed = dataStoreRepository.deleteById(template.getId());
-        return removed ? 1 : 0;
+        return lifecycle.remove(LABEL_TYPE_VALUE, name) ? 1 : 0;
     }
 
     /**

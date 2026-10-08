@@ -36,6 +36,9 @@ public class ServiceTemplateInitializer {
     @Inject
     AuditStore auditStore;
 
+    @Inject
+    CatalogLifecycle lifecycle;
+
     void loadBuiltInTemplates(@Observes StartupEvent ev) {
         URL resource = Thread.currentThread().getContextClassLoader().getResource(TEMPLATES_RESOURCE);
         if (resource == null) {
@@ -81,8 +84,9 @@ public class ServiceTemplateInitializer {
             for (Path templateDir : dirs) {
                 String name = templateDir.getFileName().toString();
                 try {
-                    if (serviceTemplateBean.get(name) != null) {
-                        LOG.debugf("Built-in template '%s' already deployed, skipping", name);
+                    // A removed built-in template stays removed until an operator restores it
+                    if (lifecycle.findAny(ServiceTemplateBean.LABEL_TYPE_VALUE, name) != null) {
+                        LOG.debugf("Built-in template '%s' already deployed or removed, skipping", name);
                         continue;
                     }
 

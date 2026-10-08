@@ -126,4 +126,14 @@ public interface ServiceCatalogService {
             @PathParam("name") String name,
             @PathParam("version") long version,
             @QueryParam("expectedVersion") Long expectedVersion);
+
+    @Path("/removed")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<List<Map<String, Object>>> removed();
+
+    @Path("/{name}/restore")
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> restore(@PathParam("name") String name);
 }

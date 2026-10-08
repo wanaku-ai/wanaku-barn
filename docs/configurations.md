@@ -193,6 +193,8 @@ These `wanaku.router.health-check.*` properties control the periodic health prob
 | Property                      | Description                                                                                                       |
 |-------------------------------|-------------------------------------------------------------------------------------------------------------------|
 | `wanaku.catalog.max-versions` | `50` - The number of versions to keep for each service catalog and template. Barn never removes the active version. |
+| `wanaku.catalog.purge-after` | Not set - The time (ISO 8601 duration, for example `P30D`) after which Barn deletes removed catalogs and templates permanently. Purge is disabled when this property is not set. |
+| `wanaku.catalog.purge-interval` | `1h` - How often Barn checks for removed catalogs and templates to purge. |
 
 ### Audit Trail
 
