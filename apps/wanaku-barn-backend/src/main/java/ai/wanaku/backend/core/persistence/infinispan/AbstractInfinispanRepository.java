@@ -58,7 +58,12 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
             return false;
         }
 
-        return cache.remove(id) != null;
+        try {
+            lock.lock();
+            return cache.remove(id) != null;
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -227,7 +232,12 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
         // Set all parameters
         fields.forEach(query::setParameter);
 
-        return query.executeStatement();
+        try {
+            lock.lock();
+            return query.executeStatement();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -240,9 +250,14 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
     @Override
     public int removeAll() {
         final Cache<Object, A> cache = cacheManager.getCache(entityName());
-        int sizeBefore = cache.size();
-        cache.values().removeIf(x -> true);
-        return sizeBefore - cache.size();
+        try {
+            lock.lock();
+            int sizeBefore = cache.size();
+            cache.values().removeIf(x -> true);
+            return sizeBefore - cache.size();
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override

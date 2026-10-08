@@ -50,7 +50,9 @@ class DataStoresImmutableTest {
         assertThatThrownBy(() -> bean.remove("published-revision")).isInstanceOf(WanakuException.class);
         assertThatThrownBy(() -> bean.removeIf("wanaku.type=catalog")).isInstanceOf(WanakuException.class);
         verify(repository, never()).update(anyString(), any());
+        verify(repository, never()).update(anyString(), any(), any());
         verify(repository, never()).deleteById(anyString());
+        verify(repository, never()).deleteById(anyString(), any());
     }
 
     @Test
@@ -61,6 +63,7 @@ class DataStoresImmutableTest {
         when(repository.findByName("another-name")).thenReturn(List.of());
         assertThatThrownBy(() -> bean.add(replacement)).isInstanceOf(WanakuException.class);
         verify(repository, never()).persist(any());
+        verify(repository, never()).create(any());
     }
 
     @Test

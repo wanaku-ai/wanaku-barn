@@ -8,6 +8,7 @@ import {
 } from "../../api/wanaku-router-api";
 import type {
   DataStore,
+  DataStoreRecord,
   GetApiV1DataStoreParams,
 } from "../../models";
 
@@ -33,16 +34,20 @@ export const useDataStores = () => {
     []
   );
 
+  // Sends the revision that was read, so the server rejects the update with 409 if the entry changed.
   const updateDataStore = useCallback(
-    (dataStore: DataStore, options?: RequestInit) => {
-      return putApiV1DataStore(dataStore, options);
+    (dataStore: DataStore | DataStoreRecord, options?: RequestInit) => {
+      const revision = (dataStore as DataStoreRecord).revision;
+      const params = revision ? { expectedRevision: revision } : undefined;
+      return putApiV1DataStore(dataStore, params, options);
     },
     []
   );
 
   const deleteDataStore = useCallback(
-    (id: string, options?: RequestInit) => {
-      return deleteApiV1DataStoreId(id, options);
+    (id: string, expectedRevision?: number, options?: RequestInit) => {
+      const params = expectedRevision ? { expectedRevision } : undefined;
+      return deleteApiV1DataStoreId(id, params, options);
     },
     []
   );

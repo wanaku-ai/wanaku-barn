@@ -3,6 +3,7 @@ package ai.wanaku.backend.core.persistence.infinispan;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.infinispan.Cache;
@@ -10,6 +11,7 @@ import org.infinispan.commons.api.query.Query;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.manager.EmbeddedCacheManager;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
+import ai.wanaku.backend.core.persistence.api.RevisionConflictException;
 import ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.DataStoreRecord;
@@ -20,6 +22,11 @@ import ai.wanaku.core.services.api.DataStoreRecord;
  * Every write stores a new {@link DataStoreRecord}: the creation metadata of the previous record is kept,
  * the update time is set and the revision is incremented. The cache holds live objects, so reads return
  * detached copies and writes never modify a stored record in place.
+ * </p>
+ * <p>
+ * All writes hold the repository lock, so checks that span entries (such as name uniqueness) are atomic in
+ * this JVM. Writes that depend on the stored value use conditional cache operations. The repository must be
+ * a single instance per cache manager.
  * </p>
  */
 public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanRepository<DataStore, String>
@@ -64,18 +71,47 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
                 && (entity.getLabels() == null
                         || !"kamelet-current".equals(entity.getLabels().get("wanaku.type"))))
             throw new EntityAlreadyExistsException("Use the Kamelet catalog API to modify current selections");
-        if (entity.getId() == null) {
-            entity.setId(newId());
+        try {
+            lock.lock();
+            if (entity.getId() == null) {
+                entity.setId(newId());
+            }
+            return cache().compute(entity.getId(), (id, current) -> stamp(entity, current, id))
+                    .copy();
+        } finally {
+            lock.unlock();
         }
-        return cache().compute(entity.getId(), (id, current) -> stamp(entity, current))
-                .copy();
     }
 
     @Override
     public DataStore persistIfAbsent(DataStore dataStore) {
         if (dataStore == null || dataStore.getId() == null)
             throw new IllegalArgumentException("Atomic persistence requires an assigned data store identifier");
-        return copyOf(cache().putIfAbsent(dataStore.getId(), stamp(dataStore, null)));
+        try {
+            lock.lock();
+            return copyOf(cache().putIfAbsent(dataStore.getId(), stamp(dataStore, null, dataStore.getId())));
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public DataStore create(DataStore dataStore) {
+        try {
+            lock.lock();
+            if (!findByName(dataStore.getName()).isEmpty()) {
+                throw EntityAlreadyExistsException.forName(dataStore.getName());
+            }
+            String id = dataStore.getId() == null ? newId() : dataStore.getId();
+            DataStoreRecord stored = stamp(dataStore, null, id);
+            if (cache().putIfAbsent(id, stored) != null) {
+                throw new EntityAlreadyExistsException("A data store with ID %s already exists".formatted(id));
+            }
+            dataStore.setId(id);
+            return stored.copy();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
@@ -85,27 +121,74 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
      */
     @Override
     public boolean update(String id, DataStore entity) {
-        return cache().computeIfPresent(id, (key, current) -> stamp(entity, current, key)) != null;
+        return update(id, entity, null) != null;
+    }
+
+    @Override
+    public DataStore update(String id, DataStore dataStore, Long expectedRevision) {
+        try {
+            lock.lock();
+            DataStoreRecord current = cache().get(id);
+            if (current == null) {
+                return null;
+            }
+            checkRevision(id, expectedRevision, current);
+            if (!Objects.equals(current.getName(), dataStore.getName())
+                    && findByName(dataStore.getName()).stream().anyMatch(other -> !id.equals(other.getId()))) {
+                throw EntityAlreadyExistsException.forName(dataStore.getName());
+            }
+            DataStoreRecord next = stamp(dataStore, current, id);
+            if (!cache().replace(id, current, next)) {
+                throw new RevisionConflictException(id, current.getRevision(), revisionOf(cache().get(id)));
+            }
+            return next.copy();
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
      * Applies a change to a copy of an existing entry and stores the result. Does not create missing entries.
+     * The write fails with {@link RevisionConflictException} if the entry changes in between.
      *
      * @return true if the entry existed and was replaced
      */
     @Override
     public boolean update(String id, Consumer<DataStore> consumer) {
-        DataStore current = findById(id);
+        DataStoreRecord current = (DataStoreRecord) findById(id);
         if (current == null) {
             return false;
         }
         consumer.accept(current);
-        return update(id, current);
+        return update(id, current, current.getRevision()) != null;
     }
 
     @Override
     public void upsert(String id, Consumer<DataStore> consumer) {
         throw new UnsupportedOperationException("Use persist to create or replace data store entries");
+    }
+
+    @Override
+    public boolean deleteById(String id) {
+        return deleteById(id, null);
+    }
+
+    @Override
+    public boolean deleteById(String id, Long expectedRevision) {
+        if (id == null) {
+            return false;
+        }
+        try {
+            lock.lock();
+            DataStoreRecord current = cache().get(id);
+            if (current == null) {
+                return false;
+            }
+            checkRevision(id, expectedRevision, current);
+            return cache().remove(id, current);
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -142,15 +225,21 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
         return cacheManager.getCache(entityName());
     }
 
+    private static void checkRevision(String id, Long expectedRevision, DataStoreRecord current) {
+        if (expectedRevision != null && expectedRevision != current.getRevision()) {
+            throw new RevisionConflictException(id, expectedRevision, current.getRevision());
+        }
+    }
+
+    private static long revisionOf(DataStoreRecord stored) {
+        return stored == null ? 0 : stored.getRevision();
+    }
+
     private static DataStore copyOf(DataStore stored) {
         if (stored == null) {
             return null;
         }
         return stored instanceof DataStoreRecord record ? record.copy() : DataStoreRecord.of(stored);
-    }
-
-    static DataStoreRecord stamp(DataStore incoming, DataStoreRecord current) {
-        return stamp(incoming, current, incoming.getId());
     }
 
     /**

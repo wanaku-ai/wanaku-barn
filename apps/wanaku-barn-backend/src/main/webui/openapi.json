@@ -1105,6 +1105,20 @@
   "paths" : {
     "/api/v1/data-store" : {
       "put" : {
+        "parameters" : [ {
+          "name" : "expectedRevision",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "If-Match",
+          "in" : "header",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -1246,6 +1260,19 @@
           "name" : "id",
           "in" : "path",
           "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "expectedRevision",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "If-Match",
+          "in" : "header",
           "schema" : {
             "type" : "string"
           }

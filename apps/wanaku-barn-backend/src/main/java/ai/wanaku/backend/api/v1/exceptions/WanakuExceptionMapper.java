@@ -8,6 +8,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
+import ai.wanaku.backend.core.persistence.api.RevisionConflictException;
 import ai.wanaku.capabilities.sdk.api.exceptions.ConfigurationNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException;
@@ -53,7 +54,7 @@ public class WanakuExceptionMapper implements ExceptionMapper<WanakuException> {
                 || e instanceof DataStoreResourceNotFoundException
                 || e instanceof ServiceTemplateNotFoundException) {
             status = 404;
-        } else if (e instanceof EntityAlreadyExistsException) {
+        } else if (e instanceof EntityAlreadyExistsException || e instanceof RevisionConflictException) {
             status = 409;
         } else if (e instanceof InvalidPayloadException) {
             status = 422;

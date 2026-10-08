@@ -12,6 +12,7 @@ import ai.wanaku.cli.main.commands.BaseCommand;
 import ai.wanaku.cli.main.support.IdSelector;
 import ai.wanaku.cli.main.support.LabelHelper;
 import ai.wanaku.cli.main.support.WanakuPrinter;
+import ai.wanaku.core.services.api.DataStoreRecord;
 import ai.wanaku.core.services.api.DataStoresService;
 import picocli.CommandLine;
 
@@ -83,7 +84,7 @@ public class DataStoresLabelAdd extends BaseCommand {
 
     private Integer addLabelsById(Map<String, String> labelsToAdd, WanakuPrinter printer) throws IOException {
         try {
-            WanakuResponse<DataStore> response = dataStoresService.getById(selector.id);
+            WanakuResponse<DataStoreRecord> response = dataStoresService.getById(selector.id);
             DataStore dataStore = response.data();
 
             if (dataStore == null) {
@@ -100,7 +101,7 @@ public class DataStoresLabelAdd extends BaseCommand {
 
     private Integer addLabelsByExpression(Map<String, String> labelsToAdd, WanakuPrinter printer) throws IOException {
         try {
-            WanakuResponse<List<DataStore>> response = dataStoresService.list(selector.labelExpression);
+            WanakuResponse<List<DataStoreRecord>> response = dataStoresService.list(selector.labelExpression);
             return LabelHelper.addLabelsByExpression(
                     response,
                     labelsToAdd,

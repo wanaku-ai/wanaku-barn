@@ -14,6 +14,7 @@ import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
 import ai.wanaku.cli.main.support.WanakuPrinter;
+import ai.wanaku.core.services.api.DataStoreRecord;
 import ai.wanaku.core.services.api.DataStoresService;
 import picocli.CommandLine;
 
@@ -75,11 +76,11 @@ public class DataStoresGet extends BaseCommand {
 
             // Fetch by ID or name
             if (id != null && !id.trim().isEmpty()) {
-                WanakuResponse<DataStore> response = dataStoresService.getById(id);
+                WanakuResponse<DataStoreRecord> response = dataStoresService.getById(id);
                 dataStore = response.data();
             } else {
-                WanakuResponse<List<DataStore>> response = dataStoresService.getByName(name);
-                List<DataStore> dataStores = response.data();
+                WanakuResponse<List<DataStoreRecord>> response = dataStoresService.getByName(name);
+                List<DataStoreRecord> dataStores = response.data();
 
                 if (dataStores == null || dataStores.isEmpty()) {
                     printer.printErrorMessage(String.format("No data store found with name: %s", name));
