@@ -21,6 +21,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.jboss.logging.Logger;
 import io.quarkus.runtime.StartupEvent;
+import ai.wanaku.backend.audit.AuditEvent;
+import ai.wanaku.backend.audit.AuditStore;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 
 @ApplicationScoped
@@ -30,6 +32,9 @@ public class ServiceTemplateInitializer {
 
     @Inject
     ServiceTemplateBean serviceTemplateBean;
+
+    @Inject
+    AuditStore auditStore;
 
     void loadBuiltInTemplates(@Observes StartupEvent ev) {
         URL resource = Thread.currentThread().getContextClassLoader().getResource(TEMPLATES_RESOURCE);
@@ -89,8 +94,11 @@ public class ServiceTemplateInitializer {
                     serviceTemplateBean.deploy(dataStore);
                     loaded++;
                     LOG.infof("Deployed built-in service template: %s", name);
+                    recordSeed(name, AuditEvent.DECISION_ALLOW, "seeded", "The built-in template was deployed.");
                 } catch (Exception e) {
                     LOG.errorf(e, "Failed to deploy built-in service template: %s", name);
+                    recordSeed(
+                            name, AuditEvent.DECISION_ERROR, "seed_failed", "The built-in template failed to deploy.");
                 }
             }
         } catch (IOException e) {
@@ -100,6 +108,14 @@ public class ServiceTemplateInitializer {
         if (loaded > 0) {
             LOG.infof("Loaded %d built-in service template(s)", loaded);
         }
+    }
+
+    private void recordSeed(String name, String decision, String reasonCode, String explanation) {
+        AuditEvent event = AuditEvent.administrative("service_template.seed", decision, reasonCode, explanation);
+        event.setProtocol("startup");
+        event.setTargetType("service_template");
+        event.setTarget(name);
+        auditStore.record(event);
     }
 
     private byte[] zipDirectory(Path dir) throws IOException {

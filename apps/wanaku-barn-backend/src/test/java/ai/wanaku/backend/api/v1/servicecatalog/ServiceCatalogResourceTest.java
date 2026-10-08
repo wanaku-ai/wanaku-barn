@@ -9,6 +9,7 @@ import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import ai.wanaku.backend.api.v1.exceptions.InvalidPayloadException;
+import ai.wanaku.backend.audit.AuditContext;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -41,6 +42,9 @@ class ServiceCatalogResourceTest {
 
     @Spy
     CatalogValidator catalogValidator = new CatalogValidator();
+
+    @Spy
+    AuditContext auditContext = new AuditContext();
 
     @InjectMocks
     ServiceCatalogResource resource;

@@ -50,6 +50,7 @@ Contributors working on the project may want to refer to the [development versio
 - [Architecture](docs/architecture.md) - System architecture and components
 - [Building](docs/building.md) - Build and package the project
 - [Deployment Debugger](docs/deployment-debugger.md) - Inspect deployed MCP servers from Praxis
+- [Audit Trail](docs/audit-trail.md) - Durable record of changes to Barn-managed resources
 - [Agent Skills](docs/agent-skills.md) - Skills that teach coding agents how to use Wanaku
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 - [Security](SECURITY.md) - Security policy and best practices

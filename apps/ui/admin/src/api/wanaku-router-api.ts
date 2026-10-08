@@ -10,6 +10,7 @@ import type {
   DeleteApiV1DataStoreLabelsParams,
   DeleteApiV1DataStoreParams,
   DeleteApiV1ServiceTemplateRemoveParams,
+  GetApiV1AuditEventsParams,
   GetApiV1DataStoreParams,
   GetApiV1KameletsNameKameletYamlParams,
   GetApiV1KameletsNameParams,
@@ -27,6 +28,9 @@ import type {
   SemanticPreviewRequest,
   SemanticRouterDefinition,
   TemplateInstantiationRequest,
+  WanakuResponseAuditEvent,
+  WanakuResponseAuditHealth,
+  WanakuResponseAuditPage,
   WanakuResponseDataStore,
   WanakuResponseDataStoreRecord,
   WanakuResponseDeploymentInstructions,
@@ -57,6 +61,137 @@ import type {
 } from "../models";
 
 import { customFetch } from "../custom-fetch";
+/**
+ * @summary List
+ */
+export type getApiV1AuditEventsResponse200 = {
+  data: WanakuResponseAuditPage;
+  status: 200;
+};
+
+export type getApiV1AuditEventsResponseSuccess =
+  getApiV1AuditEventsResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1AuditEventsResponse = getApiV1AuditEventsResponseSuccess;
+
+export const getGetApiV1AuditEventsUrl = (
+  params?: GetApiV1AuditEventsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/audit/events?${stringifiedParams}`
+    : `/api/v1/audit/events`;
+};
+
+export const getApiV1AuditEvents = async (
+  params?: GetApiV1AuditEventsParams,
+  options?: RequestInit,
+): Promise<getApiV1AuditEventsResponse> => {
+  return customFetch<getApiV1AuditEventsResponse>(
+    getGetApiV1AuditEventsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Get
+ */
+export type getApiV1AuditEventsIdResponse200 = {
+  data: WanakuResponseAuditEvent;
+  status: 200;
+};
+
+export type getApiV1AuditEventsIdResponseSuccess =
+  getApiV1AuditEventsIdResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1AuditEventsIdResponse =
+  getApiV1AuditEventsIdResponseSuccess;
+
+export const getGetApiV1AuditEventsIdUrl = (id: string) => {
+  return `/api/v1/audit/events/${id}`;
+};
+
+export const getApiV1AuditEventsId = async (
+  id: string,
+  options?: RequestInit,
+): Promise<getApiV1AuditEventsIdResponse> => {
+  return customFetch<getApiV1AuditEventsIdResponse>(
+    getGetApiV1AuditEventsIdUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Health
+ */
+export type getApiV1AuditHealthResponse200 = {
+  data: WanakuResponseAuditHealth;
+  status: 200;
+};
+
+export type getApiV1AuditHealthResponseSuccess =
+  getApiV1AuditHealthResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1AuditHealthResponse = getApiV1AuditHealthResponseSuccess;
+
+export const getGetApiV1AuditHealthUrl = () => {
+  return `/api/v1/audit/health`;
+};
+
+export const getApiV1AuditHealth = async (
+  options?: RequestInit,
+): Promise<getApiV1AuditHealthResponse> => {
+  return customFetch<getApiV1AuditHealthResponse>(getGetApiV1AuditHealthUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+/**
+ * @summary Schema
+ */
+export type getApiV1AuditSchemaResponse200 = {
+  data: WanakuResponseMapStringString;
+  status: 200;
+};
+
+export type getApiV1AuditSchemaResponseSuccess =
+  getApiV1AuditSchemaResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1AuditSchemaResponse = getApiV1AuditSchemaResponseSuccess;
+
+export const getGetApiV1AuditSchemaUrl = () => {
+  return `/api/v1/audit/schema`;
+};
+
+export const getApiV1AuditSchema = async (
+  options?: RequestInit,
+): Promise<getApiV1AuditSchemaResponse> => {
+  return customFetch<getApiV1AuditSchemaResponse>(getGetApiV1AuditSchemaUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
 /**
  * @summary Update
  */
