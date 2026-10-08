@@ -96,9 +96,14 @@ public interface WanakuRepository<A extends WanakuEntity, C> {
 
 **Key operations:**
 
-- `persist()` - Generates ID if null, stores entity
+- `persist()` - Generates an ID if the ID is null. Creates the entity, or replaces the entity with the same ID.
+- `update()` - Replaces an existing entity. Returns `false` and does not create the entity if the ID does not exist.
 - `removeByField()/removeByFields()` - Bulk deletion using Ickle queries
-- `update()` - Lock-protected entity modification
+
+`AbstractInfinispanRepository` also provides two change operations that take a `Consumer`:
+
+- `update(id, consumer)` - Applies the change to an existing entity. Returns `false` if the entity does not exist.
+- `upsert(id, consumer)` - Creates the entity if it does not exist, then applies the change. The service registry uses this operation to record service activity.
 
 ### Label-Aware Repository: LabelAwareInfinispanRepository
 
@@ -161,12 +166,8 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
     public boolean update(K id, A entity) {
         lock.lock();
         try {
-            if (!getCache().containsKey(id)) {
-                return false;
-            }
-            entity.setId(id);
-            getCache().put(id, entity);
-            return true;
+            // replace() writes only if the key exists
+            return getCache().replace(id, entity) != null;
         } finally {
             lock.unlock();
         }
@@ -181,6 +182,28 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
     }
 }
 ```
+
+### Record Metadata for Data Stores
+
+`InfinispanDataStoreRepository` stores each entry as a `DataStoreRecord`. This class extends the SDK `DataStore` type with metadata that the repository manages:
+
+| Field | Description |
+|-------|-------------|
+| `createdAt` | The time of the first write (UTC). |
+| `updatedAt` | The time of the last write (UTC). |
+| `createdBy` | The actor that created the entry. Empty, because Barn has no identity source. |
+| `updatedBy` | The actor that made the last change. Empty, because Barn has no identity source. |
+| `revision` | A number that starts at 1 and increments on each write. |
+
+The repository applies these rules:
+
+- Each write builds a new record. The repository keeps `createdAt` and `createdBy` from the previous record.
+- The repository ignores metadata values that a client sends.
+- Writes use the per-key atomic operations `compute`, `computeIfPresent` and `putIfAbsent`.
+- Reads return detached copies. A change to a returned object does not change the stored record.
+- Records written before the metadata fields existed load with `revision` 0 and empty timestamps. The next write sets `revision` to 1.
+
+The REST API returns the metadata fields in data store responses.
 
 ### AbstractLabelAwareInfinispanRepository
 
@@ -265,8 +288,15 @@ message DataStore {
   string name = 2;
   string data = 3;
   map<string, string> labels = 4;
+  int64 created_at = 5;   // milliseconds since the epoch, 0 = unknown
+  int64 updated_at = 6;
+  string created_by = 7;
+  string updated_by = 8;
+  int64 revision = 9;
 }
 ```
+
+New fields always get new field numbers. Records written with the earlier fields stay readable.
 
 **Field type mappings:**
 
@@ -314,6 +344,10 @@ public class DataStoreMarshaller implements MessageMarshaller<DataStore> {
     }
 }
 ```
+
+This example shows the basic pattern. The actual `DataStoreMarshaller` reads and writes `DataStoreRecord`, including the metadata fields, under the `DataStore` message name.
+
+> **Note:** The caches store Java objects. Ickle queries match the class of the stored values, not the proto message name. Queries on the data store cache use `from ai.wanaku.core.services.api.DataStoreRecord`. Override `queryEntityName()` in a repository when the stored class is different from `entityType()`.
 
 ### Schema Initializer
 

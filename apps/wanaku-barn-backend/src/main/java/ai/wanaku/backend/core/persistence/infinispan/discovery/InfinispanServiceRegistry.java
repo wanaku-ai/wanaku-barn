@@ -59,7 +59,7 @@ public class InfinispanServiceRegistry implements ServiceRegistry {
 
         lookupCache.evictByServiceName(serviceTarget.getServiceName());
 
-        activityRecordRepository.update(serviceTarget.getId(), a -> applyDeregistration(serviceTarget.getId(), a));
+        activityRecordRepository.upsert(serviceTarget.getId(), a -> applyDeregistration(serviceTarget.getId(), a));
     }
 
     private void applyDeregistration(String id, ActivityRecord activityRecord) {
@@ -126,7 +126,7 @@ public class InfinispanServiceRegistry implements ServiceRegistry {
     @Override
     public void updateHealthStatus(String id, HealthStatus healthStatus) {
         LOG.infof("Updating health status for capability %s to %s", id, healthStatus.asValue());
-        activityRecordRepository.update(id, e -> {
+        activityRecordRepository.upsert(id, e -> {
             e.setHealthStatus(healthStatus);
             e.setLastSeen(Instant.now());
         });
@@ -146,7 +146,7 @@ public class InfinispanServiceRegistry implements ServiceRegistry {
 
     @Override
     public void updateLastState(String id, ServiceState state) {
-        activityRecordRepository.update(id, e -> updateLastState(e, state));
+        activityRecordRepository.upsert(id, e -> updateLastState(e, state));
     }
 
     private void updateLastState(ActivityRecord activityRecord, ServiceState state) {

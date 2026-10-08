@@ -40,6 +40,9 @@ public abstract class AbstractDataStoresResourceTest extends WanakuRouterTest {
                 .body("data.name", equalTo(TEST_NAME))
                 .body("data.data", equalTo(TEST_DATA))
                 .body("data.id", notNullValue())
+                .body("data.revision", equalTo(1))
+                .body("data.createdAt", notNullValue())
+                .body("data.updatedAt", notNullValue())
                 .extract()
                 .path("data.id");
         LOG.infof("Created data store with ID: %s", testId);
@@ -92,7 +95,26 @@ public abstract class AbstractDataStoresResourceTest extends WanakuRouterTest {
 
         Response getResponse = given().headers(getHeaders()).when().get("/api/v1/data-store/" + testId);
         assertHttpStatus(getResponse, 200);
-        getResponse.then().body("data.id", equalTo(testId)).body("data.data", equalTo("Updated test data content"));
+        getResponse
+                .then()
+                .body("data.id", equalTo(testId))
+                .body("data.data", equalTo("Updated test data content"))
+                .body("data.revision", equalTo(2));
+    }
+
+    @Order(5)
+    @Test
+    void testUpdateNotFound() {
+        DataStore dataStore = new DataStore();
+        dataStore.setId("missing-" + testId);
+        dataStore.setName(TEST_NAME);
+        dataStore.setData("Never stored");
+
+        Response response = given().headers(getHeaders()).body(dataStore).when().put("/api/v1/data-store");
+        assertHttpStatus(response, 404);
+
+        Response getResponse = given().headers(getHeaders()).when().get("/api/v1/data-store/missing-" + testId);
+        assertHttpStatus(getResponse, 404);
     }
 
     @Order(6)

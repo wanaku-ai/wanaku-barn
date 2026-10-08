@@ -22,6 +22,42 @@
           }
         }
       },
+      "DataStoreRecord" : {
+        "type" : "object",
+        "properties" : {
+          "labels" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "updatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          },
+          "revision" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
       "DeploymentInstructions" : {
         "type" : "object",
         "properties" : {
@@ -47,6 +83,11 @@
             }
           }
         }
+      },
+      "Instant" : {
+        "type" : "string",
+        "format" : "date-time",
+        "examples" : [ "2022-03-10T16:15:50Z" ]
       },
       "KameletDefinition" : {
         "type" : "object",
@@ -739,6 +780,17 @@
           }
         }
       },
+      "WanakuResponseDataStoreRecord" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/DataStoreRecord"
+          }
+        }
+      },
       "WanakuResponseDeploymentInstructions" : {
         "type" : "object",
         "properties" : {
@@ -784,7 +836,7 @@
           }
         }
       },
-      "WanakuResponseListDataStore" : {
+      "WanakuResponseListDataStoreRecord" : {
         "type" : "object",
         "properties" : {
           "error" : {
@@ -793,7 +845,7 @@
           "data" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/DataStore"
+              "$ref" : "#/components/schemas/DataStoreRecord"
             }
           }
         }
@@ -1124,7 +1176,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/WanakuResponseListDataStore"
+                  "$ref" : "#/components/schemas/WanakuResponseListDataStoreRecord"
                 }
               }
             }
@@ -1150,7 +1202,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                  "$ref" : "#/components/schemas/WanakuResponseDataStoreRecord"
                 }
               }
             }
@@ -1228,7 +1280,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                  "$ref" : "#/components/schemas/WanakuResponseDataStoreRecord"
                 }
               }
             }

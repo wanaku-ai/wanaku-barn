@@ -10,6 +10,7 @@ import ai.wanaku.backend.api.v1.semanticrouter.model.SemanticPublication;
 import ai.wanaku.backend.api.v1.servicecatalog.CatalogZipReader;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
+import ai.wanaku.core.services.api.DataStoreRecord;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -103,7 +104,7 @@ class SemanticRouterPersistenceTest {
                 .statusCode(200)
                 .extract()
                 .jsonPath()
-                .getObject("data", DataStore.class);
+                .getObject("data", DataStoreRecord.class);
         assertThat(retrieved.getId()).isEqualTo(artifact.getId());
         assertThat(retrieved.getName()).isEqualTo(publication.catalogName);
         assertThat(retrieved.getData()).isEqualTo(artifact.getData());
@@ -114,7 +115,7 @@ class SemanticRouterPersistenceTest {
                 .statusCode(200)
                 .extract()
                 .jsonPath()
-                .getObject("data", DataStore.class);
+                .getObject("data", DataStoreRecord.class);
         byte[] archive = Base64.getDecoder().decode(downloaded.getData());
         assertThat(SemanticCatalogGenerator.digest(archive)).isEqualTo(publication.sha256);
         assertThat(CatalogZipReader.readEntries(archive))
@@ -123,12 +124,12 @@ class SemanticRouterPersistenceTest {
                         "service/kamelets/wsr-billing-action.kamelet.yaml",
                         "service/kamelets/wsr-technical-action.kamelet.yaml");
 
-        List<DataStore> listed = given().get("/api/v1/data-store")
+        List<DataStoreRecord> listed = given().get("/api/v1/data-store")
                 .then()
                 .statusCode(200)
                 .extract()
                 .jsonPath()
-                .getList("data", DataStore.class);
+                .getList("data", DataStoreRecord.class);
         assertThat(listed).anySatisfy(row -> {
             assertThat(row.getId()).isEqualTo(artifact.getId());
             assertThat(row.getData()).isEqualTo(artifact.getData());

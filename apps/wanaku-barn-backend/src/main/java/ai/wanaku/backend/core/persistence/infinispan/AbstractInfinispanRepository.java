@@ -73,18 +73,43 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
 
         try {
             lock.lock();
-
-            if (cache.put(id, entity) != null) {
-                return true;
-            }
+            return cache.replace(id, entity) != null;
         } finally {
             lock.unlock();
         }
-
-        return true;
     }
 
+    /**
+     * Applies a change to an existing entity. Does not create missing entities.
+     *
+     * @param id the ID of the entity to update
+     * @param consumer the change to apply
+     * @return true if the entity existed and was updated, false otherwise
+     */
     public boolean update(K id, Consumer<A> consumer) {
+        final Cache<Object, A> cache = cacheManager.getCache(entityName());
+
+        try {
+            lock.lock();
+            A entity = findById(id);
+            if (entity == null) {
+                return false;
+            }
+
+            consumer.accept(entity);
+            return cache.replace(id, entity) != null;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Applies a change to an entity, and creates the entity first if it does not exist.
+     *
+     * @param id the ID of the entity to create or update
+     * @param consumer the change to apply
+     */
+    public void upsert(K id, Consumer<A> consumer) {
         final Cache<Object, A> cache = cacheManager.getCache(entityName());
 
         try {
@@ -96,19 +121,25 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
             }
 
             consumer.accept(entity);
-            if (cache.put(id, entity) != null) {
-                return true;
-            }
+            cache.put(id, entity);
         } finally {
             lock.unlock();
         }
-
-        return false;
     }
 
     protected abstract Class<A> entityType();
 
     protected abstract String entityName();
+
+    /**
+     * The Java type name used in Ickle queries. Embedded caches that store objects match queries by the
+     * class of the stored values.
+     *
+     * @return the fully qualified class name of the stored values
+     */
+    protected String queryEntityName() {
+        return entityType().getCanonicalName();
+    }
 
     protected abstract K newId();
 
@@ -190,7 +221,7 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
                 .map(field -> "r.%s = :%s".formatted(field, field))
                 .collect(Collectors.joining(" AND "));
 
-        var queryString = DEFAULT_DELETE_TEMPLATE.formatted(entityType().getCanonicalName(), whereClause);
+        var queryString = DEFAULT_DELETE_TEMPLATE.formatted(queryEntityName(), whereClause);
         var query = cache.query(queryString);
 
         // Set all parameters

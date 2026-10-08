@@ -19,6 +19,7 @@ import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundExcept
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
+import ai.wanaku.core.services.api.DataStoreRecord;
 import ai.wanaku.core.util.StringHelper;
 
 /**
@@ -43,10 +44,10 @@ public class DataStoresResource {
      * @return response with the created data store
      */
     @POST
-    public WanakuResponse<DataStore> add(DataStore dataStore) {
+    public WanakuResponse<DataStoreRecord> add(DataStore dataStore) {
         LOG.debugf("REST: Adding data store: %s", dataStore);
         DataStore result = dataStoresBean.add(dataStore);
-        return new WanakuResponse<>(result);
+        return new WanakuResponse<>(record(result));
     }
 
     /**
@@ -72,7 +73,7 @@ public class DataStoresResource {
      * @return response with list of data stores
      */
     @GET
-    public WanakuResponse<List<DataStore>> listOrGetByName(
+    public WanakuResponse<List<DataStoreRecord>> listOrGetByName(
             @QueryParam("labelFilter") String labelFilter, @QueryParam("name") String name) {
         if (name != null && !name.isEmpty()) {
             LOG.debugf("REST: Getting data stores by name: %s", name);
@@ -80,7 +81,7 @@ public class DataStoresResource {
             if (dataStores == null || dataStores.isEmpty()) {
                 throw new DataStoreResourceNotFoundException("Data store not found with name: %s".formatted(name));
             }
-            return new WanakuResponse<>(dataStores);
+            return new WanakuResponse<>(records(dataStores));
         }
 
         if (labelFilter != null && !labelFilter.isBlank()) {
@@ -89,7 +90,7 @@ public class DataStoresResource {
             LOG.debug("REST: Listing all data stores");
         }
         List<DataStore> dataStores = dataStoresBean.list(labelFilter);
-        return new WanakuResponse<>(dataStores);
+        return new WanakuResponse<>(records(dataStores));
     }
 
     /**
@@ -101,13 +102,13 @@ public class DataStoresResource {
      */
     @Path("/{id}")
     @GET
-    public WanakuResponse<DataStore> getById(@PathParam("id") String id) {
+    public WanakuResponse<DataStoreRecord> getById(@PathParam("id") String id) {
         LOG.debugf("REST: Getting data store by ID: %s", id);
         DataStore dataStore = dataStoresBean.findById(id);
         if (dataStore == null) {
             throw new DataStoreResourceNotFoundException("Data store not found with ID: %s".formatted(id));
         }
-        return new WanakuResponse<>(dataStore);
+        return new WanakuResponse<>(record(dataStore));
     }
 
     /**
@@ -163,5 +164,13 @@ public class DataStoresResource {
         LOG.debugf("REST: Removing data stores by label expression: %s", labelExpression);
         int removed = dataStoresBean.removeIf(labelExpression);
         return new WanakuResponse<>(removed);
+    }
+
+    private static DataStoreRecord record(DataStore dataStore) {
+        return dataStore instanceof DataStoreRecord stored ? stored : DataStoreRecord.of(dataStore);
+    }
+
+    private static List<DataStoreRecord> records(List<DataStore> dataStores) {
+        return dataStores.stream().map(DataStoresResource::record).toList();
     }
 }

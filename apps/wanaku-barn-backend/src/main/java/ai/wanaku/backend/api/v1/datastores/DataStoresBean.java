@@ -10,6 +10,7 @@ import org.jboss.logging.Logger;
 import ai.wanaku.backend.common.LabelsAwareWanakuEntityBean;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.backend.core.persistence.api.WanakuRepository;
+import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -52,7 +53,7 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
      * Update an existing data store entry.
      *
      * @param dataStore the data store to update
-     * @throws WanakuException if the data store doesn't exist
+     * @throws DataStoreResourceNotFoundException if the data store doesn't exist
      */
     public void update(DataStore dataStore) throws WanakuException {
         LOG.debugf("Updating data store: %s", dataStore);
@@ -61,11 +62,17 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
         }
         DataStore existing = dataStoreRepository.findById(dataStore.getId());
         if (existing == null) {
-            throw new WanakuException("Data store not found with ID: %s".formatted(dataStore.getId()));
+            throw notFound(dataStore.getId());
         }
         rejectProtected(existing);
         rejectProtected(dataStore);
-        dataStoreRepository.update(dataStore.getId(), dataStore);
+        if (!dataStoreRepository.update(dataStore.getId(), dataStore)) {
+            throw notFound(dataStore.getId());
+        }
+    }
+
+    private static DataStoreResourceNotFoundException notFound(String id) {
+        return new DataStoreResourceNotFoundException("Data store not found with ID: %s".formatted(id));
     }
 
     /**

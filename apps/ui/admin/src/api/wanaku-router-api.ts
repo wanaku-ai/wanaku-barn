@@ -26,11 +26,12 @@ import type {
   SemanticRouterDefinition,
   TemplateInstantiationRequest,
   WanakuResponseDataStore,
+  WanakuResponseDataStoreRecord,
   WanakuResponseDeploymentInstructions,
   WanakuResponseInteger,
   WanakuResponseKameletDefinition,
   WanakuResponseKameletSummary,
-  WanakuResponseListDataStore,
+  WanakuResponseListDataStoreRecord,
   WanakuResponseListKameletSummary,
   WanakuResponseListMapStringObject,
   WanakuResponseListSemanticAction,
@@ -143,7 +144,7 @@ export const deleteApiV1DataStore = async (
  * @summary List Or Get By Name
  */
 export type getApiV1DataStoreResponse200 = {
-  data: WanakuResponseListDataStore;
+  data: WanakuResponseListDataStoreRecord;
   status: 200;
 };
 
@@ -185,7 +186,7 @@ export const getApiV1DataStore = async (
  * @summary Add
  */
 export type postApiV1DataStoreResponse200 = {
-  data: WanakuResponseDataStore;
+  data: WanakuResponseDataStoreRecord;
   status: 200;
 };
 
@@ -304,7 +305,7 @@ export const deleteApiV1DataStoreId = async (
  * @summary Get By Id
  */
 export type getApiV1DataStoreIdResponse200 = {
-  data: WanakuResponseDataStore;
+  data: WanakuResponseDataStoreRecord;
   status: 200;
 };
 

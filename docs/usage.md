@@ -1550,6 +1550,18 @@ wanaku data-store list -e 'category=routes'
 
 See the label expression guide (`wanaku man label-expression`) for detailed syntax information.
 
+#### Record Metadata
+
+The data store API (`/api/v1/data-store`) returns metadata for each entry:
+
+- `createdAt` and `updatedAt`: The time of the first and the last write, in UTC.
+- `revision`: A number that starts at 1 and increments on each write.
+- `createdBy` and `updatedBy`: Empty. Barn does not have an identity source.
+
+The server sets these values. The server ignores metadata values in requests.
+Entries written by earlier versions show `revision` 0 and no timestamps until the next write.
+An update (`PUT /api/v1/data-store`) for an ID that does not exist returns HTTP 404.
+
 ### Managing Labels on Data Stores
 
 Data stores support labels for organization and filtering, similar to tools and resources.
