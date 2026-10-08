@@ -97,6 +97,7 @@ export * from "./postApiV1PromptsParams";
 export * from "./postApiV1ServiceCatalogNameVersionsVersionActivateParams";
 export * from "./postApiV1ServiceCatalogParams";
 export * from "./postApiV1ServiceTemplateDeployParams";
+export * from "./postApiV1ServiceTemplateRestoreParams";
 export * from "./postApiV1ServiceTemplateVersionsActivateParams";
 export * from "./promptArgument";
 export * from "./promptContent";

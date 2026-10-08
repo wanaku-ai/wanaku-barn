@@ -128,6 +128,23 @@ wanaku service versions restore --template --name=my-template --version=1
 | `GET` | `/api/v1/service-template/versions/download?name={name}&version={n}` | Get the package of one version. |
 | `POST` | `/api/v1/service-template/versions/activate?name={name}&version={n}&expectedVersion={m}` | Restore one version as a new version. |
 
+### Remove and Restore a Template
+
+A template removal keeps the template and its versions, in the same way as for catalogs. See [Removal and Restore](service-catalogs.md#removal-and-restore).
+
+```shell
+wanaku service removed --template
+wanaku service restore --template --name=my-template
+```
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `DELETE` | `/api/v1/service-template/remove?name={name}` | Remove a template. |
+| `GET` | `/api/v1/service-template/removed` | List removed templates. |
+| `POST` | `/api/v1/service-template/restore?name={name}` | Restore a removed template. |
+
+Barn does not deploy a removed built-in template again at startup. Restore the template to use it again.
+
 Built-in templates that Barn deploys at startup create versions with the origin `startup`.
 A catalog that `instantiate` creates gets a version with the origin `instantiate`.
 

@@ -16,6 +16,9 @@ class ServiceTemplateSeedingAuditTest {
     @Inject
     ServiceTemplateInitializer initializer;
 
+    @Inject
+    CatalogLifecycle lifecycle;
+
     private static JsonPath newestSeed() {
         return given().queryParam("operation", "service_template.seed")
                 .queryParam("limit", 1)
@@ -27,7 +30,7 @@ class ServiceTemplateSeedingAuditTest {
     }
 
     @Test
-    void reseedingARemovedBuiltInTemplateIsRecorded() {
+    void reseedingAPurgedBuiltInTemplateIsRecorded() {
         // Other test classes can remove the built-in templates; seeding restores them
         initializer.loadBuiltInTemplates(null);
         Long newest = newestSeed().getObject("data.events[0].sequence", Long.class);
@@ -36,6 +39,8 @@ class ServiceTemplateSeedingAuditTest {
                 .delete("/api/v1/service-template/remove")
                 .then()
                 .statusCode(200);
+        // A removed built-in template is not seeded again; a purged one is
+        lifecycle.purgeRemovedBefore("template", java.time.Instant.now());
 
         initializer.loadBuiltInTemplates(null);
 

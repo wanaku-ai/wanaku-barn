@@ -6,6 +6,7 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import java.util.List;
+import java.util.Map;
 import org.jboss.logging.Logger;
 import ai.wanaku.backend.common.LabelsAwareWanakuEntityBean;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
@@ -189,10 +190,6 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
             throw new EntityAlreadyExistsException("Use the Kamelet catalog API to modify managed Kamelets");
         if ("semantic-definition".equals(type) || "semantic-publication".equals(type))
             throw new WanakuException("Use the semantic router API to modify semantic authoring records");
-        // Catalog and template content changes must create a version
-        if ("catalog".equals(type) || "template".equals(type))
-            throw new EntityAlreadyExistsException(
-                    "Use the service catalog or template API to modify %ss".formatted(type));
         rejectImmutable(data);
     }
 
@@ -218,6 +215,21 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
                 && data.getLabels() != null
                 && "true".equals(data.getLabels().get("semantic.immutable")))
             throw new WanakuException("Published semantic catalog revisions are immutable");
+        if (data != null && isCatalogOrTemplate(data.getLabels()))
+            throw new EntityAlreadyExistsException(
+                    "Use the service catalog or template API to modify catalogs and templates");
+    }
+
+    /**
+     * Catalog and template content changes must create a version, and removals must keep the history, so the
+     * generic API cannot create, change or delete these entries, including removed ones.
+     */
+    private static boolean isCatalogOrTemplate(Map<String, String> labels) {
+        String type = labels == null ? null : labels.get("wanaku.type");
+        return "catalog".equals(type)
+                || "template".equals(type)
+                || "catalog.removed".equals(type)
+                || "template.removed".equals(type);
     }
 
     /** Preserves published revisions during generic bulk removal. */

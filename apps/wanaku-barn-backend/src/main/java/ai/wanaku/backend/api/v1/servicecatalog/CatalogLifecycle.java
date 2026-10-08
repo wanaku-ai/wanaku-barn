@@ -8,14 +8,18 @@ import jakarta.inject.Inject;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.infinispan.Cache;
@@ -24,10 +28,14 @@ import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.manager.EmbeddedCacheManager;
 import org.jboss.logging.Logger;
 import io.quarkus.runtime.StartupEvent;
+import io.quarkus.scheduler.Scheduled;
 import ai.wanaku.backend.api.v1.exceptions.InvalidPayloadException;
+import ai.wanaku.backend.audit.AuditEvent;
+import ai.wanaku.backend.audit.AuditStore;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.backend.core.persistence.api.RevisionConflictException;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
+import ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.CatalogVersion;
@@ -58,6 +66,12 @@ public class CatalogLifecycle {
     /** The label that holds the active version number of a catalog or template entry. */
     public static final String VERSION_LABEL = "wanaku.version";
 
+    /** The label that holds the removal time (ISO 8601 UTC) of a removed catalog or template. */
+    public static final String REMOVED_AT_LABEL = "wanaku.removed-at";
+
+    /** The suffix of the type label of a removed catalog or template, for example {@code catalog.removed}. */
+    public static final String REMOVED_SUFFIX = ".removed";
+
     public static final String ORIGIN_API = "api";
     public static final String ORIGIN_STARTUP = "startup";
     public static final String ORIGIN_INSTANTIATE = "instantiate";
@@ -77,8 +91,14 @@ public class CatalogLifecycle {
     @Inject
     Configuration configuration;
 
+    @Inject
+    AuditStore auditStore;
+
     @ConfigProperty(name = "wanaku.catalog.max-versions", defaultValue = "50")
     int maxVersions;
+
+    @ConfigProperty(name = "wanaku.catalog.purge-after")
+    Optional<Duration> purgeAfter;
 
     private final ReentrantLock lock = new ReentrantLock();
 
@@ -185,7 +205,7 @@ public class CatalogLifecycle {
      * @throws DataStoreResourceNotFoundException if the name has no versions
      */
     public List<CatalogVersion> versions(String type, String name) {
-        long active = activeVersion(find(type, name));
+        long active = activeVersion(findAny(type, name));
         List<CatalogVersion> versions = records(type, name).stream()
                 .sorted(Comparator.comparingLong(CatalogVersion::getVersion).reversed())
                 .map(record -> record.metadata(status(record, active)))
@@ -203,7 +223,7 @@ public class CatalogLifecycle {
      */
     public CatalogVersion version(String type, String name, long version) {
         CatalogVersionRecord record = record(type, name, version);
-        return record.metadata(status(record, activeVersion(find(type, name))));
+        return record.metadata(status(record, activeVersion(findAny(type, name))));
     }
 
     /**
@@ -221,6 +241,189 @@ public class CatalogLifecycle {
         DataStore content = new DataStore(null, record.getDataStoreName(), record.getData());
         content.setLabels(new HashMap<>(record.getLabels()));
         return content;
+    }
+
+    /**
+     * Finds an active or a removed entry.
+     *
+     * @param type {@code catalog} or {@code template}
+     * @param name the catalog or template name
+     * @return the entry, or {@code null}
+     */
+    public DataStore findAny(String type, String name) {
+        DataStore entry = find(type, name);
+        return entry != null ? entry : find(removedType(type), name);
+    }
+
+    /**
+     * Lists the removed entries of a type.
+     *
+     * @param type {@code catalog} or {@code template}
+     * @return the removed entries
+     */
+    public List<DataStore> removed(String type) {
+        return list(removedType(type));
+    }
+
+    /**
+     * Summarizes the removed entries of a type.
+     *
+     * @param type {@code catalog} or {@code template}
+     * @return the name, removal time, active version and data store name of each removed entry
+     */
+    public List<Map<String, Object>> removedSummaries(String type) {
+        List<Map<String, Object>> summaries = new ArrayList<>();
+        for (DataStore entry : removed(type)) {
+            Map<String, Object> summary = new LinkedHashMap<>();
+            try {
+                summary.put(
+                        "name", ServiceCatalogIndex.fromBase64(entry.getData()).getName());
+            } catch (WanakuException e) {
+                continue;
+            }
+            summary.put("removedAt", entry.getLabels().get(REMOVED_AT_LABEL));
+            summary.put("version", activeVersion(entry));
+            summary.put("dataStoreName", entry.getName());
+            summaries.add(summary);
+        }
+        summaries.sort(Comparator.comparing(summary -> summary.get("name").toString()));
+        return summaries;
+    }
+
+    /**
+     * Marks an entry as removed. The entry and its versions are kept, so the entry can be restored.
+     *
+     * @param type {@code catalog} or {@code template}
+     * @param name the catalog or template name
+     * @return true if an active entry was removed, false if no active entry has the name
+     */
+    public boolean remove(String type, String name) {
+        try {
+            lock.lock();
+            DataStore entry = find(type, name);
+            if (entry == null) {
+                return false;
+            }
+            if (isImmutable(entry)) {
+                throw new WanakuException("Published semantic catalog revisions are immutable");
+            }
+            Map<String, String> labels = new HashMap<>(entry.getLabels());
+            labels.put(TYPE_LABEL, removedType(type));
+            labels.put(REMOVED_AT_LABEL, now().toString());
+            relabel(entry, labels);
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Restores a removed entry with its active version. The restore does not create a version.
+     *
+     * @param type {@code catalog} or {@code template}
+     * @param name the catalog or template name
+     * @return the restored entry
+     * @throws DataStoreResourceNotFoundException if no removed entry has the name
+     */
+    public DataStore restoreRemoved(String type, String name) {
+        try {
+            lock.lock();
+            DataStore entry = find(removedType(type), name);
+            if (entry == null) {
+                throw new DataStoreResourceNotFoundException("No removed %s named '%s'".formatted(type, name));
+            }
+            Map<String, String> labels = new HashMap<>(entry.getLabels());
+            labels.put(TYPE_LABEL, type);
+            labels.remove(REMOVED_AT_LABEL);
+            return relabel(entry, labels);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Permanently deletes the removed entries of a type that were removed at or before the cutoff, together
+     * with their versions. The audit trail keeps the purge events.
+     *
+     * @param type {@code catalog} or {@code template}
+     * @param cutoff the latest removal time to purge (inclusive)
+     * @return the number of purged entries
+     */
+    public int purgeRemovedBefore(String type, Instant cutoff) {
+        int purged = 0;
+        try {
+            lock.lock();
+            for (DataStore entry : removed(type)) {
+                Instant removedAt = removedAt(entry);
+                if (removedAt == null || removedAt.isAfter(cutoff)) {
+                    continue;
+                }
+                String name = ServiceCatalogIndex.fromBase64(entry.getData()).getName();
+                records(type, name).forEach(record -> versions().remove(record.key()));
+                repository.deleteById(entry.getId());
+                purged++;
+                AuditEvent event = AuditEvent.administrative(
+                        "service_%s.purge".formatted(type),
+                        AuditEvent.DECISION_ALLOW,
+                        "purged",
+                        "The removed item and its versions were deleted.");
+                event.setProtocol("scheduler");
+                event.setTargetType("service_" + type);
+                event.setTarget(name);
+                auditStore.record(event);
+                LOG.infof("Purged removed %s '%s'", type, name);
+            }
+        } finally {
+            lock.unlock();
+        }
+        return purged;
+    }
+
+    /** Purges removed entries when {@code wanaku.catalog.purge-after} is set. Disabled by default. */
+    @Scheduled(every = "${wanaku.catalog.purge-interval:1h}", delayed = "${wanaku.catalog.purge-interval:1h}")
+    void purgeExpired() {
+        if (purgeAfter.isEmpty()) {
+            return;
+        }
+        Instant cutoff = Instant.now().minus(purgeAfter.get());
+        for (String type : List.of(ServiceCatalogBean.LABEL_TYPE_VALUE, ServiceTemplateBean.LABEL_TYPE_VALUE)) {
+            try {
+                purgeRemovedBefore(type, cutoff);
+            } catch (RuntimeException e) {
+                LOG.errorf("Failed to purge removed %s entries: %s", type, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Returns the removal time of a removed entry.
+     *
+     * @param entry the entry
+     * @return the removal time, or {@code null} if the entry is not removed
+     */
+    public static Instant removedAt(DataStore entry) {
+        String value = entry.getLabels() == null ? null : entry.getLabels().get(REMOVED_AT_LABEL);
+        try {
+            return value == null ? null : Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
+
+    static String removedType(String type) {
+        return type + REMOVED_SUFFIX;
+    }
+
+    /** Replaces the labels of an entry. The content does not change, so no version is created. */
+    private DataStore relabel(DataStore entry, Map<String, String> labels) {
+        DataStore replacement = new DataStore(entry.getId(), entry.getName(), entry.getData());
+        replacement.setLabels(labels);
+        Long revision = entry instanceof DataStoreRecord current ? current.getRevision() : null;
+        DataStore stored = repository.update(entry.getId(), replacement, revision);
+        if (stored == null) {
+            throw new DataStoreResourceNotFoundException("The entry %s does not exist".formatted(entry.getId()));
+        }
+        return stored;
     }
 
     /**
@@ -247,6 +450,10 @@ public class CatalogLifecycle {
         try {
             lock.lock();
             DataStore existing = find(type, name);
+            if (existing == null && find(removedType(type), name) != null) {
+                throw new EntityAlreadyExistsException(
+                        "The %s '%s' was removed. Restore it before you deploy it again".formatted(type, name));
+            }
             if (incoming.getId() != null
                     && (existing == null || !incoming.getId().equals(existing.getId()))) {
                 rejectImmutable(repository.findById(incoming.getId()));
@@ -343,7 +550,7 @@ public class CatalogLifecycle {
 
     /** Keeps the newest {@code maxVersions} versions. Never removes the active version. */
     private void trim(String type, String name, long active) {
-        long current = active > 0 ? active : activeVersion(find(type, name));
+        long current = active > 0 ? active : activeVersion(findAny(type, name));
         List<CatalogVersionRecord> older = new ArrayList<>(records(type, name));
         older.sort(Comparator.comparingLong(CatalogVersion::getVersion).reversed());
         int keep = Math.max(1, maxVersions);

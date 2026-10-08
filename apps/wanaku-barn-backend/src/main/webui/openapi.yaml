@@ -1775,6 +1775,18 @@ paths:
       summary: Get Deployment Instructions
       tags:
       - Service Catalog Resource
+  /api/v1/service-catalog/removed:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanakuResponseListMapStringObject"
+      summary: Removed
+      tags:
+      - Service Catalog Resource
   /api/v1/service-catalog/validate:
     post:
       requestBody:
@@ -1831,6 +1843,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/WanakuResponseMapStringObject"
       summary: Get
+      tags:
+      - Service Catalog Resource
+  /api/v1/service-catalog/{name}/restore:
+    post:
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanakuResponseDataStore"
+      summary: Restore
       tags:
       - Service Catalog Resource
   /api/v1/service-catalog/{name}/versions:
@@ -2057,6 +2087,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/WanakuResponseVoid"
       summary: Remove
+      tags:
+      - Service Template Resource
+  /api/v1/service-template/removed:
+    get:
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanakuResponseListMapStringObject"
+      summary: Removed
+      tags:
+      - Service Template Resource
+  /api/v1/service-template/restore:
+    post:
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WanakuResponseDataStore"
+      summary: Restore
       tags:
       - Service Template Resource
   /api/v1/service-template/validate:

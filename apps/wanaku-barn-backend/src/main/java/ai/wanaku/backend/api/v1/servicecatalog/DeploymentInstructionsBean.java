@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.jboss.logging.Logger;
+import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.DeploymentInstructions;
@@ -80,7 +81,7 @@ public class DeploymentInstructionsBean {
 
         DataStore catalog = serviceCatalogBean.get(catalogName);
         if (catalog == null) {
-            throw new WanakuException("Service catalog not found: %s".formatted(catalogName));
+            throw new DataStoreResourceNotFoundException("Service catalog not found: %s".formatted(catalogName));
         }
 
         ServiceCatalogIndex index = serviceCatalogBean.parseIndex(catalog);

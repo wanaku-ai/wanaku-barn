@@ -17,11 +17,15 @@ Barn records one administrative event for each request to these operations:
 | `data_store.delete_by_labels` | `DELETE /api/v1/data-store/labels?labelExpression={expression}` |
 | `service_catalog.deploy` | `POST /api/v1/service-catalog` |
 | `service_catalog.remove` | `DELETE /api/v1/service-catalog/{name}` |
-| `service_catalog.restore` | `POST /api/v1/service-catalog/{name}/versions/{version}/activate` |
+| `service_catalog.activate_version` | `POST /api/v1/service-catalog/{name}/versions/{version}/activate` |
+| `service_catalog.restore` | `POST /api/v1/service-catalog/{name}/restore` |
+| `service_catalog.purge` | Scheduled purge of a removed catalog |
 | `service_template.deploy` | `POST /api/v1/service-template/deploy` |
 | `service_template.remove` | `DELETE /api/v1/service-template/remove?name={name}` |
 | `service_template.instantiate` | `POST /api/v1/service-template/instantiate` |
-| `service_template.restore` | `POST /api/v1/service-template/versions/activate` |
+| `service_template.activate_version` | `POST /api/v1/service-template/versions/activate` |
+| `service_template.restore` | `POST /api/v1/service-template/restore?name={name}` |
+| `service_template.purge` | Scheduled purge of a removed template |
 | `service_template.seed` | Startup: deployment of a built-in template |
 | `kamelet.upload` | `POST /api/v1/kamelets` |
 | `kamelet.remove` | `DELETE /api/v1/kamelets/{name}` |
@@ -51,7 +55,7 @@ These rules apply:
 | `reason_code` | A stable code for the outcome. |
 | `explanation` | A fixed description of the reason code. |
 | `correlation_id`, `request_id` | The `x-request-id` of the request. See [Observability](observability.md#request-correlation-in-the-barn-backend). For startup events, the correlation ID is the event ID. |
-| `protocol` | `http` for API requests, `startup` for built-in template seeding. |
+| `protocol` | `http` for API requests, `startup` for built-in template seeding, `scheduler` for purges. |
 | `operation` | The operation, for example `service_catalog.deploy`. |
 | `target_type`, `target` | The type and the ID or name of the changed resource. Barn limits the target to 256 characters. |
 | `policy_revision` | The resulting version, when the operation creates one: the catalog or template version for deploys and restores, or the revision of a semantic router publication. |
@@ -77,7 +81,7 @@ Barn never stores request or response bodies, data store content, ZIP packages, 
 | Other 4xx | `reject_malformed` | `client_error` |
 | 5xx | `error` | `server_error` |
 
-Built-in template seeding uses the reason codes `seeded` (`allow`) and `seed_failed` (`error`).
+Built-in template seeding uses the reason codes `seeded` (`allow`) and `seed_failed` (`error`). A purge uses the reason code `purged` (`allow`).
 
 ## Query the Audit Trail
 

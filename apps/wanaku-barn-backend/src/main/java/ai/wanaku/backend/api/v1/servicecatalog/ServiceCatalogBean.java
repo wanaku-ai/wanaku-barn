@@ -1,14 +1,11 @@
 package ai.wanaku.backend.api.v1.servicecatalog;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
-import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
@@ -32,17 +29,7 @@ public class ServiceCatalogBean {
     public static final String LABEL_TYPE_VALUE = "catalog";
 
     @Inject
-    Instance<DataStoreRepository> dataStoreRepositoryInstance;
-
-    @Inject
     CatalogLifecycle lifecycle;
-
-    private DataStoreRepository dataStoreRepository;
-
-    @PostConstruct
-    void init() {
-        dataStoreRepository = dataStoreRepositoryInstance.get();
-    }
 
     /**
      * List all service catalog entries, optionally filtered by search term.
@@ -110,21 +97,14 @@ public class ServiceCatalogBean {
     }
 
     /**
-     * Remove a service catalog by name.
+     * Remove a service catalog by name. The catalog and its versions are kept and can be restored.
      *
      * @param name the catalog name to remove
      * @return the number of entries removed
      */
     public int remove(String name) {
         LOG.debugf("Removing service catalog: %s", name);
-        DataStore catalog = get(name);
-        if (catalog == null) {
-            return 0;
-        }
-        if (catalog.getLabels() != null && "true".equals(catalog.getLabels().get("semantic.immutable")))
-            throw new WanakuException("Published semantic catalog revisions are immutable");
-        boolean removed = dataStoreRepository.deleteById(catalog.getId());
-        return removed ? 1 : 0;
+        return lifecycle.remove(LABEL_TYPE_VALUE, name) ? 1 : 0;
     }
 
     /**

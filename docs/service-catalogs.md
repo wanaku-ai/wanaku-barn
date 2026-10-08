@@ -255,7 +255,16 @@ Remove a deployed service catalog by name:
 wanaku service catalog remove --name=my-catalog --host=http://localhost:8080
 ```
 
-This sends a `DELETE` request to the router and removes the catalog and all its associated routes and rules. Use `wanaku service catalog list` to see currently deployed catalogs and their names.
+This sends a `DELETE` request to Barn. Barn hides the catalog from lists and downloads, but keeps the catalog and its versions so that you can restore it. Use `wanaku service catalog list` to see currently deployed catalogs and their names.
+
+To see the removed catalogs and restore one:
+
+```shell
+wanaku service removed
+wanaku service restore --name=my-catalog
+```
+
+See [Removal and Restore](#removal-and-restore).
 
 > [!TIP]
 > Use `wanaku service deploy` for quick iteration during development. Use the operator approach (below) for production deployments on Kubernetes.
@@ -629,6 +638,35 @@ The generic data store API (`/api/v1/data-store`) cannot create or update catalo
 The `checksum` field is the SHA-256 digest of the decoded ZIP package.
 The `origin` field is `api`, `startup`, `instantiate`, `restore` or `legacy`.
 The `actor` field is empty, because Barn has no identity source.
+
+### Removal and Restore
+
+A removal does not delete the catalog. These rules apply:
+
+- Barn marks the catalog as removed. The `wanaku.type` label changes to `catalog.removed` and the `wanaku.removed-at` label records the removal time.
+- A removed catalog does not appear in lists. Get, download, deployment instructions and instantiation return HTTP 404.
+- The version history of a removed catalog stays available through the version endpoints.
+- A removed name is reserved. A deploy with the same name returns HTTP 409 until you restore the catalog.
+- A restore makes the catalog visible again with its ID and its active version. A restore does not create a version.
+- A second removal of the same catalog returns HTTP 404.
+- The generic data store API cannot delete catalogs or templates, removed or not.
+- Built-in templates that you remove are not deployed again at startup.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `DELETE` | `/api/v1/service-catalog/{name}` | Remove a catalog. |
+| `GET` | `/api/v1/service-catalog/removed` | List removed catalogs with `name`, `removedAt`, `version` and `dataStoreName`. |
+| `POST` | `/api/v1/service-catalog/{name}/restore` | Restore a removed catalog. |
+
+#### Purge
+
+Barn can delete removed catalogs and templates permanently after a retention period. Purge is disabled by default.
+
+- Set `wanaku.catalog.purge-after` to a duration (for example, `P30D`) to enable purge.
+- Barn checks for expired items at the interval in `wanaku.catalog.purge-interval` (default `1h`).
+- Barn purges an item when its removal time is equal to or earlier than the current time minus `wanaku.catalog.purge-after`.
+- A purge deletes the item and all its versions. Version numbers are not reused if you deploy the name again.
+- Each purge records an audit event with the operation `service_catalog.purge` or `service_template.purge`.
 
 ### Remove a Catalog
 
