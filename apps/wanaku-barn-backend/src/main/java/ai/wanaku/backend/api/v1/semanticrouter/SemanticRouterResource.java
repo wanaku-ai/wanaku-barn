@@ -15,6 +15,8 @@ import ai.wanaku.backend.api.v1.semanticrouter.model.SemanticPublication;
 import ai.wanaku.backend.api.v1.semanticrouter.model.SemanticResolvedPublication;
 import ai.wanaku.backend.api.v1.semanticrouter.model.SemanticRouterDefinition;
 import ai.wanaku.backend.api.v1.semanticrouter.model.SemanticValidation;
+import ai.wanaku.backend.audit.AuditContext;
+import ai.wanaku.backend.audit.Audited;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 
 /** Thin REST transport for router authoring. */
@@ -22,6 +24,9 @@ import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 public class SemanticRouterResource implements SemanticRouterService {
     @Inject
     SemanticRouterBean bean;
+
+    @Inject
+    AuditContext auditContext;
     /** List eligible curated Kamelet actions. */
     @Override
     public WanakuResponse<List<SemanticAction>> actions(String definitionId) {
@@ -44,6 +49,7 @@ public class SemanticRouterResource implements SemanticRouterService {
     }
     /** Save a router draft. */
     @Override
+    @Audited(operation = "semantic_router.create", targetType = "semantic_router")
     public WanakuResponse<SemanticRouterDefinition> create(@Valid SemanticRouterDefinition definition) {
         return new WanakuResponse<>(bean.save(null, definition));
     }
@@ -54,12 +60,14 @@ public class SemanticRouterResource implements SemanticRouterService {
     }
     /** Update a router draft. */
     @Override
+    @Audited(operation = "semantic_router.update", targetType = "semantic_router")
     public WanakuResponse<SemanticRouterDefinition> update(
             @PathParam("id") String id, @Valid SemanticRouterDefinition definition) {
         return new WanakuResponse<>(bean.save(id, definition));
     }
     /** Remove a router draft. */
     @Override
+    @Audited(operation = "semantic_router.remove", targetType = "semantic_router")
     public WanakuResponse<Void> remove(@PathParam("id") String id) {
         bean.remove(id);
         return new WanakuResponse<>();
@@ -81,8 +89,11 @@ public class SemanticRouterResource implements SemanticRouterService {
     }
     /** Publish an immutable catalog revision. */
     @Override
+    @Audited(operation = "semantic_router.publish", targetType = "semantic_router")
     public WanakuResponse<SemanticPublication> publish(@PathParam("id") String id) {
-        return new WanakuResponse<>(bean.publish(id));
+        SemanticPublication publication = bean.publish(id);
+        auditContext.setPolicyRevision(publication.revision);
+        return new WanakuResponse<>(publication);
     }
     /** List published revisions. */
     @Override

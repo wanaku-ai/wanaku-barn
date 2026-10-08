@@ -9,7 +9,6 @@ import org.infinispan.manager.EmbeddedCacheManager;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.backend.core.persistence.api.ForwardReferenceRepository;
 import ai.wanaku.backend.core.persistence.api.PromptReferenceRepository;
-import ai.wanaku.backend.core.persistence.api.ToolCallRecordRepository;
 
 /**
  * Produces the repositories. Each repository is a singleton, so all callers share one repository lock.
@@ -38,11 +37,5 @@ public class InfinispanPersistenceConfiguration {
     @Singleton
     DataStoreRepository dataStoreRepository() {
         return new InfinispanDataStoreRepository(cacheManager, configuration);
-    }
-
-    @Produces
-    @Singleton
-    ToolCallRecordRepository toolCallRecordRepository() {
-        return new InfinispanToolCallRecordRepository(cacheManager, configuration);
     }
 }

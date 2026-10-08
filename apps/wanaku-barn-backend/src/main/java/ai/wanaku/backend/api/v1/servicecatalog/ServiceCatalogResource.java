@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
+import ai.wanaku.backend.audit.AuditContext;
+import ai.wanaku.backend.audit.Audited;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -35,6 +37,9 @@ import ai.wanaku.core.services.api.ValidationResult;
 @Path("/api/v1/service-catalog")
 public class ServiceCatalogResource {
     private static final Logger LOG = Logger.getLogger(ServiceCatalogResource.class);
+
+    @Inject
+    AuditContext auditContext;
 
     @Inject
     ServiceCatalogBean serviceCatalogBean;
@@ -160,8 +165,10 @@ public class ServiceCatalogResource {
      * @return response with the created data store entry
      */
     @POST
+    @Audited(operation = "service_catalog.deploy", targetType = "service_catalog", targetField = "name")
     public WanakuResponse<DataStore> deploy(DataStore dataStore) {
         LOG.debugf("REST: Deploying service catalog: %s", dataStore.getName());
+        auditContext.setTarget(dataStore.getName());
         DataStore result = serviceCatalogBean.deploy(dataStore);
         return new WanakuResponse<>(result);
     }
@@ -196,6 +203,7 @@ public class ServiceCatalogResource {
      */
     @Path("/{name}")
     @DELETE
+    @Audited(operation = "service_catalog.remove", targetType = "service_catalog")
     public WanakuResponse<Void> remove(@PathParam("name") String name) {
         LOG.debugf("REST: Removing service catalog: %s", name);
 

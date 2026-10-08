@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package ai.wanaku.backend.audit;
+
+/**
+ * Administrative audit event (Wanaku audit schema 1.0).
+ * The timestamp is milliseconds since the epoch (UTC).
+ */
+message AuditEvent {
+  string schema_version = 1;
+  string event_id = 2;
+  string stream_id = 3;
+  int64 sequence = 4;
+  int64 timestamp = 5;
+  string category = 6;
+  string decision = 7;
+  string correlation_id = 8;
+  string request_id = 9;
+  string actor = 10;
+  string protocol = 11;
+  string operation = 12;
+  string target_type = 13;
+  string target = 14;
+  string reason_code = 15;
+  string explanation = 16;
+  string policy_revision = 17;
+  int32 response_status = 18;
+  int64 duration_ms = 19;
+  repeated string redacted_fields = 20;
+  bool payload_captured = 21;
+  bool payload_truncated = 22;
+  map<string, string> attributes = 23;
+  bool coverage_complete = 24;
+  int64 dropped_events = 25;
+}

@@ -188,6 +188,13 @@ These `wanaku.router.health-check.*` properties control the periodic health prob
 | `wanaku.persistence.infinispan.base-folder` | Where to store Infinispan files (defaults to `${wanaku.home}/router/`). |
 | `wanaku.infinispan.max-state-count`         | `10` - The maximum number of historical states to keep for each service.      |
 
+### Audit Trail
+
+| Property                   | Description                                                                                       |
+|----------------------------|---------------------------------------------------------------------------------------------------|
+| `wanaku.audit.max-records` | `10000` - The number of audit events to keep. See [Barn Audit Trail](audit-trail.md).            |
+| `wanaku.audit.stream-id`   | `barn` - The `stream_id` value of the audit events.                                               |
+
 ### Namespaces
 
 | Property                                 | Description                                                                                                                                                                                                                                     |
