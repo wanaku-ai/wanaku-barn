@@ -2869,7 +2869,7 @@ This section provides solutions to common issues you may encounter while using W
 4. Check Infinispan cache performance and consider adjusting:
 
    ```shell
-   wanaku.infinispan.max-state-count=10
+   wanaku.persistence.infinispan.max-state-count=10
    ```
 
 5. For Kubernetes deployments, ensure adequate resource limits:
