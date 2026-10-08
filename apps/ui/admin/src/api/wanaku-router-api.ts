@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.3.0-SNAPSHOT
  */
 import type {
+  BarnArchive,
   DataStore,
   DeleteApiV1DataStoreIdParams,
   DeleteApiV1DataStoreLabelsParams,
@@ -14,6 +15,7 @@ import type {
   GetApiV1DataStoreParams,
   GetApiV1KameletsNameKameletYamlParams,
   GetApiV1KameletsNameParams,
+  GetApiV1ManagementExportParams,
   GetApiV1SemanticRoutersActionsParams,
   GetApiV1SemanticRoutersResolveParams,
   GetApiV1ServiceCatalogDownloadParams,
@@ -28,6 +30,7 @@ import type {
   GetApiV1ServiceTemplateVersionsGetParams,
   GetApiV1ServiceTemplateVersionsParams,
   KameletUpload,
+  PostApiV1ManagementImportParams,
   PostApiV1ServiceCatalogNameVersionsVersionActivateParams,
   PostApiV1ServiceCatalogParams,
   PostApiV1ServiceTemplateDeployParams,
@@ -40,6 +43,7 @@ import type {
   WanakuResponseAuditEvent,
   WanakuResponseAuditHealth,
   WanakuResponseAuditPage,
+  WanakuResponseBarnArchive,
   WanakuResponseCatalogVersion,
   WanakuResponseDataStore,
   WanakuResponseDataStoreRecord,
@@ -56,6 +60,7 @@ import type {
   WanakuResponseListSemanticPublication,
   WanakuResponseListSemanticRouterDefinition,
   WanakuResponseListServiceTemplateSummary,
+  WanakuResponseMapStringInteger,
   WanakuResponseMapStringMapStringString,
   WanakuResponseMapStringObject,
   WanakuResponseMapStringString,
@@ -781,6 +786,112 @@ export const getApiV1KameletsNameKameletYaml = async (
     {
       ...options,
       method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Export
+ */
+export type getApiV1ManagementExportResponse200 = {
+  data: WanakuResponseBarnArchive;
+  status: 200;
+};
+
+export type getApiV1ManagementExportResponseSuccess =
+  getApiV1ManagementExportResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ManagementExportResponse =
+  getApiV1ManagementExportResponseSuccess;
+
+export const getGetApiV1ManagementExportUrl = (
+  params?: GetApiV1ManagementExportParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/management/export?${stringifiedParams}`
+    : `/api/v1/management/export`;
+};
+
+export const getApiV1ManagementExport = async (
+  params?: GetApiV1ManagementExportParams,
+  options?: RequestInit,
+): Promise<getApiV1ManagementExportResponse> => {
+  return customFetch<getApiV1ManagementExportResponse>(
+    getGetApiV1ManagementExportUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Import Archive
+ */
+export type postApiV1ManagementImportResponse200 = {
+  data: WanakuResponseMapStringInteger;
+  status: 200;
+};
+
+export type postApiV1ManagementImportResponse400 = {
+  data: void;
+  status: 400;
+};
+
+export type postApiV1ManagementImportResponseSuccess =
+  postApiV1ManagementImportResponse200 & {
+    headers: Headers;
+  };
+export type postApiV1ManagementImportResponseError =
+  postApiV1ManagementImportResponse400 & {
+    headers: Headers;
+  };
+
+export type postApiV1ManagementImportResponse =
+  | postApiV1ManagementImportResponseSuccess
+  | postApiV1ManagementImportResponseError;
+
+export const getPostApiV1ManagementImportUrl = (
+  params?: PostApiV1ManagementImportParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/management/import?${stringifiedParams}`
+    : `/api/v1/management/import`;
+};
+
+export const postApiV1ManagementImport = async (
+  barnArchive: BarnArchive,
+  params?: PostApiV1ManagementImportParams,
+  options?: RequestInit,
+): Promise<postApiV1ManagementImportResponse> => {
+  return customFetch<postApiV1ManagementImportResponse>(
+    getPostApiV1ManagementImportUrl(params),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(barnArchive),
     },
   );
 };

@@ -33,6 +33,22 @@ public class StoredDataStore extends DataStoreRecord {
         return stored;
     }
 
+    /**
+     * Creates a stored entry with the content and the metadata of a record, for an import.
+     *
+     * @param record the source record
+     * @return a new stored entry
+     */
+    public static StoredDataStore restore(DataStoreRecord record) {
+        StoredDataStore stored = from(record);
+        stored.setCreatedAt(record.getCreatedAt());
+        stored.setUpdatedAt(record.getUpdatedAt());
+        stored.setCreatedBy(record.getCreatedBy());
+        stored.setUpdatedBy(record.getUpdatedBy());
+        stored.setRevision(record.getRevision());
+        return stored;
+    }
+
     /** The value of the {@value #TYPE_LABEL} label, or {@code null}. */
     public String getType() {
         return getLabelValue(TYPE_LABEL);

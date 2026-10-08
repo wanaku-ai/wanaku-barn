@@ -1,5 +1,6 @@
 package ai.wanaku.backend.api.v1.exceptions;
 
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
@@ -29,6 +30,15 @@ public class BaseExceptionMapper implements ExceptionMapper<Exception> {
             content = @Content(schema = @Schema(implementation = WanakuResponse.class)))
     @Override
     public Response toResponse(Exception e) {
+        // Keep the status of errors that the REST layer already classified, for example 400 for a body that is
+        // not valid JSON, 404 for an unknown path or 415 for an unsupported content type
+        if (e instanceof WebApplicationException wae && wae.getResponse().getStatus() < 500) {
+            LOG.warnf("Request rejected: %s", e.getMessage());
+            return Response.status(wae.getResponse().getStatus())
+                    .entity(new WanakuResponse<Void>(
+                            wae.getResponse().getStatusInfo().getReasonPhrase()))
+                    .build();
+        }
         LOG.error(e.getMessage(), e);
 
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

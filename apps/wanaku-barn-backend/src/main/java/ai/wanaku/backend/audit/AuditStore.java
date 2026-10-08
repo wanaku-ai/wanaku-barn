@@ -6,6 +6,7 @@ import jakarta.inject.Inject;
 
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -170,6 +171,37 @@ public class AuditStore {
         query.setParameter("id", eventId);
         List<AuditEvent> found = query.execute().list();
         return found.isEmpty() ? null : found.get(0);
+    }
+
+    /** Returns all retained events in sequence order, for an export. */
+    public List<AuditEvent> allEvents() {
+        return events().values().stream()
+                .sorted(Comparator.comparingLong(AuditEvent::getSequence))
+                .toList();
+    }
+
+    /** Returns the sequence number of the newest stored event. */
+    public long lastSequence() {
+        return currentSequence();
+    }
+
+    /**
+     * Replaces all events and the sequence, for an import.
+     *
+     * @param imported the events
+     * @param sequence the sequence number of the newest imported event
+     */
+    public void replaceEvents(List<AuditEvent> imported, long sequence) {
+        try {
+            lock.lock();
+            events().clear();
+            imported.forEach(event -> events().put(event.getSequence(), event));
+            state().put(SEQUENCE_KEY, sequence);
+            gap = 0;
+            lastError = null;
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**

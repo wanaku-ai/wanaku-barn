@@ -2,6 +2,7 @@ package ai.wanaku.backend.core.persistence.api;
 
 import java.util.List;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
+import ai.wanaku.core.services.api.DataStoreRecord;
 
 /**
  * Repository interface for DataStore entity operations.
@@ -76,6 +77,13 @@ public interface DataStoreRepository extends LabelAwareInfinispanRepository<Data
      * @return the page and the total number of entries
      */
     Page<DataStore> listPage(int offset, int limit);
+
+    /**
+     * Replaces all entries with the given records, keeping their identifiers and metadata. For imports only.
+     *
+     * @param records the records to store
+     */
+    void replaceAll(List<DataStoreRecord> records);
 
     /**
      * Find all data stores with the given name.

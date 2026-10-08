@@ -214,6 +214,19 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
     }
 
     @Override
+    public void replaceAll(List<DataStoreRecord> records) {
+        try {
+            lock.lock();
+            cache().clear();
+            for (DataStoreRecord record : records) {
+                cache().put(record.getId(), StoredDataStore.restore(record));
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
     public List<DataStore> findByType(String type) {
         return query("from %s d where d.type = :type".formatted(queryEntityName()), Map.of("type", type));
     }

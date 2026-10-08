@@ -89,6 +89,11 @@ public class AuditEvent {
         return Instant.ofEpochMilli(timestampMillis).toString();
     }
 
+    /** Sets the event time from an ISO 8601 UTC timestamp, for an import. */
+    public void setTimestamp(String timestamp) {
+        this.timestampMillis = Instant.parse(timestamp).toEpochMilli();
+    }
+
     @JsonIgnore
     public long getTimestampMillis() {
         return timestampMillis;
