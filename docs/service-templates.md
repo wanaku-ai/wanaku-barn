@@ -123,7 +123,7 @@ wanaku service versions restore --template --name=my-template --version=1
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/v1/service-template/deploy?expectedVersion={n}` | Deploy a new version. `expectedVersion` is optional. |
-| `GET` | `/api/v1/service-template/versions?name={name}` | List the versions, newest first. |
+| `GET` | `/api/v1/service-template/versions?name={name}&from={time}&to={time}` | List the versions, newest first. `from` and `to` are optional. |
 | `GET` | `/api/v1/service-template/versions/get?name={name}&version={n}` | Get the metadata of one version. |
 | `GET` | `/api/v1/service-template/versions/download?name={name}&version={n}` | Get the package of one version. |
 | `POST` | `/api/v1/service-template/versions/activate?name={name}&version={n}&expectedVersion={m}` | Restore one version as a new version. |

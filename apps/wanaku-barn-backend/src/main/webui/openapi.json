@@ -1568,10 +1568,24 @@
             "type" : "string"
           }
         }, {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
           "name" : "name",
           "in" : "query",
           "schema" : {
             "type" : "string"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         } ],
         "responses" : {
@@ -2377,6 +2391,20 @@
     "/api/v1/service-catalog" : {
       "get" : {
         "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
           "name" : "search",
           "in" : "query",
           "schema" : {
@@ -2629,6 +2657,18 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -2878,6 +2918,20 @@
     "/api/v1/service-template/list" : {
       "get" : {
         "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
           "name" : "search",
           "in" : "query",
           "schema" : {
@@ -3030,7 +3084,19 @@
     "/api/v1/service-template/versions" : {
       "get" : {
         "parameters" : [ {
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
           "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "to",
           "in" : "query",
           "schema" : {
             "type" : "string"

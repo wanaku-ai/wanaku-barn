@@ -4,21 +4,21 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.HashMap;
 import org.infinispan.protostream.MessageMarshaller;
+import ai.wanaku.backend.core.persistence.infinispan.StoredDataStore;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
-import ai.wanaku.core.services.api.DataStoreRecord;
 
 /**
  * Protostream marshaller for DataStore entity serialization.
  * <p>
- * Entries are stored as {@link DataStoreRecord} under the original {@code DataStore} message name,
+ * Entries are stored as {@link StoredDataStore} under the original {@code DataStore} message name,
  * so records written before the metadata fields existed remain readable.
  * </p>
  */
-public class DataStoreMarshaller implements MessageMarshaller<DataStoreRecord> {
+public class DataStoreMarshaller implements MessageMarshaller<StoredDataStore> {
 
     @Override
-    public DataStoreRecord readFrom(ProtoStreamReader reader) throws IOException {
-        DataStoreRecord dataStore = new DataStoreRecord();
+    public StoredDataStore readFrom(ProtoStreamReader reader) throws IOException {
+        StoredDataStore dataStore = new StoredDataStore();
         dataStore.setId(reader.readString("id"));
         dataStore.setName(reader.readString("name"));
         dataStore.setData(reader.readString("data"));
@@ -33,7 +33,7 @@ public class DataStoreMarshaller implements MessageMarshaller<DataStoreRecord> {
     }
 
     @Override
-    public void writeTo(ProtoStreamWriter writer, DataStoreRecord dataStore) throws IOException {
+    public void writeTo(ProtoStreamWriter writer, StoredDataStore dataStore) throws IOException {
         writer.writeString("id", dataStore.getId());
         writer.writeString("name", dataStore.getName());
         writer.writeString("data", dataStore.getData());
@@ -46,8 +46,8 @@ public class DataStoreMarshaller implements MessageMarshaller<DataStoreRecord> {
     }
 
     @Override
-    public Class<? extends DataStoreRecord> getJavaClass() {
-        return DataStoreRecord.class;
+    public Class<? extends StoredDataStore> getJavaClass() {
+        return StoredDataStore.class;
     }
 
     @Override

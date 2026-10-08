@@ -10,6 +10,7 @@ import java.util.Map;
 import org.jboss.logging.Logger;
 import ai.wanaku.backend.common.LabelsAwareWanakuEntityBean;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
+import ai.wanaku.backend.core.persistence.api.Page;
 import ai.wanaku.backend.core.persistence.api.RevisionConflictException;
 import ai.wanaku.backend.core.persistence.api.WanakuRepository;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
@@ -104,6 +105,17 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
 
         LOG.debugf("Listing data stores with label filter: %s", labelFilter);
         return dataStoreRepository.findAllFilterByLabelExpression(labelFilter);
+    }
+
+    /**
+     * Returns one page of all data stores, sorted by name and then by ID.
+     *
+     * @param offset the number of entries to skip
+     * @param limit the maximum number of entries
+     * @return the page
+     */
+    public Page<DataStore> page(int offset, int limit) {
+        return dataStoreRepository.listPage(offset, limit);
     }
 
     /**

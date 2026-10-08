@@ -15,11 +15,14 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 
+import java.util.Comparator;
 import java.util.List;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestResponse;
 import ai.wanaku.backend.audit.AuditContext;
 import ai.wanaku.backend.audit.Audited;
+import ai.wanaku.backend.common.Paging;
+import ai.wanaku.backend.core.persistence.api.Page;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -90,18 +93,29 @@ public class DataStoresResource {
      * {@code GET /api/v1/data-store?labelFilter={expression}}
      *
      * @param labelFilter optional label expression to filter data stores
-     * @return response with list of data stores
+     * @param offset optional number of entries to skip; requests a page
+     * @param limit optional maximum number of entries (1-1000); requests a page
+     * @return response with list of data stores; a page carries the total in {@code X-Total-Count}
      */
     @GET
-    public WanakuResponse<List<DataStoreRecord>> listOrGetByName(
-            @QueryParam("labelFilter") String labelFilter, @QueryParam("name") String name) {
+    public RestResponse<WanakuResponse<List<DataStoreRecord>>> listOrGetByName(
+            @QueryParam("labelFilter") String labelFilter,
+            @QueryParam("name") String name,
+            @QueryParam("offset") Integer offset,
+            @QueryParam("limit") Integer limit) {
+        boolean paged = Paging.requested(offset, limit);
         if (name != null && !name.isEmpty()) {
             LOG.debugf("REST: Getting data stores by name: %s", name);
             List<DataStore> dataStores = dataStoresBean.findByName(name);
             if (dataStores == null || dataStores.isEmpty()) {
                 throw new DataStoreResourceNotFoundException("Data store not found with name: %s".formatted(name));
             }
-            return new WanakuResponse<>(records(dataStores));
+            return Paging.response(records(dataStores), null);
+        }
+
+        if (paged && (labelFilter == null || labelFilter.isBlank())) {
+            Page<DataStore> page = dataStoresBean.page(Paging.offset(offset), Paging.limit(limit));
+            return Paging.response(records(page.items()), page.total());
         }
 
         if (labelFilter != null && !labelFilter.isBlank()) {
@@ -110,7 +124,14 @@ public class DataStoresResource {
             LOG.debug("REST: Listing all data stores");
         }
         List<DataStore> dataStores = dataStoresBean.list(labelFilter);
-        return new WanakuResponse<>(records(dataStores));
+        if (paged) {
+            List<DataStore> sorted = dataStores.stream()
+                    .sorted(Comparator.comparing(DataStore::getName, Comparator.nullsFirst(Comparator.naturalOrder()))
+                            .thenComparing(DataStore::getId))
+                    .toList();
+            return Paging.response(records(Paging.slice(sorted, offset, limit)), (long) sorted.size());
+        }
+        return Paging.response(records(dataStores), null);
     }
 
     /**

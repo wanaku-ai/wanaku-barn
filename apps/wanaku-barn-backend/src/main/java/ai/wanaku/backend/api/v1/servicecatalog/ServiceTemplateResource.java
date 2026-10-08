@@ -11,15 +11,19 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.RestResponse;
 import ai.wanaku.backend.api.v1.exceptions.ServiceTemplateNotFoundException;
 import ai.wanaku.backend.audit.AuditContext;
 import ai.wanaku.backend.audit.Audited;
+import ai.wanaku.backend.common.Paging;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -66,7 +70,11 @@ public class ServiceTemplateResource {
      */
     @Path("/list")
     @GET
-    public WanakuResponse<List<ServiceTemplateSummary>> list(@QueryParam("search") String search) {
+    public RestResponse<WanakuResponse<List<ServiceTemplateSummary>>> list(
+            @QueryParam("search") String search,
+            @QueryParam("offset") Integer offset,
+            @QueryParam("limit") Integer limit) {
+        boolean paged = Paging.requested(offset, limit);
         if (search != null && !search.isBlank()) {
             LOG.debugf("REST: Listing service templates with search: %s", search);
         } else {
@@ -102,9 +110,13 @@ public class ServiceTemplateResource {
         }
 
         summaries.sort(Comparator.comparing(
-                ServiceTemplateSummary::getName, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)));
+                        ServiceTemplateSummary::getName, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER))
+                .thenComparing(ServiceTemplateSummary::getId, Comparator.nullsFirst(Comparator.naturalOrder())));
 
-        return new WanakuResponse<>(summaries);
+        if (paged) {
+            return Paging.response(Paging.slice(summaries, offset, limit), (long) summaries.size());
+        }
+        return Paging.response(summaries, null);
     }
 
     /**
@@ -239,9 +251,11 @@ public class ServiceTemplateResource {
      */
     @Path("/versions")
     @GET
-    public WanakuResponse<List<CatalogVersion>> versions(@QueryParam("name") String name) {
+    public WanakuResponse<List<CatalogVersion>> versions(
+            @QueryParam("name") String name, @QueryParam("from") String from, @QueryParam("to") String to) {
         requireName(name);
-        return new WanakuResponse<>(lifecycle.versions(ServiceTemplateBean.LABEL_TYPE_VALUE, name));
+        return new WanakuResponse<>(lifecycle.versions(
+                ServiceTemplateBean.LABEL_TYPE_VALUE, name, instant("from", from), instant("to", to)));
     }
 
     /**
@@ -391,5 +405,16 @@ public class ServiceTemplateResource {
                 request.getTemplateName(), request.getProperties(),
                 request.getServiceName(), request.getServiceSystem());
         return new WanakuResponse<>(catalog);
+    }
+
+    private static Instant instant(String parameter, String value) {
+        if (StringHelper.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("'%s' must be an ISO 8601 UTC timestamp".formatted(parameter));
+        }
     }
 }

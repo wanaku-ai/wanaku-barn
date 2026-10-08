@@ -5,8 +5,7 @@
  * OpenAPI spec version: 0.3.0-SNAPSHOT
  */
 
-export type GetApiV1ServiceCatalogParams = {
-  limit?: number;
-  offset?: number;
-  search?: string;
+export type GetApiV1ServiceCatalogNameVersionsParams = {
+  from?: string;
+  to?: string;
 };

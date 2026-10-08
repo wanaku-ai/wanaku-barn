@@ -52,6 +52,32 @@ public interface DataStoreRepository extends LabelAwareInfinispanRepository<Data
     boolean deleteById(String id, Long expectedRevision);
 
     /**
+     * Finds the entries with the given {@code wanaku.type} label.
+     *
+     * @param type the type, for example {@code catalog}
+     * @return the matching entries
+     */
+    List<DataStore> findByType(String type);
+
+    /**
+     * Finds the entries with the given {@code wanaku.type} and {@code wanaku.catalog-name} labels.
+     *
+     * @param type the type, for example {@code catalog}
+     * @param catalogName the name from {@code index.properties}
+     * @return the matching entries
+     */
+    List<DataStore> findByTypeAndCatalogName(String type, String catalogName);
+
+    /**
+     * Returns one page of all entries, sorted by name and then by identifier.
+     *
+     * @param offset the number of entries to skip
+     * @param limit the maximum number of entries to return
+     * @return the page and the total number of entries
+     */
+    Page<DataStore> listPage(int offset, int limit);
+
+    /**
      * Find all data stores with the given name.
      *
      * @param name the name to search for

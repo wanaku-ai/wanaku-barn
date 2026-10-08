@@ -1562,6 +1562,19 @@ The server sets these values. The server ignores metadata values in requests.
 Entries written by earlier versions show `revision` 0 and no timestamps until the next write.
 An update (`PUT /api/v1/data-store`) for an ID that does not exist returns HTTP 404.
 
+#### Pagination
+
+The data store list endpoint (`GET /api/v1/data-store`) returns all matching entries by default.
+To request one page, send the `offset` or the `limit` query parameter:
+
+- `offset` is the number of entries to skip. The default is 0.
+- `limit` is the maximum number of entries to return, from 1 to 1000. The default is 100.
+- A page is sorted by name, then by ID. Name sorting is case-sensitive.
+- The `X-Total-Count` response header contains the number of matching entries.
+- A value out of range returns HTTP 400.
+
+The service catalog list (`GET /api/v1/service-catalog`) and the service template list (`GET /api/v1/service-template/list`) accept the same parameters. Their pages are sorted by name without regard to case, then by ID.
+
 #### Concurrent Changes
 
 The data store API uses optimistic concurrency control to prevent lost updates:

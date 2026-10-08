@@ -224,6 +224,18 @@ The repository uses these mechanisms:
 
 The cache mode is `LOCAL` and the file store is not shared. These guarantees apply to one Barn process. Do not start more than one process on the same store directory.
 
+### Queries
+
+Barn does not embed a query index (Lucene). Ickle queries scan the cache in memory.
+
+`StoredDataStore` extends `DataStoreRecord` and adds derived properties for queries: `type` (label `wanaku.type`), `catalogName` (label `wanaku.catalog-name`) and `updatedAtMillis`. The repository stores `StoredDataStore` and returns `DataStoreRecord` copies.
+
+The queries of `DataStoreRepository` are `findByName`, `findByType`, `findByTypeAndCatalogName` and `listPage`.
+Service catalog and template lookups use `findByTypeAndCatalogName`, so Barn does not decode each ZIP package to find a catalog by name.
+
+Label expressions (`findAllFilterByLabelExpression`, `removeIf`) still filter in memory, because labels are a map and an expression can use any key.
+Use `findByType` when you need only the `wanaku.type` label.
+
 ### AbstractLabelAwareInfinispanRepository
 
 Extends base with label filtering:
@@ -597,6 +609,6 @@ When adding a new entity type:
 
 4. **Ickle Queries**: Infinispan's query language for bulk operations. More efficient than iterating and removing individually.
 
-5. **Label Expressions**: In-memory filtering with parsed predicates. Suitable for moderate data sizes; consider indexed queries for large datasets.
+5. **Label Expressions**: In-memory filtering with parsed predicates. Lookups by name, by type and by catalog name use Ickle queries on the derived properties of `StoredDataStore` instead.
 
 6. **Proto3 Serialization**: Efficient binary format with forward/backward compatibility. Field numbers must not change once deployed.
