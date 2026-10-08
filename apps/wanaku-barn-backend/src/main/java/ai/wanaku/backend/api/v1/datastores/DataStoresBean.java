@@ -189,6 +189,10 @@ public class DataStoresBean extends LabelsAwareWanakuEntityBean<DataStore> {
             throw new EntityAlreadyExistsException("Use the Kamelet catalog API to modify managed Kamelets");
         if ("semantic-definition".equals(type) || "semantic-publication".equals(type))
             throw new WanakuException("Use the semantic router API to modify semantic authoring records");
+        // Catalog and template content changes must create a version
+        if ("catalog".equals(type) || "template".equals(type))
+            throw new EntityAlreadyExistsException(
+                    "Use the service catalog or template API to modify %ss".formatted(type));
         rejectImmutable(data);
     }
 

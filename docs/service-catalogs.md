@@ -260,6 +260,24 @@ This sends a `DELETE` request to the router and removes the catalog and all its 
 > [!TIP]
 > Use `wanaku service deploy` for quick iteration during development. Use the operator approach (below) for production deployments on Kubernetes.
 
+### Step 7: Inspect and Restore Earlier Versions
+
+Barn keeps the version history of each catalog.
+Each deploy creates a new version, and you can restore an earlier version at any time.
+
+```shell
+# List the versions, newest first
+wanaku service versions list --name=my-catalog
+
+# Download the package of version 2
+wanaku service versions download --name=my-catalog --version=2 --output=my-catalog-v2.service.zip
+
+# Make the content of version 2 active again
+wanaku service versions restore --name=my-catalog --version=2
+```
+
+Add `--template` to these commands to work with a service template. See [Version History](#version-history).
+
 ## Complete End-to-End Example
 
 Here's a complete workflow for creating and deploying an HR service catalog with employee and payroll routes.
@@ -559,6 +577,58 @@ jq -n --arg data "$(cat my-service.b64)" '{name: "my-service.zip", data: $data}'
 > Warnings do not make a package invalid: they point at things that are likely mistakes, such as a
 > catalog that declares parameterized properties and should be deployed as a
 > [service template](service-templates.md) instead.
+
+### Version History
+
+Barn identifies a catalog by the `catalog.name` value in `index.properties`.
+The data store name that the deploy request sends (for example, `my-service.service.zip`) is a file name. It does not identify the catalog.
+
+Each deploy stores an immutable version of the package:
+
+- The first deploy creates version 1. Each later deploy of the same catalog name creates the next version.
+- The catalog entry keeps its ID when the content changes. The `wanaku.version` label of the entry contains the active version.
+- A version has one of these statuses: `active` (the current content), `superseded` (an earlier content), or `rejected` (never activated).
+- Barn keeps the newest 50 versions of each catalog. Set `wanaku.catalog.max-versions` to change the limit. Barn never removes the active version.
+- A restore creates a new version with the earlier content. Barn never changes an earlier version.
+- Version numbers continue after a catalog is removed and deployed again.
+- Barn does not keep the content of rejected versions.
+- Catalogs and templates that existed before version history was added get version 1 (origin `legacy`) at startup.
+
+To prevent lost updates, send the active version that you expect in the `expectedVersion` query parameter of the deploy or restore request. If the active version is different, Barn returns HTTP 409 and does not create a version.
+
+The generic data store API (`/api/v1/data-store`) cannot create or update catalog entries. Use the service catalog API, so that each change creates a version.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/service-catalog?expectedVersion={n}` | Deploy a new version. `expectedVersion` is optional. |
+| `GET` | `/api/v1/service-catalog/{name}/versions` | List the versions, newest first. |
+| `GET` | `/api/v1/service-catalog/{name}/versions/{version}` | Get the metadata of one version. |
+| `GET` | `/api/v1/service-catalog/{name}/versions/{version}/download` | Get the package of one version (Base64-encoded ZIP in `data`). |
+| `POST` | `/api/v1/service-catalog/{name}/versions/{version}/activate?expectedVersion={n}` | Restore one version as a new version. |
+
+**Version metadata example:**
+
+```json
+{
+  "data": {
+    "type": "catalog",
+    "name": "my-service",
+    "version": 3,
+    "status": "active",
+    "createdAt": "2026-10-08T10:15:30.123Z",
+    "activatedAt": "2026-10-08T10:15:30.125Z",
+    "checksum": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "origin": "restore",
+    "restoredFrom": 1,
+    "dataStoreName": "my-service.service.zip"
+  },
+  "error": null
+}
+```
+
+The `checksum` field is the SHA-256 digest of the decoded ZIP package.
+The `origin` field is `api`, `startup`, `instantiate`, `restore` or `legacy`.
+The `actor` field is empty, because Barn has no identity source.
 
 ### Remove a Catalog
 

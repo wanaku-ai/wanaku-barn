@@ -129,6 +129,49 @@
           }
         }
       },
+      "CatalogVersion" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "activatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "checksum" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "actor" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "restoredFrom" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "dataStoreName" : {
+            "type" : "string"
+          }
+        }
+      },
       "DataStore" : {
         "type" : "object",
         "properties" : {
@@ -946,6 +989,17 @@
           }
         }
       },
+      "WanakuResponseCatalogVersion" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/CatalogVersion"
+          }
+        }
+      },
       "WanakuResponseDataStore" : {
         "type" : "object",
         "properties" : {
@@ -1010,6 +1064,20 @@
           },
           "data" : {
             "$ref" : "#/components/schemas/KameletSummary"
+          }
+        }
+      },
+      "WanakuResponseListCatalogVersion" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CatalogVersion"
+            }
           }
         }
       },
@@ -2331,6 +2399,14 @@
         "tags" : [ "Service Catalog Resource" ]
       },
       "post" : {
+        "parameters" : [ {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2500,8 +2576,151 @@
         "tags" : [ "Service Catalog Resource" ]
       }
     },
+    "/api/v1/service-catalog/{name}/versions" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Versions",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/{name}/versions/{version}" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Version",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/{name}/versions/{version}/activate" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Activate Version",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/{name}/versions/{version}/download" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Download Version",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
     "/api/v1/service-template/deploy" : {
       "post" : {
+        "parameters" : [ {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -2718,6 +2937,134 @@
           }
         },
         "summary" : "Validate",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/versions" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Versions",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/versions/activate" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Activate Version",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/versions/download" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Download Version",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/versions/get" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Version",
         "tags" : [ "Service Template Resource" ]
       }
     }

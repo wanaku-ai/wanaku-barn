@@ -173,12 +173,12 @@ class ServiceCatalogResourceTest {
         input.setName("test.service.zip");
         input.setData(createTestZipBase64("test", "desc", "sys1"));
 
-        when(serviceCatalogBean.deploy(any())).thenReturn(testCatalog);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(testCatalog);
 
-        WanakuResponse<DataStore> response = resource.deploy(input);
+        WanakuResponse<DataStore> response = resource.deploy(null, input);
         assertNotNull(response);
         assertEquals("test-id", response.data().getId());
-        verify(serviceCatalogBean).deploy(input);
+        verify(serviceCatalogBean).deploy(input, CatalogLifecycle.ORIGIN_API, null);
     }
 
     @Test

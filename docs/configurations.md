@@ -188,6 +188,12 @@ These `wanaku.router.health-check.*` properties control the periodic health prob
 | `wanaku.persistence.infinispan.base-folder` | Where to store Infinispan files (defaults to `${wanaku.home}/router/`). |
 | `wanaku.infinispan.max-state-count`         | `10` - The maximum number of historical states to keep for each service.      |
 
+### Service Catalog Versions
+
+| Property                      | Description                                                                                                       |
+|-------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| `wanaku.catalog.max-versions` | `50` - The number of versions to keep for each service catalog and template. Barn never removes the active version. |
+
 ### Audit Trail
 
 | Property                   | Description                                                                                       |

@@ -109,6 +109,28 @@ wanaku service deploy --template /path/to/template
 
 This packages the template directory into a ZIP and deploys it to the router's template registry.
 
+### Template Version History
+
+Barn keeps the version history of each template, in the same way as for service catalogs.
+See [Version History](service-catalogs.md#version-history) for the rules.
+
+```shell
+wanaku service versions list --template --name=my-template
+wanaku service versions download --template --name=my-template --version=1
+wanaku service versions restore --template --name=my-template --version=1
+```
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/service-template/deploy?expectedVersion={n}` | Deploy a new version. `expectedVersion` is optional. |
+| `GET` | `/api/v1/service-template/versions?name={name}` | List the versions, newest first. |
+| `GET` | `/api/v1/service-template/versions/get?name={name}&version={n}` | Get the metadata of one version. |
+| `GET` | `/api/v1/service-template/versions/download?name={name}&version={n}` | Get the package of one version. |
+| `POST` | `/api/v1/service-template/versions/activate?name={name}&version={n}&expectedVersion={m}` | Restore one version as a new version. |
+
+Built-in templates that Barn deploys at startup create versions with the origin `startup`.
+A catalog that `instantiate` creates gets a version with the origin `instantiate`.
+
 ## Using Service Templates via UI
 
 The Wanaku Admin UI provides a graphical interface for working with service templates.

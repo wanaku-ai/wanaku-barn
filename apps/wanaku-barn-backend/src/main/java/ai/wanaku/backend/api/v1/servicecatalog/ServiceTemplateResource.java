@@ -28,6 +28,7 @@ import ai.wanaku.capabilities.sdk.api.types.ServiceTemplateSummary;
 import ai.wanaku.capabilities.sdk.api.types.ServiceTemplateSystem;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.capabilities.sdk.api.types.io.TemplateInstantiationRequest;
+import ai.wanaku.core.services.api.CatalogVersion;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
 import ai.wanaku.core.services.api.ValidationResult;
 import ai.wanaku.core.util.StringHelper;
@@ -45,6 +46,9 @@ public class ServiceTemplateResource {
 
     @Inject
     AuditContext auditContext;
+
+    @Inject
+    CatalogLifecycle lifecycle;
 
     @Inject
     ServiceTemplateBean serviceTemplateBean;
@@ -190,11 +194,87 @@ public class ServiceTemplateResource {
     @Path("/deploy")
     @POST
     @Audited(operation = "service_template.deploy", targetType = "service_template", targetField = "name")
-    public WanakuResponse<DataStore> deploy(DataStore dataStore) {
+    public WanakuResponse<DataStore> deploy(@QueryParam("expectedVersion") Long expectedVersion, DataStore dataStore) {
         LOG.debugf("REST: Deploying service template: %s", dataStore.getName());
         auditContext.setTarget(dataStore.getName());
-        DataStore result = serviceTemplateBean.deploy(dataStore);
+        DataStore result = serviceTemplateBean.deploy(dataStore, CatalogLifecycle.ORIGIN_API, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
         return new WanakuResponse<>(result);
+    }
+
+    /**
+     * List the versions of a service template, newest first.
+     * GET /api/v1/service-template/versions?name={name}
+     *
+     * @param name the template name
+     * @return response with the version metadata
+     */
+    @Path("/versions")
+    @GET
+    public WanakuResponse<List<CatalogVersion>> versions(@QueryParam("name") String name) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.versions(ServiceTemplateBean.LABEL_TYPE_VALUE, name));
+    }
+
+    /**
+     * Get the metadata of one version of a service template.
+     * GET /api/v1/service-template/versions/get?name={name}&amp;version={version}
+     *
+     * @param name the template name
+     * @param version the version number
+     * @return response with the version metadata
+     */
+    @Path("/versions/get")
+    @GET
+    public WanakuResponse<CatalogVersion> version(
+            @QueryParam("name") String name, @QueryParam("version") long version) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.version(ServiceTemplateBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Download the package of one version of a service template.
+     * GET /api/v1/service-template/versions/download?name={name}&amp;version={version}
+     *
+     * @param name the template name
+     * @param version the version number
+     * @return response with a DataStore that contains the Base64-encoded ZIP
+     */
+    @Path("/versions/download")
+    @GET
+    public WanakuResponse<DataStore> downloadVersion(
+            @QueryParam("name") String name, @QueryParam("version") long version) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.content(ServiceTemplateBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Restore an earlier version of a service template. The restore creates a new version.
+     * POST /api/v1/service-template/versions/activate?name={name}&amp;version={version}
+     *
+     * @param name the template name
+     * @param version the version to restore
+     * @param expectedVersion optional active version that the caller expects; a mismatch returns 409
+     * @return response with the template entry
+     */
+    @Path("/versions/activate")
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Audited(operation = "service_template.restore", targetType = "service_template")
+    public WanakuResponse<DataStore> activateVersion(
+            @QueryParam("name") String name,
+            @QueryParam("version") long version,
+            @QueryParam("expectedVersion") Long expectedVersion) {
+        requireName(name);
+        DataStore result = lifecycle.restore(ServiceTemplateBean.LABEL_TYPE_VALUE, name, version, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
+        return new WanakuResponse<>(result);
+    }
+
+    private static void requireName(String name) {
+        if (StringHelper.isBlank(name)) {
+            throw new WanakuException("Query parameter 'name' is required");
+        }
     }
 
     /**

@@ -23,7 +23,14 @@ import type {
   GetApiV1ServiceTemplateGetParams,
   GetApiV1ServiceTemplateListParams,
   GetApiV1ServiceTemplatePropertiesParams,
+  GetApiV1ServiceTemplateVersionsDownloadParams,
+  GetApiV1ServiceTemplateVersionsGetParams,
+  GetApiV1ServiceTemplateVersionsParams,
   KameletUpload,
+  PostApiV1ServiceCatalogNameVersionsVersionActivateParams,
+  PostApiV1ServiceCatalogParams,
+  PostApiV1ServiceTemplateDeployParams,
+  PostApiV1ServiceTemplateVersionsActivateParams,
   PutApiV1DataStoreParams,
   SemanticPreviewRequest,
   SemanticRouterDefinition,
@@ -31,12 +38,14 @@ import type {
   WanakuResponseAuditEvent,
   WanakuResponseAuditHealth,
   WanakuResponseAuditPage,
+  WanakuResponseCatalogVersion,
   WanakuResponseDataStore,
   WanakuResponseDataStoreRecord,
   WanakuResponseDeploymentInstructions,
   WanakuResponseInteger,
   WanakuResponseKameletDefinition,
   WanakuResponseKameletSummary,
+  WanakuResponseListCatalogVersion,
   WanakuResponseListDataStoreRecord,
   WanakuResponseListKameletSummary,
   WanakuResponseListMapStringObject,
@@ -1633,16 +1642,31 @@ export type postApiV1ServiceCatalogResponse =
   | postApiV1ServiceCatalogResponseSuccess
   | postApiV1ServiceCatalogResponseError;
 
-export const getPostApiV1ServiceCatalogUrl = () => {
-  return `/api/v1/service-catalog`;
+export const getPostApiV1ServiceCatalogUrl = (
+  params?: PostApiV1ServiceCatalogParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-catalog?${stringifiedParams}`
+    : `/api/v1/service-catalog`;
 };
 
 export const postApiV1ServiceCatalog = async (
   dataStore: DataStore,
+  params?: PostApiV1ServiceCatalogParams,
   options?: RequestInit,
 ): Promise<postApiV1ServiceCatalogResponse> => {
   return customFetch<postApiV1ServiceCatalogResponse>(
-    getPostApiV1ServiceCatalogUrl(),
+    getPostApiV1ServiceCatalogUrl(params),
     {
       ...options,
       method: "POST",
@@ -1861,6 +1885,164 @@ export const getApiV1ServiceCatalogName = async (
 };
 
 /**
+ * @summary Versions
+ */
+export type getApiV1ServiceCatalogNameVersionsResponse200 = {
+  data: WanakuResponseListCatalogVersion;
+  status: 200;
+};
+
+export type getApiV1ServiceCatalogNameVersionsResponseSuccess =
+  getApiV1ServiceCatalogNameVersionsResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceCatalogNameVersionsResponse =
+  getApiV1ServiceCatalogNameVersionsResponseSuccess;
+
+export const getGetApiV1ServiceCatalogNameVersionsUrl = (name: string) => {
+  return `/api/v1/service-catalog/${name}/versions`;
+};
+
+export const getApiV1ServiceCatalogNameVersions = async (
+  name: string,
+  options?: RequestInit,
+): Promise<getApiV1ServiceCatalogNameVersionsResponse> => {
+  return customFetch<getApiV1ServiceCatalogNameVersionsResponse>(
+    getGetApiV1ServiceCatalogNameVersionsUrl(name),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Version
+ */
+export type getApiV1ServiceCatalogNameVersionsVersionResponse200 = {
+  data: WanakuResponseCatalogVersion;
+  status: 200;
+};
+
+export type getApiV1ServiceCatalogNameVersionsVersionResponseSuccess =
+  getApiV1ServiceCatalogNameVersionsVersionResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceCatalogNameVersionsVersionResponse =
+  getApiV1ServiceCatalogNameVersionsVersionResponseSuccess;
+
+export const getGetApiV1ServiceCatalogNameVersionsVersionUrl = (
+  name: string,
+  version: number,
+) => {
+  return `/api/v1/service-catalog/${name}/versions/${version}`;
+};
+
+export const getApiV1ServiceCatalogNameVersionsVersion = async (
+  name: string,
+  version: number,
+  options?: RequestInit,
+): Promise<getApiV1ServiceCatalogNameVersionsVersionResponse> => {
+  return customFetch<getApiV1ServiceCatalogNameVersionsVersionResponse>(
+    getGetApiV1ServiceCatalogNameVersionsVersionUrl(name, version),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Activate Version
+ */
+export type postApiV1ServiceCatalogNameVersionsVersionActivateResponse200 = {
+  data: WanakuResponseDataStore;
+  status: 200;
+};
+
+export type postApiV1ServiceCatalogNameVersionsVersionActivateResponseSuccess =
+  postApiV1ServiceCatalogNameVersionsVersionActivateResponse200 & {
+    headers: Headers;
+  };
+export type postApiV1ServiceCatalogNameVersionsVersionActivateResponse =
+  postApiV1ServiceCatalogNameVersionsVersionActivateResponseSuccess;
+
+export const getPostApiV1ServiceCatalogNameVersionsVersionActivateUrl = (
+  name: string,
+  version: number,
+  params?: PostApiV1ServiceCatalogNameVersionsVersionActivateParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-catalog/${name}/versions/${version}/activate?${stringifiedParams}`
+    : `/api/v1/service-catalog/${name}/versions/${version}/activate`;
+};
+
+export const postApiV1ServiceCatalogNameVersionsVersionActivate = async (
+  name: string,
+  version: number,
+  params?: PostApiV1ServiceCatalogNameVersionsVersionActivateParams,
+  options?: RequestInit,
+): Promise<postApiV1ServiceCatalogNameVersionsVersionActivateResponse> => {
+  return customFetch<postApiV1ServiceCatalogNameVersionsVersionActivateResponse>(
+    getPostApiV1ServiceCatalogNameVersionsVersionActivateUrl(
+      name,
+      version,
+      params,
+    ),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+/**
+ * @summary Download Version
+ */
+export type getApiV1ServiceCatalogNameVersionsVersionDownloadResponse200 = {
+  data: WanakuResponseDataStore;
+  status: 200;
+};
+
+export type getApiV1ServiceCatalogNameVersionsVersionDownloadResponseSuccess =
+  getApiV1ServiceCatalogNameVersionsVersionDownloadResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceCatalogNameVersionsVersionDownloadResponse =
+  getApiV1ServiceCatalogNameVersionsVersionDownloadResponseSuccess;
+
+export const getGetApiV1ServiceCatalogNameVersionsVersionDownloadUrl = (
+  name: string,
+  version: number,
+) => {
+  return `/api/v1/service-catalog/${name}/versions/${version}/download`;
+};
+
+export const getApiV1ServiceCatalogNameVersionsVersionDownload = async (
+  name: string,
+  version: number,
+  options?: RequestInit,
+): Promise<getApiV1ServiceCatalogNameVersionsVersionDownloadResponse> => {
+  return customFetch<getApiV1ServiceCatalogNameVersionsVersionDownloadResponse>(
+    getGetApiV1ServiceCatalogNameVersionsVersionDownloadUrl(name, version),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
  * @summary Deploy
  */
 export type postApiV1ServiceTemplateDeployResponse200 = {
@@ -1886,16 +2068,31 @@ export type postApiV1ServiceTemplateDeployResponse =
   | postApiV1ServiceTemplateDeployResponseSuccess
   | postApiV1ServiceTemplateDeployResponseError;
 
-export const getPostApiV1ServiceTemplateDeployUrl = () => {
-  return `/api/v1/service-template/deploy`;
+export const getPostApiV1ServiceTemplateDeployUrl = (
+  params?: PostApiV1ServiceTemplateDeployParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-template/deploy?${stringifiedParams}`
+    : `/api/v1/service-template/deploy`;
 };
 
 export const postApiV1ServiceTemplateDeploy = async (
   dataStore: DataStore,
+  params?: PostApiV1ServiceTemplateDeployParams,
   options?: RequestInit,
 ): Promise<postApiV1ServiceTemplateDeployResponse> => {
   return customFetch<postApiV1ServiceTemplateDeployResponse>(
-    getPostApiV1ServiceTemplateDeployUrl(),
+    getPostApiV1ServiceTemplateDeployUrl(params),
     {
       ...options,
       method: "POST",
@@ -2228,6 +2425,190 @@ export const postApiV1ServiceTemplateValidate = async (
       method: "POST",
       headers: { "Content-Type": "application/json", ...options?.headers },
       body: JSON.stringify(dataStore),
+    },
+  );
+};
+
+/**
+ * @summary Versions
+ */
+export type getApiV1ServiceTemplateVersionsResponse200 = {
+  data: WanakuResponseListCatalogVersion;
+  status: 200;
+};
+
+export type getApiV1ServiceTemplateVersionsResponseSuccess =
+  getApiV1ServiceTemplateVersionsResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceTemplateVersionsResponse =
+  getApiV1ServiceTemplateVersionsResponseSuccess;
+
+export const getGetApiV1ServiceTemplateVersionsUrl = (
+  params?: GetApiV1ServiceTemplateVersionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-template/versions?${stringifiedParams}`
+    : `/api/v1/service-template/versions`;
+};
+
+export const getApiV1ServiceTemplateVersions = async (
+  params?: GetApiV1ServiceTemplateVersionsParams,
+  options?: RequestInit,
+): Promise<getApiV1ServiceTemplateVersionsResponse> => {
+  return customFetch<getApiV1ServiceTemplateVersionsResponse>(
+    getGetApiV1ServiceTemplateVersionsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Activate Version
+ */
+export type postApiV1ServiceTemplateVersionsActivateResponse200 = {
+  data: WanakuResponseDataStore;
+  status: 200;
+};
+
+export type postApiV1ServiceTemplateVersionsActivateResponseSuccess =
+  postApiV1ServiceTemplateVersionsActivateResponse200 & {
+    headers: Headers;
+  };
+export type postApiV1ServiceTemplateVersionsActivateResponse =
+  postApiV1ServiceTemplateVersionsActivateResponseSuccess;
+
+export const getPostApiV1ServiceTemplateVersionsActivateUrl = (
+  params?: PostApiV1ServiceTemplateVersionsActivateParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-template/versions/activate?${stringifiedParams}`
+    : `/api/v1/service-template/versions/activate`;
+};
+
+export const postApiV1ServiceTemplateVersionsActivate = async (
+  params?: PostApiV1ServiceTemplateVersionsActivateParams,
+  options?: RequestInit,
+): Promise<postApiV1ServiceTemplateVersionsActivateResponse> => {
+  return customFetch<postApiV1ServiceTemplateVersionsActivateResponse>(
+    getPostApiV1ServiceTemplateVersionsActivateUrl(params),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+/**
+ * @summary Download Version
+ */
+export type getApiV1ServiceTemplateVersionsDownloadResponse200 = {
+  data: WanakuResponseDataStore;
+  status: 200;
+};
+
+export type getApiV1ServiceTemplateVersionsDownloadResponseSuccess =
+  getApiV1ServiceTemplateVersionsDownloadResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceTemplateVersionsDownloadResponse =
+  getApiV1ServiceTemplateVersionsDownloadResponseSuccess;
+
+export const getGetApiV1ServiceTemplateVersionsDownloadUrl = (
+  params?: GetApiV1ServiceTemplateVersionsDownloadParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-template/versions/download?${stringifiedParams}`
+    : `/api/v1/service-template/versions/download`;
+};
+
+export const getApiV1ServiceTemplateVersionsDownload = async (
+  params?: GetApiV1ServiceTemplateVersionsDownloadParams,
+  options?: RequestInit,
+): Promise<getApiV1ServiceTemplateVersionsDownloadResponse> => {
+  return customFetch<getApiV1ServiceTemplateVersionsDownloadResponse>(
+    getGetApiV1ServiceTemplateVersionsDownloadUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+/**
+ * @summary Version
+ */
+export type getApiV1ServiceTemplateVersionsGetResponse200 = {
+  data: WanakuResponseCatalogVersion;
+  status: 200;
+};
+
+export type getApiV1ServiceTemplateVersionsGetResponseSuccess =
+  getApiV1ServiceTemplateVersionsGetResponse200 & {
+    headers: Headers;
+  };
+export type getApiV1ServiceTemplateVersionsGetResponse =
+  getApiV1ServiceTemplateVersionsGetResponseSuccess;
+
+export const getGetApiV1ServiceTemplateVersionsGetUrl = (
+  params?: GetApiV1ServiceTemplateVersionsGetParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-template/versions/get?${stringifiedParams}`
+    : `/api/v1/service-template/versions/get`;
+};
+
+export const getApiV1ServiceTemplateVersionsGet = async (
+  params?: GetApiV1ServiceTemplateVersionsGetParams,
+  options?: RequestInit,
+): Promise<getApiV1ServiceTemplateVersionsGetResponse> => {
+  return customFetch<getApiV1ServiceTemplateVersionsGetResponse>(
+    getGetApiV1ServiceTemplateVersionsGetUrl(params),
+    {
+      ...options,
+      method: "GET",
     },
   );
 };
