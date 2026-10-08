@@ -68,7 +68,7 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithDefaultValues() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
@@ -105,7 +105,7 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithServiceNameOverride() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
@@ -130,7 +130,7 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithServiceSystemOverride() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
@@ -159,7 +159,7 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithBothOverrides() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
@@ -184,7 +184,7 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithBlankOverridesUsesDefaults() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
@@ -216,7 +216,7 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithDependencies("forage-svc", "Forage test", "jms", depsContent));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("artemis"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jms", "io.kaoto.forage:forage-jms-artemis"));
@@ -247,7 +247,7 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithDependencies("dedup-svc", "Dedup test", "jms", depsContent));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("artemis"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jms", "io.kaoto.forage:forage-jms-artemis"));
@@ -280,7 +280,7 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithDependencies("noforage-svc", "No forage test", "jms", depsContent));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
 
         DataStore deployed = new DataStore();
@@ -300,7 +300,7 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithForageKindNoDepsFileCreatesDepsFile() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
         when(forageDependencyResolver.resolveGavs("artemis")).thenReturn(Set.of("io.kaoto.forage:forage-jms"));
 
@@ -332,7 +332,7 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithServiceProperties("sql-svc", "SQL test", "sql", depsContent, serviceProps));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("postgresql"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jdbc", "io.kaoto.forage:forage-jdbc-postgresql"));
@@ -365,7 +365,7 @@ class ServiceTemplateBeanTest {
                 "sql-override", "SQL override", "sql", depsContent, serviceProps));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("mysql"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jdbc", "io.kaoto.forage:forage-jdbc-mysql"));

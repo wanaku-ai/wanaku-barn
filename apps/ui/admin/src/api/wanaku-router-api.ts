@@ -18,6 +18,7 @@ import type {
   GetApiV1SemanticRoutersResolveParams,
   GetApiV1ServiceCatalogDownloadParams,
   GetApiV1ServiceCatalogInstructionsParams,
+  GetApiV1ServiceCatalogNameVersionsParams,
   GetApiV1ServiceCatalogParams,
   GetApiV1ServiceTemplateDownloadParams,
   GetApiV1ServiceTemplateGetParams,
@@ -1963,16 +1964,32 @@ export type getApiV1ServiceCatalogNameVersionsResponseSuccess =
 export type getApiV1ServiceCatalogNameVersionsResponse =
   getApiV1ServiceCatalogNameVersionsResponseSuccess;
 
-export const getGetApiV1ServiceCatalogNameVersionsUrl = (name: string) => {
-  return `/api/v1/service-catalog/${name}/versions`;
+export const getGetApiV1ServiceCatalogNameVersionsUrl = (
+  name: string,
+  params?: GetApiV1ServiceCatalogNameVersionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/service-catalog/${name}/versions?${stringifiedParams}`
+    : `/api/v1/service-catalog/${name}/versions`;
 };
 
 export const getApiV1ServiceCatalogNameVersions = async (
   name: string,
+  params?: GetApiV1ServiceCatalogNameVersionsParams,
   options?: RequestInit,
 ): Promise<getApiV1ServiceCatalogNameVersionsResponse> => {
   return customFetch<getApiV1ServiceCatalogNameVersionsResponse>(
-    getGetApiV1ServiceCatalogNameVersionsUrl(name),
+    getGetApiV1ServiceCatalogNameVersionsUrl(name, params),
     {
       ...options,
       method: "GET",

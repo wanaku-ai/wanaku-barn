@@ -45,7 +45,8 @@ class ServiceTemplateResourceTest {
         when(serviceTemplateBean.parseIndex(zeta)).thenReturn(ServiceCatalogIndex.fromBase64(zeta.getData()));
         when(serviceTemplateBean.parseIndex(alpha)).thenReturn(ServiceCatalogIndex.fromBase64(alpha.getData()));
 
-        WanakuResponse<List<ServiceTemplateSummary>> response = resource.list(null);
+        WanakuResponse<List<ServiceTemplateSummary>> response =
+                resource.list(null, null, null).getEntity();
         assertNotNull(response);
         assertEquals(2, response.data().size());
         assertEquals("alpha-template", response.data().get(0).getName());

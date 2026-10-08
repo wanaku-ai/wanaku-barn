@@ -34,6 +34,7 @@ import ai.wanaku.backend.audit.AuditEvent;
 import ai.wanaku.backend.audit.AuditStore;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.backend.core.persistence.api.RevisionConflictException;
+import ai.wanaku.backend.core.persistence.infinispan.StoredDataStore;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
@@ -62,6 +63,9 @@ public class CatalogLifecycle {
 
     /** The label that holds the type of a catalog or template entry. */
     public static final String TYPE_LABEL = "wanaku.type";
+
+    /** The label that holds the name from {@code index.properties}. The cache index uses it for lookups. */
+    public static final String CATALOG_NAME_LABEL = StoredDataStore.CATALOG_NAME_LABEL;
 
     /** The label that holds the active version number of a catalog or template entry. */
     public static final String VERSION_LABEL = "wanaku.version";
@@ -117,18 +121,35 @@ public class CatalogLifecycle {
      */
     void migrateLegacyEntries(@Observes @Priority(1) StartupEvent event) {
         for (String type : List.of(ServiceCatalogBean.LABEL_TYPE_VALUE, ServiceTemplateBean.LABEL_TYPE_VALUE)) {
-            for (DataStore entry : list(type)) {
-                if (entry.getLabels().containsKey(VERSION_LABEL)) {
-                    continue;
-                }
-                try {
-                    ServiceCatalogIndex index = ServiceCatalogIndex.fromBase64(entry.getData());
-                    deploy(type, entry, ORIGIN_LEGACY, null, null);
-                    LOG.infof("Created version history for existing %s '%s'", type, index.getName());
-                } catch (RuntimeException e) {
-                    LOG.warnf("Cannot create version history for %s entry %s: %s", type, entry.getId(), e.getMessage());
+            for (String stored : List.of(type, removedType(type))) {
+                for (DataStore entry : list(stored)) {
+                    migrate(type, entry);
                 }
             }
+        }
+    }
+
+    /**
+     * Gives version 1 to an entry without a version, and adds the {@value #CATALOG_NAME_LABEL} label when it is
+     * missing. The entry is updated in place.
+     */
+    private void migrate(String type, DataStore entry) {
+        Map<String, String> labels = entry.getLabels();
+        if (labels.containsKey(VERSION_LABEL) && labels.containsKey(CATALOG_NAME_LABEL)) {
+            return;
+        }
+        try {
+            String name = ServiceCatalogIndex.fromBase64(entry.getData()).getName();
+            if (!labels.containsKey(VERSION_LABEL)) {
+                deploy(type, entry, ORIGIN_LEGACY, null, null, entry);
+                LOG.infof("Created version history for existing %s '%s'", type, name);
+            } else {
+                Map<String, String> updated = new HashMap<>(labels);
+                updated.put(CATALOG_NAME_LABEL, name);
+                relabel(entry, updated);
+            }
+        } catch (RuntimeException e) {
+            LOG.warnf("Cannot migrate %s entry %s: %s", type, entry.getId(), e.getMessage());
         }
     }
 
@@ -139,27 +160,19 @@ public class CatalogLifecycle {
      * @return the entries
      */
     public List<DataStore> list(String type) {
-        return repository.findAllFilterByLabelExpression(TYPE_LABEL + "=" + type);
+        return repository.findByType(type);
     }
 
     /**
-     * Finds the entry with the given name in {@code index.properties}.
+     * Finds the entry with the given name in {@code index.properties}. Uses the cache index.
      *
      * @param type {@code catalog} or {@code template}
      * @param name the catalog or template name
      * @return the entry, or {@code null}
      */
     public DataStore find(String type, String name) {
-        for (DataStore entry : list(type)) {
-            try {
-                if (name.equals(ServiceCatalogIndex.fromBase64(entry.getData()).getName())) {
-                    return entry;
-                }
-            } catch (WanakuException e) {
-                LOG.debugf("Failed to parse the index of %s entry '%s': %s", type, entry.getName(), e.getMessage());
-            }
-        }
-        return null;
+        List<DataStore> found = repository.findByTypeAndCatalogName(type, name);
+        return found.isEmpty() ? null : found.get(0);
     }
 
     /**
@@ -173,7 +186,7 @@ public class CatalogLifecycle {
      * @throws RevisionConflictException if the active version is different from the expected version
      */
     public DataStore deploy(String type, DataStore incoming, String origin, Long expectedVersion) {
-        return deploy(type, incoming, origin, expectedVersion, null);
+        return deploy(type, incoming, origin, expectedVersion, null, null);
     }
 
     /**
@@ -193,7 +206,7 @@ public class CatalogLifecycle {
         }
         DataStore content = new DataStore(null, source.getDataStoreName(), source.getData());
         content.setLabels(new HashMap<>(source.getLabels()));
-        return deploy(type, content, ORIGIN_RESTORE, expectedVersion, version);
+        return deploy(type, content, ORIGIN_RESTORE, expectedVersion, version, null);
     }
 
     /**
@@ -205,15 +218,41 @@ public class CatalogLifecycle {
      * @throws DataStoreResourceNotFoundException if the name has no versions
      */
     public List<CatalogVersion> versions(String type, String name) {
-        long active = activeVersion(findAny(type, name));
-        List<CatalogVersion> versions = records(type, name).stream()
-                .sorted(Comparator.comparingLong(CatalogVersion::getVersion).reversed())
-                .map(record -> record.metadata(status(record, active)))
-                .toList();
-        if (versions.isEmpty()) {
+        return versions(type, name, null, null);
+    }
+
+    /**
+     * Lists the versions of a catalog or template that were created in a time range, newest first.
+     *
+     * @param type {@code catalog} or {@code template}
+     * @param name the catalog or template name
+     * @param from the earliest creation time (inclusive), or {@code null}
+     * @param to the latest creation time (inclusive), or {@code null}
+     * @return the version metadata
+     * @throws DataStoreResourceNotFoundException if the name has no versions
+     */
+    public List<CatalogVersion> versions(String type, String name, Instant from, Instant to) {
+        if (records(type, name).isEmpty()) {
             throw new DataStoreResourceNotFoundException("No versions found for %s '%s'".formatted(type, name));
         }
-        return versions;
+        long active = activeVersion(findAny(type, name));
+        StringBuilder statement =
+                new StringBuilder("from %s v where v.type = :type and v.name = :name".formatted(VERSION_TYPE));
+        Map<String, Object> parameters = new HashMap<>(Map.of("type", type, "name", name));
+        if (from != null) {
+            statement.append(" and v.createdAtMillis >= :from");
+            parameters.put("from", from.toEpochMilli());
+        }
+        if (to != null) {
+            statement.append(" and v.createdAtMillis <= :to");
+            parameters.put("to", to.toEpochMilli());
+        }
+        statement.append(" order by v.version desc");
+        Query<CatalogVersionRecord> query = versions().query(statement.toString());
+        parameters.forEach(query::setParameter);
+        return query.execute().list().stream()
+                .map(record -> record.metadata(status(record, active)))
+                .toList();
     }
 
     /**
@@ -443,13 +482,22 @@ public class CatalogLifecycle {
         }
     }
 
-    private DataStore deploy(String type, DataStore incoming, String origin, Long expectedVersion, Long restoredFrom) {
+    /**
+     * @param knownEntry the entry to update, for a migration of an entry without the catalog name label
+     */
+    private DataStore deploy(
+            String type,
+            DataStore incoming,
+            String origin,
+            Long expectedVersion,
+            Long restoredFrom,
+            DataStore knownEntry) {
         byte[] archive = SafeZip.decodeArchive(incoming.getData());
         ServiceCatalogIndex index = ServiceCatalogIndex.fromZipBytes(archive);
         String name = index.getName();
         try {
             lock.lock();
-            DataStore existing = find(type, name);
+            DataStore existing = knownEntry != null ? knownEntry : find(type, name);
             if (existing == null && find(removedType(type), name) != null) {
                 throw new EntityAlreadyExistsException(
                         "The %s '%s' was removed. Restore it before you deploy it again".formatted(type, name));
@@ -472,7 +520,8 @@ public class CatalogLifecycle {
             versions().put(record.key(), record);
 
             Map<String, String> labels = new HashMap<>(incoming.getLabels() == null ? Map.of() : incoming.getLabels());
-            labels.put(TYPE_LABEL, type);
+            labels.put(TYPE_LABEL, isRemoved(existing) ? removedType(type) : type);
+            labels.put(CATALOG_NAME_LABEL, name);
             labels.put(VERSION_LABEL, Long.toString(record.getVersion()));
             DataStore stored;
             try {
@@ -593,6 +642,10 @@ public class CatalogLifecycle {
             return CatalogVersion.STATUS_REJECTED;
         }
         return CatalogVersion.STATUS_SUPERSEDED;
+    }
+
+    private static boolean isRemoved(DataStore entry) {
+        return entry != null && entry.getLabels() != null && entry.getLabels().containsKey(REMOVED_AT_LABEL);
     }
 
     private static boolean isImmutable(DataStore entry) {

@@ -8,9 +8,9 @@ import org.infinispan.protostream.FileDescriptorSource;
 import org.infinispan.protostream.MessageMarshaller;
 import org.infinispan.protostream.ProtobufUtil;
 import org.infinispan.protostream.SerializationContext;
+import ai.wanaku.backend.core.persistence.infinispan.StoredDataStore;
 import ai.wanaku.backend.core.persistence.infinispan.protostream.schema.DataStoreSchema;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
-import ai.wanaku.core.services.api.DataStoreRecord;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,7 +39,7 @@ class DataStoreMarshallerCompatibilityTest {
         legacy.setLabels(new HashMap<>(Map.of("wanaku.type", "catalog")));
         byte[] bytes = ProtobufUtil.toWrappedByteArray(legacyContext(), legacy);
 
-        DataStoreRecord loaded = (DataStoreRecord) ProtobufUtil.fromWrappedByteArray(currentContext(), bytes);
+        StoredDataStore loaded = (StoredDataStore) ProtobufUtil.fromWrappedByteArray(currentContext(), bytes);
 
         assertEquals("legacy-id", loaded.getId());
         assertEquals("legacy", loaded.getName());
@@ -53,7 +53,7 @@ class DataStoreMarshallerCompatibilityTest {
 
     @Test
     void metadataRoundTrips() throws IOException {
-        DataStoreRecord record = DataStoreRecord.of(new DataStore("id", "name", "data"));
+        StoredDataStore record = StoredDataStore.from(new DataStore("id", "name", "data"));
         record.setCreatedAt(Instant.ofEpochMilli(1_000));
         record.setUpdatedAt(Instant.ofEpochMilli(2_000));
         record.setRevision(7);

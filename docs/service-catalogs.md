@@ -610,7 +610,7 @@ The generic data store API (`/api/v1/data-store`) cannot create or update catalo
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/api/v1/service-catalog?expectedVersion={n}` | Deploy a new version. `expectedVersion` is optional. |
-| `GET` | `/api/v1/service-catalog/{name}/versions` | List the versions, newest first. |
+| `GET` | `/api/v1/service-catalog/{name}/versions?from={time}&to={time}` | List the versions, newest first. `from` and `to` are optional ISO 8601 UTC timestamps (inclusive) that filter on `createdAt`. |
 | `GET` | `/api/v1/service-catalog/{name}/versions/{version}` | Get the metadata of one version. |
 | `GET` | `/api/v1/service-catalog/{name}/versions/{version}/download` | Get the package of one version (Base64-encoded ZIP in `data`). |
 | `POST` | `/api/v1/service-catalog/{name}/versions/{version}/activate?expectedVersion={n}` | Restore one version as a new version. |

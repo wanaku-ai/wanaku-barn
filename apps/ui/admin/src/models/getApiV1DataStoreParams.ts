@@ -7,5 +7,7 @@
 
 export type GetApiV1DataStoreParams = {
   labelFilter?: string;
+  limit?: number;
   name?: string;
+  offset?: number;
 };

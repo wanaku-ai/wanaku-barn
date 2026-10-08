@@ -3,14 +3,17 @@ package ai.wanaku.backend.core.persistence.infinispan;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.infinispan.Cache;
 import org.infinispan.commons.api.query.Query;
+import org.infinispan.commons.api.query.QueryResult;
 import org.infinispan.configuration.cache.Configuration;
 import org.infinispan.manager.EmbeddedCacheManager;
 import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
+import ai.wanaku.backend.core.persistence.api.Page;
 import ai.wanaku.backend.core.persistence.api.RevisionConflictException;
 import ai.wanaku.capabilities.sdk.api.exceptions.EntityAlreadyExistsException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -48,7 +51,7 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
 
     @Override
     protected String queryEntityName() {
-        return DataStoreRecord.class.getCanonicalName();
+        return StoredDataStore.class.getCanonicalName();
     }
 
     @Override
@@ -103,7 +106,7 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
                 throw EntityAlreadyExistsException.forName(dataStore.getName());
             }
             String id = dataStore.getId() == null ? newId() : dataStore.getId();
-            DataStoreRecord stored = stamp(dataStore, null, id);
+            StoredDataStore stored = stamp(dataStore, null, id);
             if (cache().putIfAbsent(id, stored) != null) {
                 throw new EntityAlreadyExistsException("A data store with ID %s already exists".formatted(id));
             }
@@ -128,7 +131,7 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
     public DataStore update(String id, DataStore dataStore, Long expectedRevision) {
         try {
             lock.lock();
-            DataStoreRecord current = cache().get(id);
+            StoredDataStore current = cache().get(id);
             if (current == null) {
                 return null;
             }
@@ -137,7 +140,7 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
                     && findByName(dataStore.getName()).stream().anyMatch(other -> !id.equals(other.getId()))) {
                 throw EntityAlreadyExistsException.forName(dataStore.getName());
             }
-            DataStoreRecord next = stamp(dataStore, current, id);
+            StoredDataStore next = stamp(dataStore, current, id);
             if (!cache().replace(id, current, next)) {
                 throw new RevisionConflictException(id, current.getRevision(), revisionOf(cache().get(id)));
             }
@@ -180,7 +183,7 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
         }
         try {
             lock.lock();
-            DataStoreRecord current = cache().get(id);
+            StoredDataStore current = cache().get(id);
             if (current == null) {
                 return false;
             }
@@ -211,6 +214,40 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
     }
 
     @Override
+    public List<DataStore> findByType(String type) {
+        return query("from %s d where d.type = :type".formatted(queryEntityName()), Map.of("type", type));
+    }
+
+    @Override
+    public List<DataStore> findByTypeAndCatalogName(String type, String catalogName) {
+        return query(
+                "from %s d where d.type = :type and d.catalogName = :name".formatted(queryEntityName()),
+                Map.of("type", type, "name", catalogName));
+    }
+
+    @Override
+    public Page<DataStore> listPage(int offset, int limit) {
+        Query<DataStore> query = cacheManager
+                .getCache(entityName())
+                .query("from %s d order by d.name, d.id".formatted(queryEntityName()));
+        query.startOffset(offset).maxResults(limit);
+        QueryResult<DataStore> result = query.execute();
+        return new Page<>(
+                result.list().stream()
+                        .map(InfinispanDataStoreRepository::copyOf)
+                        .toList(),
+                result.count().value());
+    }
+
+    private List<DataStore> query(String statement, Map<String, Object> parameters) {
+        Query<DataStore> query = cacheManager.getCache(entityName()).query(statement);
+        parameters.forEach(query::setParameter);
+        return query.execute().list().stream()
+                .map(InfinispanDataStoreRepository::copyOf)
+                .toList();
+    }
+
+    @Override
     public List<DataStore> findByName(String name) {
         Query<DataStore> query = cacheManager
                 .getCache(entityName())
@@ -221,7 +258,7 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
                 .toList();
     }
 
-    private Cache<String, DataStoreRecord> cache() {
+    private Cache<String, StoredDataStore> cache() {
         return cacheManager.getCache(entityName());
     }
 
@@ -245,8 +282,8 @@ public class InfinispanDataStoreRepository extends AbstractLabelAwareInfinispanR
     /**
      * Builds the record to store for a write. Client-supplied metadata is ignored.
      */
-    private static DataStoreRecord stamp(DataStore incoming, DataStoreRecord current, String id) {
-        DataStoreRecord next = DataStoreRecord.of(incoming);
+    private static StoredDataStore stamp(DataStore incoming, DataStoreRecord current, String id) {
+        StoredDataStore next = StoredDataStore.from(incoming);
         next.setId(id);
         Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
         if (current == null) {

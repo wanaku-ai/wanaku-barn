@@ -6,5 +6,7 @@
  */
 
 export type GetApiV1ServiceTemplateVersionsParams = {
+  from?: string;
   name?: string;
+  to?: string;
 };

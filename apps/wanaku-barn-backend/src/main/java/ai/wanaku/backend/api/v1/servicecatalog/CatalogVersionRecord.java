@@ -3,6 +3,7 @@ package ai.wanaku.backend.api.v1.servicecatalog;
 import java.util.HashMap;
 import java.util.Map;
 import ai.wanaku.core.services.api.CatalogVersion;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * A stored catalog or template version: the metadata plus the immutable package content.
@@ -23,6 +24,12 @@ public class CatalogVersionRecord extends CatalogVersion {
 
     public String key() {
         return key(getType(), getName(), getVersion());
+    }
+
+    /** The creation time in milliseconds since the epoch, for time-range queries. */
+    @JsonIgnore
+    public long getCreatedAtMillis() {
+        return getCreatedAt() == null ? 0 : getCreatedAt().toEpochMilli();
     }
 
     /**

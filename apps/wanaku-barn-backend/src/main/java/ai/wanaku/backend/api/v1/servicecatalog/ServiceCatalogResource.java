@@ -12,6 +12,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -19,8 +21,10 @@ import java.util.List;
 import java.util.Map;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.RestResponse;
 import ai.wanaku.backend.audit.AuditContext;
 import ai.wanaku.backend.audit.Audited;
+import ai.wanaku.backend.common.Paging;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -29,6 +33,7 @@ import ai.wanaku.core.services.api.CatalogVersion;
 import ai.wanaku.core.services.api.DeploymentInstructions;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
 import ai.wanaku.core.services.api.ValidationResult;
+import ai.wanaku.core.util.StringHelper;
 
 /**
  * REST API resource for service catalog operations.
@@ -63,7 +68,11 @@ public class ServiceCatalogResource {
      * @return response with list of catalog summaries
      */
     @GET
-    public WanakuResponse<List<Map<String, Object>>> list(@QueryParam("search") String search) {
+    public RestResponse<WanakuResponse<List<Map<String, Object>>>> list(
+            @QueryParam("search") String search,
+            @QueryParam("offset") Integer offset,
+            @QueryParam("limit") Integer limit) {
+        boolean paged = Paging.requested(offset, limit);
         if (search != null && !search.isBlank()) {
             LOG.debugf("REST: Listing service catalogs with search: %s", search);
         } else {
@@ -71,6 +80,18 @@ public class ServiceCatalogResource {
         }
 
         List<DataStore> catalogs = serviceCatalogBean.list(search);
+        Long total = null;
+        if (paged && StringHelper.isBlank(search)) {
+            // Sort by the name label, so only the catalogs of the page are decoded
+            List<DataStore> sorted = catalogs.stream()
+                    .sorted(Comparator.comparing(
+                                    (DataStore ds) -> ds.getLabels().get(CatalogLifecycle.CATALOG_NAME_LABEL),
+                                    Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER))
+                            .thenComparing(DataStore::getId))
+                    .toList();
+            total = (long) sorted.size();
+            catalogs = Paging.slice(sorted, offset, limit);
+        }
         List<Map<String, Object>> summaries = new ArrayList<>();
 
         for (DataStore ds : catalogs) {
@@ -93,10 +114,15 @@ public class ServiceCatalogResource {
         }
 
         summaries.sort(Comparator.comparing(
-                (Map<String, Object> m) -> (String) m.get("name"),
-                Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)));
+                        (Map<String, Object> m) -> (String) m.get("name"),
+                        Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER))
+                .thenComparing(m -> (String) m.get("id"), Comparator.nullsFirst(Comparator.naturalOrder())));
 
-        return new WanakuResponse<>(summaries);
+        if (paged && total == null) {
+            total = (long) summaries.size();
+            summaries = Paging.slice(summaries, offset, limit);
+        }
+        return Paging.response(summaries, total);
     }
 
     /**
@@ -213,8 +239,10 @@ public class ServiceCatalogResource {
      */
     @Path("/{name}/versions")
     @GET
-    public WanakuResponse<List<CatalogVersion>> versions(@PathParam("name") String name) {
-        return new WanakuResponse<>(lifecycle.versions(ServiceCatalogBean.LABEL_TYPE_VALUE, name));
+    public WanakuResponse<List<CatalogVersion>> versions(
+            @PathParam("name") String name, @QueryParam("from") String from, @QueryParam("to") String to) {
+        return new WanakuResponse<>(lifecycle.versions(
+                ServiceCatalogBean.LABEL_TYPE_VALUE, name, instant("from", from), instant("to", to)));
     }
 
     /**
@@ -333,5 +361,16 @@ public class ServiceCatalogResource {
 
         DeploymentInstructions instructions = deploymentInstructionsBean.generateInstructions(name, model);
         return new WanakuResponse<>(instructions);
+    }
+
+    private static Instant instant(String parameter, String value) {
+        if (StringHelper.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("'%s' must be an ISO 8601 UTC timestamp".formatted(parameter));
+        }
     }
 }

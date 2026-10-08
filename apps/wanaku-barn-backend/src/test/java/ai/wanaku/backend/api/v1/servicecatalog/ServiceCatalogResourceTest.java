@@ -66,7 +66,8 @@ class ServiceCatalogResourceTest {
     void testListEmpty() {
         when(serviceCatalogBean.list(null)).thenReturn(Collections.emptyList());
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list(null);
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list(null, null, null).getEntity();
         assertNotNull(response);
         assertNotNull(response.data());
         assertTrue(response.data().isEmpty());
@@ -77,7 +78,8 @@ class ServiceCatalogResourceTest {
         when(serviceCatalogBean.list(null)).thenReturn(List.of(testCatalog));
         when(serviceCatalogBean.parseIndex(testCatalog)).thenReturn(testIndex);
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list(null);
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list(null, null, null).getEntity();
         assertNotNull(response);
         assertEquals(1, response.data().size());
 
@@ -91,7 +93,8 @@ class ServiceCatalogResourceTest {
         when(serviceCatalogBean.list("test")).thenReturn(List.of(testCatalog));
         when(serviceCatalogBean.parseIndex(testCatalog)).thenReturn(testIndex);
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list("test");
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list("test", null, null).getEntity();
         assertNotNull(response);
         assertEquals(1, response.data().size());
         verify(serviceCatalogBean).list("test");
@@ -113,7 +116,8 @@ class ServiceCatalogResourceTest {
         when(serviceCatalogBean.parseIndex(zeta)).thenReturn(ServiceCatalogIndex.fromBase64(zeta.getData()));
         when(serviceCatalogBean.parseIndex(alpha)).thenReturn(ServiceCatalogIndex.fromBase64(alpha.getData()));
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list(null);
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list(null, null, null).getEntity();
         assertNotNull(response);
         assertEquals(2, response.data().size());
         assertEquals("alpha-catalog", response.data().get(0).get("name"));
