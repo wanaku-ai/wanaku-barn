@@ -101,6 +101,14 @@ The response contains `events`, `offset`, `limit` and `total` (the number of mat
 curl 'http://localhost:8180/api/v1/audit/events?operation=service_catalog.deploy&limit=10'
 ```
 
+## Change History Page
+
+The admin UI shows the audit trail on the **Change History** page.
+
+- Select a resource type in **Resource** to show only the events of that type, for example **Service catalogs** or **Semantic routers**.
+- The page shows the newest events first, with the operation, target, decision, reason code and HTTP status.
+- The **Service Catalog** and **Semantic Routers** pages have a **View the change history** link. The link opens the Change History page with the matching filter.
+
 ## Configuration
 
 | Property | Default | Description |

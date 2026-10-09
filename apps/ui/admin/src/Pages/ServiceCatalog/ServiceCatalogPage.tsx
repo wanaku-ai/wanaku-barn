@@ -4,6 +4,7 @@ import {ServiceCatalogCards} from "./ServiceCatalogCards";
 import {ServiceTemplateCards} from "./ServiceTemplateCards";
 import {useServiceCatalog} from "../../hooks/api/use-service-catalog";
 import {useServiceTemplate} from "../../hooks/api/use-service-template";
+import {Link} from "react-router-dom";
 import "./ServiceCatalogPage.scss";
 
 interface ServiceCatalogSystem {
@@ -155,7 +156,8 @@ export const ServiceCatalogPage: React.FC = () => {
       )}
       <h1 className="title">Service Catalog</h1>
       <p className="description">
-        View and manage deployed service catalogs and service templates.
+        View and manage deployed service catalogs and service templates.{" "}
+        <Link to="/change-history?type=service_catalog">View the change history</Link>
       </p>
       <Tabs>
         <TabList aria-label="Service catalog tabs">

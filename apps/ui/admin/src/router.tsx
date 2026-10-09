@@ -29,6 +29,10 @@ export const router = createHashRouter([
         path: Links.SemanticRouters,
         lazy: async () => import("./Pages/SemanticRouters"),
       },
+      {
+        path: Links.ChangeHistory,
+        lazy: async () => import("./Pages/ChangeHistory"),
+      },
     ],
   },
 ]);

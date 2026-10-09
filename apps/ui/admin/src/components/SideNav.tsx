@@ -47,6 +47,13 @@ function SideNavComponent({
         >
           Kamelets
         </SideNavMenuItem>
+        <SideNavMenuItem
+          element={Link}
+          to={Links.ChangeHistory}
+          onClick={onClickSideNavExpand}
+        >
+          Change History
+        </SideNavMenuItem>
       </SideNavItems>
     </SideNav>
   );

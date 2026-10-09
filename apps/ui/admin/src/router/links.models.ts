@@ -4,6 +4,7 @@ export const enum Links {
   ServiceCatalog = "/service-catalog",
   SemanticRouters = "/semantic-routers",
   Kamelets = "/kamelets",
+  ChangeHistory = "/change-history",
   Logout = "/logout",
 }
 
