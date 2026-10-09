@@ -1,0 +1,29 @@
+{
+  "name": "support-route",
+  "description": "Route a support message to billing or technical support.",
+  "toolName": "route_support",
+  "profile": "message-to-string/v1",
+  "expertId": "support",
+  "semanticInput": "message",
+  "instructions": "Select one support action. Select no_match when neither action applies.",
+  "noMatchCriteria": "Requests unrelated to billing or technical support.",
+  "actions": [
+    {
+      "actionId": "wsr-billing-action",
+      "label": "billing",
+      "criteria": "Questions about invoices, payments, or refunds.",
+      "configuration": {"prefix": "Support"}
+    },
+    {
+      "actionId": "wsr-technical-action",
+      "label": "technical",
+      "criteria": "Questions about bugs, outages, or technical problems.",
+      "configuration": {"prefix": "Support"}
+    }
+  ],
+  "examples": [
+    {"message": "I have a question about my invoice.", "expectedLabel": "billing"},
+    {"message": "The application crashes when I log in.", "expectedLabel": "technical"},
+    {"message": "What is the weather tomorrow?", "expectedLabel": "no_match"}
+  ]
+}

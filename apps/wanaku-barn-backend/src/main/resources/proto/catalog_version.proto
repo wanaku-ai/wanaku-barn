@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package ai.wanaku.backend.api.v1.servicecatalog;
+
+/**
+ * An immutable version of a service catalog or service template.
+ * Timestamps are milliseconds since the epoch (UTC). A value of 0 means unset.
+ */
+message CatalogVersionRecord {
+  string type = 1;
+  string name = 2;
+  int64 version = 3;
+  int64 created_at = 4;
+  int64 activated_at = 5;
+  string checksum = 6;
+  string origin = 7;
+  string actor = 8;
+  string failure_reason = 9;
+  int64 restored_from = 10;
+  string data_store_name = 11;
+  string data = 12;
+  map<string, string> labels = 13;
+  bool rejected = 14;
+}

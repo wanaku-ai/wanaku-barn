@@ -34,7 +34,7 @@ public final class OperatorUtil {
      * {@value #ALLOWED_IMAGE_PREFIXES} (comma-separated registry/repository prefixes). When the
      * allowlist is empty (the default) any image is permitted; when configured, the image must
      * start with one of the prefixes, otherwise reconciliation fails. This prevents a principal
-     * able to create/patch a {@code WanakuCapability}/{@code WanakuRouter} from scheduling an
+     * able to create/patch a the {@code WanakuRouter} from scheduling an
      * arbitrary, untrusted image.
      *
      * @param image the image reference from the custom resource (may be null or blank)
@@ -114,7 +114,7 @@ public final class OperatorUtil {
 
     /**
      * Resolves image pull policy with priority:
-     * 1. Component-specific policy (router.imagePullPolicy or capability.imagePullPolicy)
+     * 1. Component-specific policy (router.imagePullPolicy or praxis.imagePullPolicy)
      * 2. Global policy (spec.imagePullPolicy)
      * 3. Default (IfNotPresent)
      *
@@ -142,9 +142,5 @@ public final class OperatorUtil {
      */
     public static String getRouterBaseUrl(String routerRef) {
         return "http://internal-" + routerRef + ":8080";
-    }
-
-    static String getInternalRegistrationUri(String routerRef) {
-        return getRouterBaseUrl(routerRef) + "/";
     }
 }

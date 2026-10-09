@@ -253,7 +253,6 @@ Benefits of using Wanaku:
 - Centralized management and governance
 - Unified authentication and authorization
 - Tool and resource organization via namespaces
-- Service discovery and health monitoring
 - Ability to aggregate multiple MCP servers
 - Consistent interface regardless of backend services
 

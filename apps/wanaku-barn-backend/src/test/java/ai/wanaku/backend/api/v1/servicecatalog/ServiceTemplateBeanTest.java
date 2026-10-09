@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,6 +52,10 @@ class ServiceTemplateBeanTest {
 
     @BeforeEach
     void setUp() {
+        CatalogLifecycle lifecycle = new CatalogLifecycle();
+        lifecycle.repository = dataStoreRepository;
+        serviceTemplateBean.lifecycle = lifecycle;
+
         templateStore = new DataStore();
         templateStore.setId("tmpl-1");
         templateStore.setName("test-template");
@@ -63,13 +68,13 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithDefaultValues() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
         deployed.setId("catalog-1");
         deployed.setName("my-service");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         DataStore result = serviceTemplateBean.instantiate("my-service", Map.of());
 
@@ -77,7 +82,7 @@ class ServiceTemplateBeanTest {
         assertEquals("catalog-1", result.getId());
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         DataStore catalogArg = captor.getValue();
         assertEquals("my-service", catalogArg.getName());
@@ -100,20 +105,20 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithServiceNameOverride() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
         deployed.setId("catalog-2");
         deployed.setName("custom-name");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         DataStore result = serviceTemplateBean.instantiate("my-service", Map.of(), "custom-name", null);
 
         assertNotNull(result);
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         DataStore catalogArg = captor.getValue();
         assertEquals("custom-name", catalogArg.getName());
@@ -125,20 +130,20 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithServiceSystemOverride() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
         deployed.setId("catalog-3");
         deployed.setName("my-service");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         DataStore result = serviceTemplateBean.instantiate("my-service", Map.of(), null, "custom-system");
 
         assertNotNull(result);
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         DataStore catalogArg = captor.getValue();
         assertEquals("my-service", catalogArg.getName());
@@ -154,20 +159,20 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithBothOverrides() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
         deployed.setId("catalog-4");
         deployed.setName("new-name");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         DataStore result = serviceTemplateBean.instantiate("my-service", Map.of(), "new-name", "new-system");
 
         assertNotNull(result);
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         DataStore catalogArg = captor.getValue();
         assertEquals("new-name", catalogArg.getName());
@@ -179,20 +184,20 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithBlankOverridesUsesDefaults() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
 
         DataStore deployed = new DataStore();
         deployed.setId("catalog-5");
         deployed.setName("my-service");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         DataStore result = serviceTemplateBean.instantiate("my-service", Map.of(), "", "  ");
 
         assertNotNull(result);
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         DataStore catalogArg = captor.getValue();
         assertEquals("my-service", catalogArg.getName());
@@ -211,7 +216,7 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithDependencies("forage-svc", "Forage test", "jms", depsContent));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("artemis"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jms", "io.kaoto.forage:forage-jms-artemis"));
@@ -219,12 +224,12 @@ class ServiceTemplateBeanTest {
         DataStore deployed = new DataStore();
         deployed.setId("catalog-forage");
         deployed.setName("forage-svc");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         serviceTemplateBean.instantiate("forage-svc", Map.of("forage.jms.kind", "artemis"));
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         String depsFile = extractZipEntry(captor.getValue().getData(), "jms/jms.dependencies.txt");
         assertNotNull(depsFile, "dependencies file should exist in the output ZIP");
@@ -242,7 +247,7 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithDependencies("dedup-svc", "Dedup test", "jms", depsContent));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("artemis"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jms", "io.kaoto.forage:forage-jms-artemis"));
@@ -250,12 +255,12 @@ class ServiceTemplateBeanTest {
         DataStore deployed = new DataStore();
         deployed.setId("catalog-dedup");
         deployed.setName("dedup-svc");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         serviceTemplateBean.instantiate("dedup-svc", Map.of("forage.jms.kind", "artemis"));
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         String depsFile = extractZipEntry(captor.getValue().getData(), "jms/jms.dependencies.txt");
         assertNotNull(depsFile);
@@ -275,18 +280,18 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithDependencies("noforage-svc", "No forage test", "jms", depsContent));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
 
         DataStore deployed = new DataStore();
         deployed.setId("catalog-noforage");
         deployed.setName("noforage-svc");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         serviceTemplateBean.instantiate("noforage-svc", Map.of("some.other.property", "value"));
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         String depsFile = extractZipEntry(captor.getValue().getData(), "jms/jms.dependencies.txt");
         assertNotNull(depsFile);
@@ -295,19 +300,19 @@ class ServiceTemplateBeanTest {
 
     @Test
     void testInstantiateWithForageKindNoDepsFileCreatesDepsFile() throws Exception {
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(templateStore));
         when(forageDependencyResolver.resolveGavs("artemis")).thenReturn(Set.of("io.kaoto.forage:forage-jms"));
 
         DataStore deployed = new DataStore();
         deployed.setId("catalog-newdeps");
         deployed.setName("my-service");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         serviceTemplateBean.instantiate("my-service", Map.of("forage.jms.kind", "artemis"));
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         String depsFile = extractZipEntry(captor.getValue().getData(), "sys1/sys1.dependencies.txt");
         assertNotNull(depsFile, "new dependencies file should be created");
@@ -327,7 +332,7 @@ class ServiceTemplateBeanTest {
         tmpl.setData(createTemplateZipWithServiceProperties("sql-svc", "SQL test", "sql", depsContent, serviceProps));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("postgresql"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jdbc", "io.kaoto.forage:forage-jdbc-postgresql"));
@@ -335,12 +340,12 @@ class ServiceTemplateBeanTest {
         DataStore deployed = new DataStore();
         deployed.setId("catalog-forage-default");
         deployed.setName("sql-svc");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         serviceTemplateBean.instantiate("sql-svc", Map.of());
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         String depsFile = extractZipEntry(captor.getValue().getData(), "sql/sql.dependencies.txt");
         assertNotNull(depsFile, "dependencies file should exist in the output ZIP");
@@ -360,7 +365,7 @@ class ServiceTemplateBeanTest {
                 "sql-override", "SQL override", "sql", depsContent, serviceProps));
         tmpl.setLabels(Map.of("wanaku.type", "template"));
 
-        when(dataStoreRepository.findAllFilterByLabelExpression("wanaku.type=template"))
+        when(dataStoreRepository.findByTypeAndCatalogName(eq("template"), any()))
                 .thenReturn(List.of(tmpl));
         when(forageDependencyResolver.resolveGavs("mysql"))
                 .thenReturn(Set.of("io.kaoto.forage:forage-jdbc", "io.kaoto.forage:forage-jdbc-mysql"));
@@ -368,12 +373,12 @@ class ServiceTemplateBeanTest {
         DataStore deployed = new DataStore();
         deployed.setId("catalog-forage-override");
         deployed.setName("sql-override");
-        when(serviceCatalogBean.deploy(any())).thenReturn(deployed);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(deployed);
 
         serviceTemplateBean.instantiate("sql-override", Map.of("forage.jdbc.db.kind", "mysql"));
 
         ArgumentCaptor<DataStore> captor = ArgumentCaptor.forClass(DataStore.class);
-        verify(serviceCatalogBean).deploy(captor.capture());
+        verify(serviceCatalogBean).deploy(captor.capture(), eq(CatalogLifecycle.ORIGIN_INSTANTIATE), any());
 
         String depsFile = extractZipEntry(captor.getValue().getData(), "sql/sql.dependencies.txt");
         assertNotNull(depsFile);

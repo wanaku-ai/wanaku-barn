@@ -18,7 +18,7 @@ The persistence layer follows a layered architecture:
 ├─────────────────────────────────────┤
 │    Infinispan Embedded Cache        │
 ├─────────────────────────────────────┤
-│      SingleFileStore (Disk)         │
+│    SoftIndexFileStore (Disk)        │
 └─────────────────────────────────────┘
 ```
 
@@ -28,7 +28,8 @@ The persistence layer follows a layered architecture:
 - Infinispan embedded cache with file-based persistence
 - Protocol Buffers (proto3) for serialization
 - CDI for dependency injection
-- Thread-safe operations with ReentrantLock
+- Thread-safe operations with ReentrantLock and conditional cache operations
+- No transactions: each write changes one entry. Operations that change more than one entry (for example, a catalog deploy) are serialized with a lock in one process, but are not atomic across a crash
 
 ## Entity Hierarchy
 
@@ -96,9 +97,14 @@ public interface WanakuRepository<A extends WanakuEntity, C> {
 
 **Key operations:**
 
-- `persist()` - Generates ID if null, stores entity
+- `persist()` - Generates an ID if the ID is null. Creates the entity, or replaces the entity with the same ID.
+- `update()` - Replaces an existing entity. Returns `false` and does not create the entity if the ID does not exist.
 - `removeByField()/removeByFields()` - Bulk deletion using Ickle queries
-- `update()` - Lock-protected entity modification
+
+`AbstractInfinispanRepository` also provides two change operations that take a `Consumer`:
+
+- `update(id, consumer)` - Applies the change to an existing entity. Returns `false` if the entity does not exist.
+- `upsert(id, consumer)` - Creates the entity if it does not exist, then applies the change.
 
 ### Label-Aware Repository: LabelAwareInfinispanRepository
 
@@ -161,12 +167,8 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
     public boolean update(K id, A entity) {
         lock.lock();
         try {
-            if (!getCache().containsKey(id)) {
-                return false;
-            }
-            entity.setId(id);
-            getCache().put(id, entity);
-            return true;
+            // replace() writes only if the key exists
+            return getCache().replace(id, entity) != null;
         } finally {
             lock.unlock();
         }
@@ -181,6 +183,59 @@ public abstract class AbstractInfinispanRepository<A extends WanakuEntity<K>, K>
     }
 }
 ```
+
+### Record Metadata for Data Stores
+
+`InfinispanDataStoreRepository` stores each entry as a `DataStoreRecord`. This class extends the SDK `DataStore` type with metadata that the repository manages:
+
+| Field | Description |
+|-------|-------------|
+| `createdAt` | The time of the first write (UTC). |
+| `updatedAt` | The time of the last write (UTC). |
+| `createdBy` | The actor that created the entry. Empty, because Barn has no identity source. |
+| `updatedBy` | The actor that made the last change. Empty, because Barn has no identity source. |
+| `revision` | A number that starts at 1 and increments on each write. |
+
+The repository applies these rules:
+
+- Each write builds a new record. The repository keeps `createdAt` and `createdBy` from the previous record.
+- The repository ignores metadata values that a client sends.
+- Writes use the per-key atomic operations `compute`, `computeIfPresent` and `putIfAbsent`.
+- Reads return detached copies. A change to a returned object does not change the stored record.
+- Records written before the metadata fields existed load with `revision` 0 and empty timestamps. The next write sets `revision` to 1.
+
+The REST API returns the metadata fields in data store responses.
+
+### Optimistic Concurrency for Data Stores
+
+`DataStoreRepository` provides conditional operations:
+
+- `create(dataStore)` - Creates an entry. Throws `EntityAlreadyExistsException` if an entry has the same name or ID.
+- `update(id, dataStore, expectedRevision)` - Replaces an entry if the stored revision is equal to `expectedRevision`. Returns `null` if the entry does not exist. Throws `RevisionConflictException` if the revisions are different. Throws `EntityAlreadyExistsException` if a rename uses the name of another entry.
+- `deleteById(id, expectedRevision)` - Deletes an entry if the stored revision is equal to `expectedRevision`.
+
+A `null` expected revision skips the revision check.
+
+The repository uses these mechanisms:
+
+- The repositories are CDI singletons. All callers share one repository instance and one lock.
+- All data store writes hold the repository lock. Checks that read more than one entry, such as name uniqueness, are atomic in the JVM.
+- Writes that depend on the stored value use the conditional cache operations `replace(key, old, new)`, `remove(key, old)` and `putIfAbsent`.
+- Generic deletes (`deleteById`, `removeByFields`, `removeAll`, `removeIf`) also hold the lock. `removeIf` counts only the entries that it removed.
+
+The cache mode is `LOCAL` and the file store is not shared. These guarantees apply to one Barn process. Do not start more than one process on the same store directory.
+
+### Queries
+
+Barn does not embed a query index (Lucene). Ickle queries scan the cache in memory.
+
+`StoredDataStore` extends `DataStoreRecord` and adds derived properties for queries: `type` (label `wanaku.type`), `catalogName` (label `wanaku.catalog-name`) and `updatedAtMillis`. The repository stores `StoredDataStore` and returns `DataStoreRecord` copies.
+
+The queries of `DataStoreRepository` are `findByName`, `findByType`, `findByTypeAndCatalogName` and `listPage`.
+Service catalog and template lookups use `findByTypeAndCatalogName`, so Barn does not decode each ZIP package to find a catalog by name.
+
+Label expressions (`findAllFilterByLabelExpression`, `removeIf`) still filter in memory, because labels are a map and an expression can use any key.
+Use `findByType` when you need only the `wanaku.type` label.
 
 ### AbstractLabelAwareInfinispanRepository
 
@@ -265,8 +320,15 @@ message DataStore {
   string name = 2;
   string data = 3;
   map<string, string> labels = 4;
+  int64 created_at = 5;   // milliseconds since the epoch, 0 = unknown
+  int64 updated_at = 6;
+  string created_by = 7;
+  string updated_by = 8;
+  int64 revision = 9;
 }
 ```
+
+New fields always get new field numbers. Records written with the earlier fields stay readable.
 
 **Field type mappings:**
 
@@ -314,6 +376,10 @@ public class DataStoreMarshaller implements MessageMarshaller<DataStore> {
     }
 }
 ```
+
+This example shows the basic pattern. The actual `DataStoreMarshaller` reads and writes `DataStoreRecord`, including the metadata fields, under the `DataStore` message name.
+
+> **Note:** The caches store Java objects. Ickle queries match the class of the stored values, not the proto message name. Queries on the data store cache use `from ai.wanaku.core.services.api.DataStoreRecord`. Override `queryEntityName()` in a repository when the stored class is different from `entityType()`.
 
 ### Schema Initializer
 
@@ -368,29 +434,47 @@ public class InfinispanConfigurationProvider {
                    defaultValue = "${wanaku.home}/barn/")
     String baseFolder;
 
+    @ConfigProperty(name = "wanaku.persistence.infinispan.max-entries", defaultValue = "10000")
+    int maxEntries;
+
+    @ConfigProperty(name = "wanaku.persistence.infinispan.file-store", defaultValue = "true")
+    boolean fileStore;
+
     @Produces
     Configuration newConfiguration() {
-        String location = WanakuHome.expandPlaceholders(baseFolder);
-        Files.createDirectories(Paths.get(location));
+        ConfigurationBuilder builder = new ConfigurationBuilder();
+        builder.clustering()
+                .cacheMode(CacheMode.LOCAL)
+                .memory()
+                .storage(StorageType.HEAP)
+                .maxCount(maxEntries);
 
-        return new ConfigurationBuilder()
-            .clustering()
-            .cacheMode(CacheMode.LOCAL)
-            .persistence()
-            .passivation(false)
-            .addStore(SingleFileStoreConfigurationBuilder.class)
-            .location(location)
-            .build();
+        if (fileStore) {
+            String location = WanakuHome.expandPlaceholders(baseFolder);
+            builder.persistence()
+                    .passivation(false)
+                    .addSoftIndexFileStore()
+                    .dataLocation(location)
+                    .indexLocation(location)
+                    .shared(false)
+                    .preload(true)
+                    .purgeOnStartup(false);
+        }
+        return builder.build();
     }
 }
 ```
 
 **Configuration options:**
 
-- `CacheMode.LOCAL` - Single-node caching
-- `SingleFileStore` - File-based persistence
-- `passivation(false)` - All entries persisted to disk
-- Configurable storage location via property
+- `CacheMode.LOCAL` - Single-node caching. The caches are not shared between processes.
+- `StorageType.HEAP` with `maxCount` - The caches keep up to `wanaku.persistence.infinispan.max-entries` entries in memory. With the file store, entries removed from memory stay on disk.
+- `addSoftIndexFileStore()` - File-based persistence with the Infinispan SoftIndexFileStore.
+- `passivation(false)` - Write-through: every write goes to the store.
+- `preload(true)` - The store loads all entries into memory at startup.
+- `purgeOnStartup(false)` - The store keeps its content at startup.
+- `wanaku.persistence.infinispan.file-store=false` - Turns off disk persistence (used by the tests).
+- Configurable storage location via `wanaku.persistence.infinispan.base-folder`
 
 ### Repository Producer
 
@@ -404,18 +488,22 @@ public class InfinispanPersistenceConfiguration {
     Configuration configuration;
 
     @Produces
+    @Singleton
     DataStoreRepository dataStoreRepository() {
         return new InfinispanDataStoreRepository(cacheManager, configuration);
     }
 
     @Produces
-    ToolReferenceRepository toolReferenceRepository() {
-        return new InfinispanToolReferenceRepository(cacheManager, configuration);
+    @Singleton
+    ForwardReferenceRepository forwardReferenceRepository() {
+        return new InfinispanForwardReferenceRepository(cacheManager, configuration);
     }
 
     // Additional producers for each repository type
 }
 ```
+
+Annotate each producer with `@Singleton`. Without a scope, CDI creates a new repository for each injection point, and each instance has its own lock.
 
 ## Usage Patterns
 
@@ -485,8 +573,6 @@ apps/wanaku-barn-backend/src/main/java/ai/wanaku/backend/core/persistence/
 │   ├── InfinispanPersistenceConfiguration.java
 │   ├── codeexecution/
 │   │   └── InfinispanCodeTaskRepository.java
-│   ├── discovery/
-│   │   └── InfinispanCapabilitiesRepository.java  # Class name preserved for compatibility
 │   ├── providers/
 │   │   └── InfinispanConfigurationProvider.java
 │   └── protostream/
@@ -536,10 +622,12 @@ When adding a new entity type:
 
 2. **Local Cache Mode**: Single-node operation. For distributed scenarios, change to `CacheMode.DIST_SYNC` or `REPL_SYNC`.
 
-3. **ReentrantLock**: Ensures thread-safe ID generation and updates. Lock is held only during cache operations.
+3. **ReentrantLock**: Each repository is a singleton with one lock. Writes and deletes hold the lock. Data store writes also use conditional cache operations and revision checks.
 
 4. **Ickle Queries**: Infinispan's query language for bulk operations. More efficient than iterating and removing individually.
 
-5. **Label Expressions**: In-memory filtering with parsed predicates. Suitable for moderate data sizes; consider indexed queries for large datasets.
+5. **Label Expressions**: In-memory filtering with parsed predicates. Lookups by name, by type and by catalog name use Ickle queries on the derived properties of `StoredDataStore` instead.
 
-6. **Proto3 Serialization**: Efficient binary format with forward/backward compatibility. Field numbers must not change once deployed.
+6. **Proto3 Serialization**: Efficient binary format with forward/backward compatibility. Field numbers must not change once deployed. Register each schema initializer in `META-INF/services/org.infinispan.protostream.SerializationContextInitializer`. `FileStoreRestartTest` loads the schemas only from this file and checks that the data survives a restart.
+
+7. **Schema Version**: `SchemaMigrations` stores a schema version and runs ordered, idempotent migration steps at startup. Add a step and increment `SchemaMigrations.CURRENT_VERSION` when existing data needs a change. See [Backup, Restore and Upgrade](backup-and-upgrade.md).

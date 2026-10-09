@@ -5,10 +5,12 @@ This module contains the Wanaku Operator implementation.
 The operator currently manages:
 
 - `WanakuRouter`
-- `WanakuCapability`
-- `WanakuCamelCodeExecutionEngine`
+- `WanakuServiceCatalog`
 
-Sample manifests are available under `samples/` for both in-cluster and remote code execution engine deployment modes.
+Capability services (such as the Camel Integration Capability) are deployed as regular
+`Deployment` resources and registered with the router using `wanaku forwards add`.
+
+Sample manifests are available under `samples/`.
 
 
 ### Running the operator

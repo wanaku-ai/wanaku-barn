@@ -117,32 +117,6 @@ spec:
       port: 9190
 ```
 
-### Allow MCP Server-to-Router Registration
-
-Allow downstream MCP servers to register with the router (port 8080):
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-capability-registration
-  namespace: wanaku-system
-spec:
-  podSelector:
-    matchLabels:
-      app: wanaku-router
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: wanaku-capabilities
-    ports:
-    - protocol: TCP
-      port: 8080
-```
-
 ### Keycloak Access
 
 Restrict Keycloak access to the router namespace only:
@@ -217,7 +191,6 @@ Assign minimal roles in Keycloak for each downstream MCP server:
 1. Create dedicated client per MCP server (e.g., `camel-integration-capability-prod`)
 2. Enable **Service Accounts** and **Client Authentication**
 3. Assign only required roles:
-   - `wanaku-service` role for registration
    - Specific resource roles as needed
 4. Avoid realm-admin or broad roles
 
@@ -270,21 +243,17 @@ KC_SPI_EVENTS_LISTENER_JBOSS_LOGGING_ERROR_EVENTS=LOGIN_ERROR,TOKEN_REFRESH_ERRO
 
 The exact configuration depends on your Keycloak deployment method. Check the [Keycloak documentation](https://www.keycloak.org/server/configuration) for your version.
 
-### Wanaku Router Audit
+### Barn Audit Trail
 
-The router logs all management API operations. Configure log level in `application.properties`:
+Barn records every change to data stores, service catalogs, service templates, Kamelets and semantic routers in a durable audit trail.
+Read the events at `GET /api/v1/audit/events`. See [Barn Audit Trail](audit-trail.md).
+
+Barn also writes operational log lines. These log lines are not an audit trail. Configure the log level in `application.properties`:
 
 ```properties
 quarkus.log.category."ai.wanaku".level=INFO
-quarkus.log.category."ai.wanaku.router".level=DEBUG
+quarkus.log.category."ai.wanaku.backend".level=DEBUG
 ```
-
-Key events logged:
-
-- Tool/resource registration and deletion
-- Namespace creation/modification
-- MCP server registration/deregistration
-- Authentication successes and failures
 
 ### Access Logs
 
@@ -366,7 +335,7 @@ For enhanced security, plan for mTLS:
 | Secret management | K8s Secrets + external vault | Audit secret access logs |
 | Authentication | OIDC with Keycloak | Verify token validation |
 | Authorization | Namespace isolation + RBAC | Test cross-namespace access |
-| Audit logging | Keycloak + router + K8s audit | Review log samples |
+| Audit logging | Keycloak + Barn audit trail + K8s audit | Query `/api/v1/audit/events` and review log samples |
 | Network segmentation | NetworkPolicies per namespace | `kubectl exec` connectivity tests |
 | Vulnerability scanning | Image scanning in CI/CD | Check scan reports |
 | Incident response | Runbook for credential rotation | Tabletop exercise |

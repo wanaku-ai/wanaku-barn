@@ -1,16 +1,11 @@
 package ai.wanaku.backend.api.v1.servicecatalog;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
-import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
@@ -34,14 +29,7 @@ public class ServiceCatalogBean {
     public static final String LABEL_TYPE_VALUE = "catalog";
 
     @Inject
-    Instance<DataStoreRepository> dataStoreRepositoryInstance;
-
-    private DataStoreRepository dataStoreRepository;
-
-    @PostConstruct
-    void init() {
-        dataStoreRepository = dataStoreRepositoryInstance.get();
-    }
+    CatalogLifecycle lifecycle;
 
     /**
      * List all service catalog entries, optionally filtered by search term.
@@ -51,8 +39,7 @@ public class ServiceCatalogBean {
      */
     public List<DataStore> list(String search) {
         LOG.debug("Listing service catalogs");
-        List<DataStore> all =
-                dataStoreRepository.findAllFilterByLabelExpression(LABEL_TYPE_KEY + "=" + LABEL_TYPE_VALUE);
+        List<DataStore> all = lifecycle.list(LABEL_TYPE_VALUE);
 
         if (StringHelper.isBlank(search)) {
             return all;
@@ -71,30 +58,32 @@ public class ServiceCatalogBean {
      */
     public DataStore get(String name) {
         LOG.debugf("Getting service catalog: %s", name);
-        List<DataStore> catalogs = list(null);
-
-        for (DataStore ds : catalogs) {
-            try {
-                ServiceCatalogIndex index = ServiceCatalogIndex.fromBase64(ds.getData());
-                if (name.equals(index.getName())) {
-                    return ds;
-                }
-            } catch (WanakuException e) {
-                LOG.debugf("Failed to parse catalog index for '%s': %s", ds.getName(), e.getMessage());
-            }
-        }
-        return null;
+        return lifecycle.find(LABEL_TYPE_VALUE, name);
     }
 
     /**
      * Deploy a service catalog ZIP package.
-     * Validates the ZIP structure, then stores it as a DataStore entry with catalog labels.
      *
      * @param dataStore the data store entry containing the Base64-encoded ZIP
      * @return the persisted data store entry
      * @throws WanakuException if validation fails
      */
     public DataStore deploy(DataStore dataStore) throws WanakuException {
+        return deploy(dataStore, CatalogLifecycle.ORIGIN_API, null);
+    }
+
+    /**
+     * Deploy a service catalog ZIP package as a new version.
+     * Validates the ZIP structure, then stores the package as the active version of the catalog with the name
+     * from {@code index.properties}. A redeploy keeps the identifier of the catalog entry.
+     *
+     * @param dataStore the data store entry containing the Base64-encoded ZIP
+     * @param origin how the deploy was started
+     * @param expectedVersion the active version that the caller expects, or {@code null} to skip the check
+     * @return the persisted data store entry
+     * @throws WanakuException if validation fails
+     */
+    public DataStore deploy(DataStore dataStore, String origin, Long expectedVersion) throws WanakuException {
         LOG.debugf("Deploying service catalog: %s", dataStore.getName());
 
         if (StringHelper.isBlank(dataStore.getName())) {
@@ -104,45 +93,18 @@ public class ServiceCatalogBean {
             throw new WanakuException("Catalog data (Base64-encoded ZIP) is required");
         }
 
-        // Validate ZIP structure by parsing the index
-        ServiceCatalogIndex.fromBase64(dataStore.getData());
-
-        // Set catalog label
-        Map<String, String> labels = dataStore.getLabels();
-        if (labels == null) {
-            labels = new HashMap<>();
-        } else {
-            labels = new HashMap<>(labels);
-        }
-        labels.put(LABEL_TYPE_KEY, LABEL_TYPE_VALUE);
-        dataStore.setLabels(labels);
-
-        // Check for existing catalog with same name and remove it
-        DataStore existing = get(dataStore.getName());
-        if (existing != null) {
-            LOG.debugf("Replacing existing catalog: %s", dataStore.getName());
-            if (!dataStoreRepository.deleteById(existing.getId())) {
-                LOG.warnf("Failed to delete existing catalog before replace: %s", existing.getId());
-            }
-        }
-
-        return dataStoreRepository.persist(dataStore);
+        return lifecycle.deploy(LABEL_TYPE_VALUE, dataStore, origin, expectedVersion);
     }
 
     /**
-     * Remove a service catalog by name.
+     * Remove a service catalog by name. The catalog and its versions are kept and can be restored.
      *
      * @param name the catalog name to remove
      * @return the number of entries removed
      */
     public int remove(String name) {
         LOG.debugf("Removing service catalog: %s", name);
-        DataStore catalog = get(name);
-        if (catalog == null) {
-            return 0;
-        }
-        boolean removed = dataStoreRepository.deleteById(catalog.getId());
-        return removed ? 1 : 0;
+        return lifecycle.remove(LABEL_TYPE_VALUE, name) ? 1 : 0;
     }
 
     /**

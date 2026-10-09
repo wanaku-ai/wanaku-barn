@@ -28,6 +28,12 @@ export const ViewDataStoreModal: React.FC<ViewDataStoreModalProps> = ({
     }
 
     try {
+      const type = dataStore.labels?.["wanaku.type"];
+      if (type === "semantic-definition" || type === "semantic-publication" || type === "semantic-current-publication") {
+        setDecodedContent(dataStore.data);
+        setIsLoading(false);
+        return;
+      }
       // Decode base64 to binary, then use TextDecoder for proper UTF-8 handling
       const binaryString = atob(dataStore.data);
       const bytes = new Uint8Array(binaryString.length);
@@ -42,7 +48,7 @@ export const ViewDataStoreModal: React.FC<ViewDataStoreModalProps> = ({
       setError("Failed to decode data. The content may be binary or corrupted.");
       setIsLoading(false);
     }
-  }, [dataStore.data]);
+  }, [dataStore.data, dataStore.labels]);
 
   // Format content, pretty-printing JSON if valid (single parse attempt)
   const formatContent = (content: string): string => {

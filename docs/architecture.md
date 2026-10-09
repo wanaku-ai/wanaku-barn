@@ -9,7 +9,7 @@ The Wanaku MCP Router is a distributed system for managing Model Context Protoco
 - **Separation of Concerns**: Router backend handles protocol and routing; downstream MCP servers handle actual operations
 - **Service Isolation**: Each MCP server runs independently for security and reliability
 - **Protocol Abstraction**: MCP protocol details are handled by the router; services focus on business logic
-- **Dynamic Discovery**: Services register themselves at runtime, enabling flexible deployment
+- **MCP Forwards**: Wanaku connects to configured downstream MCP endpoints
 
 ### High-Level Architecture
 
@@ -18,7 +18,7 @@ The Wanaku MCP Router is a distributed system for managing Model Context Protoco
 Wanaku doesn't directly host tools or resources. Instead, it acts as a central hub that manages and governs how AI agents access specific resources and tools through registered MCP servers.
 
 > [!NOTE]
-> The primary MCP routing engine is now [Wanaku Praxis](https://github.com/wanaku-ai/wanaku), a Rust-based router.
+> The primary MCP routing engine is now [Wanaku](https://github.com/wanaku-ai/wanaku), a Rust-based router.
 > This repository (wanaku-barn) provides the "Classic Wanaku" Java backend for persistence, service catalogs, the operator, and administration.
 > For detailed information about the backend's internal implementation, see [Wanaku Router Internals](wanaku-router-internals.md).
 
@@ -67,16 +67,9 @@ graph TB
 
 #### Router Backend (`wanaku-barn-backend`)
 
-The main MCP server engine that:
+The Barn management backend provides persistence, service catalogs and templates, semantic router definitions, audit history, and HTTP administration APIs. Wanaku handles MCP requests, forwards, and namespaces.
 
-- Receives MCP protocol requests from AI clients (SSE and HTTP transports)
-- Routes tool invocations to appropriate tool services
-- Routes resource read requests to appropriate providers
-- Manages tool and resource registrations across namespaces
-- Provides HTTP management API for configuration
-- Handles authentication and authorization via Keycloak
-
-**Technology Stack**: Quarkus, Quarkus MCP Server Extension, Infinispan
+**Technology Stack**: Quarkus REST, Infinispan
 
 #### CLI (`cli`)
 
@@ -126,7 +119,6 @@ Shared libraries providing foundational functionality:
 |---------|---------|
 | **core-mcp-client** | MCP protocol client for communicating with downstream MCP servers |
 | **core-services-api** | Service API interfaces for tools, resources, namespaces, and services |
-| **core-service-discovery** | Service registration and health monitoring |
 | **core-util** | Common utilities, constants, and helper classes |
 
 ### Development Tools
@@ -174,85 +166,9 @@ sequenceDiagram
 6. **Service Processing**: Downstream MCP server handles actual resource access or tool execution
 7. **Response**: Results flow back through the router to the client
 
-### Tool Invocation Flow
+### MCP Request Routing
 
-```mermaid
-sequenceDiagram
-    participant LLM as LLM Agent
-    participant Router as Router Backend
-    participant Registry as Service Registry
-    participant ToolSvc as HTTP Tool Service
-    participant API as External API
-
-    LLM->>Router: Call Tool "http://api.example.com/data"
-    Router->>Registry: Lookup Service for "http://" URI
-    Registry-->>Router: Return HTTP Service Details
-    Router->>ToolSvc: MCP Tool Call(uri, params)
-    ToolSvc->>API: HTTP GET /data
-    API-->>ToolSvc: JSON Response
-    ToolSvc-->>Router: MCP Response
-    Router-->>LLM: MCP Tool Result
-```
-
-### Resource Read Flow
-
-```mermaid
-sequenceDiagram
-    participant LLM as LLM Agent
-    participant Router as Router Backend
-    participant Registry as Service Registry
-    participant FileProv as File Provider
-    participant FS as File System
-
-    LLM->>Router: Read Resource "file:///path/to/doc.txt"
-    Router->>Registry: Lookup Provider for "file://" URI
-    Registry-->>Router: Return File Provider Details
-    Router->>FileProv: MCP ReadResource(uri)
-    FileProv->>FS: Read File
-    FS-->>FileProv: File Contents
-    FileProv-->>Router: MCP Response (contents)
-    Router-->>LLM: MCP Resource Content
-```
-
-### Service Discovery and Registration
-
-The router maintains a dynamic service registry that tracks available downstream MCP servers.
-
-```mermaid
-sequenceDiagram
-    participant Service as Downstream MCP Server
-    participant Router as Router Backend
-    participant Registry as Service Registry
-    participant Health as Health Monitor
-
-    Service->>Router: Register (name, URI, capabilities)
-    Router->>Registry: Store Service Info
-    Router-->>Service: Registration Confirmed
-
-    loop Heartbeat (every 10s)
-        Service->>Router: Heartbeat Ping
-        Router->>Health: Update Health Status
-        Router-->>Service: Pong
-    end
-
-    Note over Router,Health: If heartbeat missed<br/>mark service offline
-
-    Router->>Registry: Query Available Services
-    Registry-->>Router: Return Active Services
-```
-
-**Registration Process:**
-
-1. **Service Startup**: Downstream MCP server starts and loads configuration
-2. **Authentication**: Service authenticates with router using OIDC client credentials
-3. **Registration**: Service registers itself with router, providing:
-   - Service name and type
-   - Service endpoint address
-   - Supported capabilities (tool types or resource protocols)
-   - Configuration schema
-4. **Health Monitoring**: Service sends periodic heartbeats to indicate availability
-5. **Dynamic Discovery**: Router updates service registry and makes services available
-6. **Deregistration**: Service deregisters on shutdown or is marked offline after missed heartbeats
+Wanaku routes tool invocations and resource reads to configured downstream MCP endpoints. Add an endpoint using `wanaku forwards add`; Barn supplies management APIs for catalogs and persistence.
 
 ### Namespace Isolation
 
@@ -308,43 +224,7 @@ graph TB
 
 ### Data Persistence
 
-```mermaid
-graph LR
-    subgraph "Router Backend"
-        API[Management API]
-        MCP[MCP Server]
-    end
-
-    subgraph "Persistence Layer"
-        Infinispan[(Infinispan<br/>Data Grid)]
-    end
-
-    subgraph "Stored Data"
-        Tools[Tool Definitions]
-        Resources[Resource Definitions]
-        Namespaces[Namespace Config]
-        Services[Service Registry]
-        History[State History]
-    end
-
-    API --> Infinispan
-    MCP --> Infinispan
-    Infinispan --> Tools
-    Infinispan --> Resources
-    Infinispan --> Namespaces
-    Infinispan --> Services
-    Infinispan --> History
-
-    style Infinispan fill:#4A90E2
-```
-
-Wanaku uses Infinispan embedded data grid for persistence:
-
-- **Tool Definitions**: Registered tools with URIs, labels, and configuration
-- **Resource Definitions**: Registered resources with URIs and metadata
-- **Namespace Configuration**: Namespace settings and mappings
-- **Service Registry**: Active downstream MCP servers and their health status
-- **State History**: Historical snapshots for rollback and auditing (configurable retention)
+Barn uses embedded Infinispan for data stores, service catalogs and templates, immutable catalog versions, semantic router definitions, and audit events. See [Persistence](internals-persistence.md) and [Barn Audit Trail](audit-trail.md).
 
 ### Extensibility Model
 
@@ -370,9 +250,9 @@ graph LR
 
 1. Use the [Wanaku Capabilities Java SDK](https://github.com/wanaku-ai/wanaku-capabilities-java-sdk) archetypes to generate a project
 2. Implement tool logic using Java/Camel or other supported language
-3. Configure service registration and OIDC credentials
+3. Configure authentication for the downstream MCP endpoint
 4. Deploy service (standalone or containerized)
-5. Service auto-registers with router on startup
+5. Add the reachable MCP endpoint to Wanaku using `wanaku forwards add`
 
 #### 2. Resource Providers
 
@@ -416,8 +296,8 @@ Leverage 300+ Camel components for rapid integration:
 
 - **Embedded**: No external database dependency for simple deployments
 - **Performance**: In-memory data grid with fast access
-- **Clustering**: Supports distributed deployments (future)
-- **ACID**: Transactional consistency for critical operations
+- **Clustering**: Supports distributed deployments (not used: Barn runs one process per data directory)
+- **Consistency**: Each write changes one entry atomically. Conditional writes (revision checks) prevent lost updates. Barn does not use transactions, so an operation that changes more than one entry is not atomic across a crash.
 
 ## Deployment Architectures
 

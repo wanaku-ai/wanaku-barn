@@ -12,7 +12,6 @@
  *   <li>{@link ai.wanaku.core.services.api.PromptsService} - Prompt listing endpoints ({@code /api/v1/prompts})</li>
  *   <li>{@link ai.wanaku.core.services.api.NamespacesService} - Namespace management endpoints ({@code /api/v1/namespaces})</li>
  *   <li>{@link ai.wanaku.core.services.api.ForwardsService} - Forward management endpoints ({@code /api/v1/forwards})</li>
- *   <li>{@link ai.wanaku.core.services.api.CapabilitiesService} - Capability discovery and monitoring endpoints ({@code /api/v1/capabilities})</li>
  * </ul>
  *
  * @see ai.wanaku.capabilities.sdk.api.types

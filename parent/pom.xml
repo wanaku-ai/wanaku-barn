@@ -59,7 +59,7 @@
         <commons-pool2.version>2.13.1</commons-pool2.version>
         <jsonassert.version>1.5.3</jsonassert.version>
         <swagger-core.version>2.2.55</swagger-core.version>
-        <jline.version>4.4.0</jline.version>
+        <jline.version>4.4.6</jline.version>
         <swagger-parser.version>2.1.48</swagger-parser.version>
         <quarkus-infinispan-embedded.version>2.0.1</quarkus-infinispan-embedded.version>
         <!-- TEMPORARY: quarkus-infinispan-embedded wrongly set infinispan to 16.0.9
@@ -75,11 +75,11 @@
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
         <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <spotbugs-maven-plugin.version>4.10.4.1</spotbugs-maven-plugin.version>
-        <spotless-maven-plugin.version>3.9.0</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.10.3</spotless-maven-plugin.version>
         <quarkus-operator-sdk.version>7.7.4</quarkus-operator-sdk.version>
         <quarkus-helm.version>1.4.2</quarkus-helm.version>
         <wanaku-capabilities-sdk.version>0.3.0-SNAPSHOT</wanaku-capabilities-sdk.version>
-        <forage.version>1.6.0</forage.version>
+        <forage.version>1.6.1</forage.version>
         <commonmark.version>0.29.0</commonmark.version>
         <oauth2-oidc-sdk.version>11.38.2</oauth2-oidc-sdk.version>
         <operator-framework.version>5.3.4</operator-framework.version>

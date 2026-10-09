@@ -2,6 +2,276 @@
   "openapi" : "3.1.0",
   "components" : {
     "schemas" : {
+      "AuditEvent" : {
+        "type" : "object",
+        "properties" : {
+          "schema_version" : {
+            "type" : "string"
+          },
+          "event_id" : {
+            "type" : "string"
+          },
+          "stream_id" : {
+            "type" : "string"
+          },
+          "sequence" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "category" : {
+            "type" : "string"
+          },
+          "decision" : {
+            "type" : "string"
+          },
+          "correlation_id" : {
+            "type" : "string"
+          },
+          "request_id" : {
+            "type" : "string"
+          },
+          "actor" : {
+            "type" : "string"
+          },
+          "protocol" : {
+            "type" : "string"
+          },
+          "operation" : {
+            "type" : "string"
+          },
+          "target_type" : {
+            "type" : "string"
+          },
+          "target" : {
+            "type" : "string"
+          },
+          "reason_code" : {
+            "type" : "string"
+          },
+          "explanation" : {
+            "type" : "string"
+          },
+          "policy_revision" : {
+            "type" : "string"
+          },
+          "response_status" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "duration_ms" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "redaction" : {
+            "$ref" : "#/components/schemas/RedactionMetadata"
+          },
+          "attributes" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "coverage_complete" : {
+            "type" : "boolean"
+          },
+          "dropped_events" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "timestamp" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AuditHealth" : {
+        "type" : "object",
+        "properties" : {
+          "healthy" : {
+            "type" : "boolean"
+          },
+          "dropped_events" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "retained_events" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "capacity" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "last_error" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AuditPage" : {
+        "type" : "object",
+        "properties" : {
+          "events" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AuditEvent"
+            }
+          },
+          "offset" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "limit" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "BarnArchive" : {
+        "type" : "object",
+        "properties" : {
+          "formatVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "schemaVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "exportedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "dataStores" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DataStoreRecord"
+            }
+          },
+          "catalogVersions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CatalogVersionRecord"
+            }
+          },
+          "versionCounters" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int64"
+            }
+          },
+          "auditEvents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AuditEvent"
+            }
+          },
+          "auditSequence" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "CatalogVersion" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "activatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "checksum" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "actor" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "restoredFrom" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "dataStoreName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CatalogVersionRecord" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "activatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "checksum" : {
+            "type" : "string"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "actor" : {
+            "type" : "string"
+          },
+          "failureReason" : {
+            "type" : "string"
+          },
+          "restoredFrom" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "dataStoreName" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "string"
+          },
+          "labels" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "rejected" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "DataStore" : {
         "type" : "object",
         "properties" : {
@@ -19,6 +289,42 @@
           },
           "data" : {
             "type" : "string"
+          }
+        }
+      },
+      "DataStoreRecord" : {
+        "type" : "object",
+        "properties" : {
+          "labels" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "data" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "updatedAt" : {
+            "$ref" : "#/components/schemas/Instant"
+          },
+          "createdBy" : {
+            "type" : "string"
+          },
+          "updatedBy" : {
+            "type" : "string"
+          },
+          "revision" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },
@@ -48,6 +354,121 @@
           }
         }
       },
+      "Instant" : {
+        "type" : "string",
+        "format" : "date-time",
+        "examples" : [ "2022-03-10T16:15:50Z" ]
+      },
+      "KameletDefinition" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Native Kamelet metadata.name"
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "Native definition title"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Native definition description"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "Native Kamelet type",
+            "enum" : [ "source", "sink", "action" ]
+          },
+          "sha256" : {
+            "type" : "string",
+            "description" : "SHA-256 of the exact UTF-8 YAML bytes"
+          },
+          "semanticEligible" : {
+            "type" : "boolean",
+            "description" : "Whether this revision is eligible for semantic routing"
+          },
+          "semanticEligibilityReason" : {
+            "type" : [ "string", "null" ],
+            "description" : "Reason this revision is not eligible; null for an eligible action"
+          },
+          "source" : {
+            "type" : "string",
+            "description" : "Catalog source",
+            "enum" : [ "bundled", "configured", "uploaded" ]
+          },
+          "removable" : {
+            "type" : "boolean",
+            "description" : "Whether the current catalog selection can be removed"
+          },
+          "downloadUrl" : {
+            "type" : "string",
+            "description" : "Raw YAML download path pinned to this exact revision"
+          },
+          "yaml" : {
+            "type" : "string",
+            "description" : "Original single-document UTF-8 Kamelet YAML, without normalization"
+          }
+        }
+      },
+      "KameletSummary" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Native Kamelet metadata.name"
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "Native definition title"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Native definition description"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "Native Kamelet type",
+            "enum" : [ "source", "sink", "action" ]
+          },
+          "sha256" : {
+            "type" : "string",
+            "description" : "SHA-256 of the exact UTF-8 YAML bytes"
+          },
+          "semanticEligible" : {
+            "type" : "boolean",
+            "description" : "Whether this revision is eligible for semantic routing"
+          },
+          "semanticEligibilityReason" : {
+            "type" : [ "string", "null" ],
+            "description" : "Reason this revision is not eligible; null for an eligible action"
+          },
+          "source" : {
+            "type" : "string",
+            "description" : "Catalog source",
+            "enum" : [ "bundled", "configured", "uploaded" ]
+          },
+          "removable" : {
+            "type" : "boolean",
+            "description" : "Whether the current catalog selection can be removed"
+          },
+          "downloadUrl" : {
+            "type" : "string",
+            "description" : "Raw YAML download path pinned to this exact revision"
+          }
+        }
+      },
+      "KameletUpload" : {
+        "type" : "object",
+        "required" : [ "yaml" ],
+        "properties" : {
+          "yaml" : {
+            "type" : "string",
+            "description" : "Single native Kamelet YAML document, at most 1 MiB in UTF-8 bytes",
+            "pattern" : "\\S",
+            "maxLength" : 1048576
+          }
+        }
+      },
       "PlaceholderDefinition" : {
         "type" : "object",
         "properties" : {
@@ -65,6 +486,391 @@
           },
           "type" : {
             "type" : "string"
+          }
+        }
+      },
+      "RedactionMetadata" : {
+        "type" : "object",
+        "properties" : {
+          "redacted_fields" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "payload_captured" : {
+            "type" : "boolean"
+          },
+          "payload_truncated" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "SemanticAction" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Native metadata.name used as the Kamelet identifier"
+          },
+          "sha256" : {
+            "type" : "string",
+            "description" : "SHA-256 pin for the exact selected native Kamelet bytes; omitted on legacy selections"
+          },
+          "current" : {
+            "type" : "boolean",
+            "description" : "Whether this action revision is the current catalog selection"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "Native Kamelet type; sinks return a fixed acknowledgement after successful delivery",
+            "enum" : [ "action", "sink" ]
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Native Kamelet title"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Native Kamelet purpose"
+          },
+          "criteria" : {
+            "type" : "string",
+            "description" : "Suggested native routing criterion"
+          },
+          "profile" : {
+            "type" : "string",
+            "description" : "Compatible invocation and result profile"
+          },
+          "inputSchema" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "description" : "Native Kamelet input body schema"
+          },
+          "outputSchema" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "description" : "Native Kamelet output body schema"
+          },
+          "configurationSchema" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "description" : "Native deployment configuration JSON Schema; secret fields accept external references only"
+          },
+          "dependencies" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "description" : "Native Kamelet implementation dependencies"
+          }
+        }
+      },
+      "SemanticActionSelection" : {
+        "type" : "object",
+        "properties" : {
+          "actionId" : {
+            "type" : "string",
+            "description" : "Eligible native Kamelet identifier"
+          },
+          "sha256" : {
+            "type" : "string",
+            "description" : "SHA-256 pin for the exact selected native Kamelet bytes; omitted on legacy selections"
+          },
+          "label" : {
+            "type" : "string",
+            "description" : "Fixed unique semantic label; no_match is reserved"
+          },
+          "criteria" : {
+            "type" : "string",
+            "description" : "Plain text criterion for selecting this action"
+          },
+          "configuration" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "Deployment parameter values; credentials use env:VARIABLE_NAME references"
+          }
+        }
+      },
+      "SemanticExample" : {
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string",
+            "description" : "Classification example input"
+          },
+          "expectedLabel" : {
+            "type" : "string",
+            "description" : "Expected action label or no_match"
+          }
+        }
+      },
+      "SemanticExpert" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Configured expert catalog identifier"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Configured expert display name"
+          },
+          "bean" : {
+            "type" : "string",
+            "description" : "Named Camel expert instance configured externally by the deployment"
+          },
+          "dependency" : {
+            "type" : "string",
+            "description" : "Maven group:artifact:version implementation dependency"
+          },
+          "supportsConfidence" : {
+            "type" : "boolean",
+            "description" : "Whether this contract exposes confidence controls"
+          }
+        }
+      },
+      "SemanticFieldError" : {
+        "type" : "object",
+        "properties" : {
+          "field" : {
+            "type" : "string",
+            "description" : "Definition field or configuration property with a validation error"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Actionable structural validation error"
+          }
+        }
+      },
+      "SemanticPreview" : {
+        "type" : "object",
+        "properties" : {
+          "label" : {
+            "type" : [ "string", "null" ],
+            "description" : "Selected fixed action label, or no_match; null on evaluation failure"
+          },
+          "noMatch" : {
+            "type" : "boolean",
+            "description" : "True only for the explicit no_match label"
+          },
+          "durationMillis" : {
+            "type" : "integer",
+            "format" : "int64",
+            "description" : "Evaluation wall-clock duration in milliseconds"
+          },
+          "error" : {
+            "type" : [ "string", "null" ],
+            "description" : "Sanitized evaluation error; null after successful classification"
+          },
+          "diagnostics" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "description" : "Only available native confidence and known-label probabilities; no fabricated values"
+          }
+        }
+      },
+      "SemanticPreviewRequest" : {
+        "type" : "object",
+        "required" : [ "message" ],
+        "properties" : {
+          "message" : {
+            "type" : "string",
+            "description" : "Example invocation message to classify without action dispatch",
+            "pattern" : "\\S",
+            "maxLength" : 8192
+          }
+        }
+      },
+      "SemanticPublication" : {
+        "type" : "object",
+        "properties" : {
+          "definitionId" : {
+            "type" : "string",
+            "description" : "Persisted authoring definition identifier"
+          },
+          "toolName" : {
+            "type" : [ "string", "null" ],
+            "description" : "Public MCP tool name captured at publication; absent in legacy records"
+          },
+          "expert" : {
+            "description" : "Expert identity and implementation captured at publication without credentials; absent in legacy records",
+            "type" : [ "object", "null" ],
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/SemanticExpert"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "revision" : {
+            "type" : "string",
+            "description" : "Immutable revision derived from the generated catalog inputs"
+          },
+          "catalogName" : {
+            "type" : "string",
+            "description" : "Revision-specific existing Barn catalog name"
+          },
+          "sha256" : {
+            "type" : "string",
+            "description" : "SHA-256 pin for the complete downloaded ZIP archive"
+          },
+          "mainFile" : {
+            "type" : "string",
+            "description" : "Main Camel YAML path inside the archive"
+          },
+          "camelVersion" : {
+            "type" : "string",
+            "description" : "Required Camel runtime version"
+          },
+          "camelBuild" : {
+            "type" : [ "string", "null" ],
+            "description" : "Required fixed Camel snapshot timestamp when recorded"
+          },
+          "downloadUrl" : {
+            "type" : "string",
+            "description" : "Existing Barn catalog download path returning a Base64 ZIP"
+          },
+          "deploymentInstructions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "description" : "Instructions to select and start this revision in WSR"
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "Publication state; does not assert runtime readiness or activation"
+          }
+        }
+      },
+      "SemanticResolvedPublication" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Exact current saved router name used for lookup"
+          },
+          "toolName" : {
+            "type" : "string",
+            "description" : "Public MCP tool name in the selected immutable archive"
+          },
+          "catalogName" : {
+            "type" : "string",
+            "description" : "Revision-specific Barn catalog index name"
+          },
+          "service" : {
+            "type" : "string",
+            "description" : "Selected service identifier in the catalog index"
+          },
+          "revision" : {
+            "type" : "string",
+            "description" : "Immutable published revision"
+          },
+          "sha256" : {
+            "type" : "string",
+            "description" : "SHA-256 pin for the complete downloaded ZIP"
+          },
+          "mainFile" : {
+            "type" : "string",
+            "description" : "Main Camel YAML path inside the archive"
+          },
+          "camelVersion" : {
+            "type" : "string",
+            "description" : "Required Camel runtime version"
+          },
+          "camelBuild" : {
+            "type" : [ "string", "null" ],
+            "description" : "Required fixed Camel snapshot timestamp when recorded"
+          },
+          "downloadUrl" : {
+            "type" : "string",
+            "description" : "Existing Barn catalog download path returning a Base64 ZIP"
+          },
+          "expert" : {
+            "description" : "Published expert snapshot; absent when a legacy archive cannot prove one unique curated expert",
+            "type" : [ "object", "null" ],
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/SemanticExpert"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        }
+      },
+      "SemanticRouterDefinition" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Persisted draft identifier, assigned by Barn"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Router name; start with an ASCII letter, then use ASCII letters, digits, hyphens, or underscores; no spaces; at most 120 characters; empty for an incomplete draft",
+            "pattern" : "^([A-Za-z][A-Za-z0-9_-]*)?$",
+            "maxLength" : 120
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Business purpose and public MCP tool description"
+          },
+          "toolName" : {
+            "type" : "string",
+            "description" : "Public MCP tool name; start with an ASCII letter, then use ASCII letters, digits, hyphens, or underscores; no spaces; at most 64 characters; empty for an incomplete draft",
+            "pattern" : "^([A-Za-z][A-Za-z0-9_-]*)?$",
+            "maxLength" : 64
+          },
+          "profile" : {
+            "type" : "string",
+            "description" : "Supported action input and output profile"
+          },
+          "expertId" : {
+            "type" : "string",
+            "description" : "Configured expert catalog identifier"
+          },
+          "semanticInput" : {
+            "type" : "string",
+            "description" : "Invocation field supplied to native semantic evaluation"
+          },
+          "instructions" : {
+            "type" : "string",
+            "description" : "Plain text instructions for native choice evaluation"
+          },
+          "noMatchCriteria" : {
+            "type" : "string",
+            "description" : "Criterion for the reserved no_match label"
+          },
+          "actions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticActionSelection"
+            },
+            "description" : "Fixed eligible actions with deployment configuration and selection criteria"
+          },
+          "examples" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticExample"
+            },
+            "description" : "Saved classification examples and expected labels"
+          }
+        }
+      },
+      "SemanticValidation" : {
+        "type" : "object",
+        "properties" : {
+          "valid" : {
+            "type" : "boolean",
+            "description" : "True when all structural checks pass without inference"
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticFieldError"
+            },
+            "description" : "Structural field errors; empty for a valid definition"
           }
         }
       },
@@ -250,6 +1056,61 @@
           "data" : { }
         }
       },
+      "WanakuResponseAuditEvent" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/AuditEvent"
+          }
+        }
+      },
+      "WanakuResponseAuditHealth" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/AuditHealth"
+          }
+        }
+      },
+      "WanakuResponseAuditPage" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/AuditPage"
+          }
+        }
+      },
+      "WanakuResponseBarnArchive" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/BarnArchive"
+          }
+        }
+      },
+      "WanakuResponseCatalogVersion" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/CatalogVersion"
+          }
+        }
+      },
       "WanakuResponseDataStore" : {
         "type" : "object",
         "properties" : {
@@ -258,6 +1119,17 @@
           },
           "data" : {
             "$ref" : "#/components/schemas/DataStore"
+          }
+        }
+      },
+      "WanakuResponseDataStoreRecord" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/DataStoreRecord"
           }
         }
       },
@@ -284,7 +1156,29 @@
           }
         }
       },
-      "WanakuResponseListDataStore" : {
+      "WanakuResponseKameletDefinition" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/KameletDefinition"
+          }
+        }
+      },
+      "WanakuResponseKameletSummary" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/KameletSummary"
+          }
+        }
+      },
+      "WanakuResponseListCatalogVersion" : {
         "type" : "object",
         "properties" : {
           "error" : {
@@ -293,7 +1187,35 @@
           "data" : {
             "type" : "array",
             "items" : {
-              "$ref" : "#/components/schemas/DataStore"
+              "$ref" : "#/components/schemas/CatalogVersion"
+            }
+          }
+        }
+      },
+      "WanakuResponseListDataStoreRecord" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DataStoreRecord"
+            }
+          }
+        }
+      },
+      "WanakuResponseListKameletSummary" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/KameletSummary"
             }
           }
         }
@@ -313,6 +1235,62 @@
           }
         }
       },
+      "WanakuResponseListSemanticAction" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticAction"
+            }
+          }
+        }
+      },
+      "WanakuResponseListSemanticExpert" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticExpert"
+            }
+          }
+        }
+      },
+      "WanakuResponseListSemanticPublication" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticPublication"
+            }
+          }
+        }
+      },
+      "WanakuResponseListSemanticRouterDefinition" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SemanticRouterDefinition"
+            }
+          }
+        }
+      },
       "WanakuResponseListServiceTemplateSummary" : {
         "type" : "object",
         "properties" : {
@@ -323,6 +1301,21 @@
             "type" : "array",
             "items" : {
               "$ref" : "#/components/schemas/ServiceTemplateSummary"
+            }
+          }
+        }
+      },
+      "WanakuResponseMapStringInteger" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "integer",
+              "format" : "int32"
             }
           }
         }
@@ -353,6 +1346,75 @@
           "data" : {
             "type" : "object",
             "additionalProperties" : { }
+          }
+        }
+      },
+      "WanakuResponseMapStringString" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "WanakuResponseSemanticPreview" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SemanticPreview"
+          }
+        }
+      },
+      "WanakuResponseSemanticPublication" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SemanticPublication"
+          }
+        }
+      },
+      "WanakuResponseSemanticResolvedPublication" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SemanticResolvedPublication"
+          }
+        }
+      },
+      "WanakuResponseSemanticRouterDefinition" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SemanticRouterDefinition"
+          }
+        }
+      },
+      "WanakuResponseSemanticValidation" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/WanakuError"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/SemanticValidation"
           }
         }
       },
@@ -412,8 +1474,167 @@
     }
   },
   "paths" : {
+    "/api/v1/audit/events" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "actor",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "decision",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 100
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0
+          }
+        }, {
+          "name" : "operation",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "reason_code",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "target",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "target_type",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseAuditPage"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "List",
+        "tags" : [ "Audit Resource" ]
+      }
+    },
+    "/api/v1/audit/events/{id}" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseAuditEvent"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Get",
+        "tags" : [ "Audit Resource" ]
+      }
+    },
+    "/api/v1/audit/health" : {
+      "get" : {
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseAuditHealth"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Health",
+        "tags" : [ "Audit Resource" ]
+      }
+    },
+    "/api/v1/audit/schema" : {
+      "get" : {
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseMapStringString"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Schema",
+        "tags" : [ "Audit Resource" ]
+      }
+    },
     "/api/v1/data-store" : {
       "put" : {
+        "parameters" : [ {
+          "name" : "expectedRevision",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "If-Match",
+          "in" : "header",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -473,10 +1694,24 @@
             "type" : "string"
           }
         }, {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
           "name" : "name",
           "in" : "query",
           "schema" : {
             "type" : "string"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         } ],
         "responses" : {
@@ -485,7 +1720,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/WanakuResponseListDataStore"
+                  "$ref" : "#/components/schemas/WanakuResponseListDataStoreRecord"
                 }
               }
             }
@@ -511,7 +1746,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                  "$ref" : "#/components/schemas/WanakuResponseDataStoreRecord"
                 }
               }
             }
@@ -558,6 +1793,19 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "name" : "expectedRevision",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "If-Match",
+          "in" : "header",
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -589,7 +1837,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                  "$ref" : "#/components/schemas/WanakuResponseDataStoreRecord"
                 }
               }
             }
@@ -597,6 +1845,248 @@
         },
         "summary" : "Get By Id",
         "tags" : [ "Data Stores Resource" ]
+      }
+    },
+    "/api/v1/kamelets" : {
+      "post" : {
+        "summary" : "Upload a Kamelet",
+        "description" : "Validate and persist original YAML as an immutable SHA-256 revision. Select the uploaded revision for its name. Identical uploads are idempotent. This operation does not execute YAML or contact external services.",
+        "tags" : [ "Kamelets" ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KameletUpload"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Uploaded revision selected",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseKameletSummary"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "409" : {
+            "description" : "Name is reserved by a bundled or configured Kamelet"
+          },
+          "422" : {
+            "description" : "YAML is invalid or exceeds 1 MiB"
+          }
+        }
+      },
+      "get" : {
+        "summary" : "List current Kamelets",
+        "description" : "List native Kamelets and their semantic eligibility. Uploaded revisions are available immediately.",
+        "tags" : [ "Kamelets" ],
+        "responses" : {
+          "200" : {
+            "description" : "Current Kamelet metadata",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListKameletSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kamelets/{name}" : {
+      "delete" : {
+        "summary" : "Remove a current Kamelet selection",
+        "description" : "Remove an uploaded Kamelet from the current catalog. Retain immutable revisions for saved semantic routes. Bundled and configured definitions cannot be removed.",
+        "tags" : [ "Kamelets" ],
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Current uploaded selection removed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseVoid"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid name"
+          },
+          "404" : {
+            "description" : "Current Kamelet not found"
+          },
+          "409" : {
+            "description" : "Bundled or configured Kamelet cannot be removed"
+          }
+        }
+      },
+      "get" : {
+        "summary" : "Read a Kamelet",
+        "description" : "Read the current definition or an exact immutable revision. Removed current selections do not remove retained revisions.",
+        "tags" : [ "Kamelets" ],
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "sha256",
+          "in" : "query",
+          "schema" : {
+            "type" : "string",
+            "pattern" : "[a-f0-9]{64}"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Original definition with metadata",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseKameletDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid name or digest"
+          },
+          "404" : {
+            "description" : "Kamelet revision not found"
+          }
+        }
+      }
+    },
+    "/api/v1/kamelets/{name}.kamelet.yaml" : {
+      "get" : {
+        "summary" : "Download native Kamelet YAML",
+        "description" : "Return original UTF-8 YAML with a SHA-256 ETag. The filename path supports Camel Kamelet resource lookup.",
+        "tags" : [ "Kamelets" ],
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "sha256",
+          "in" : "query",
+          "schema" : {
+            "type" : "string",
+            "pattern" : "[a-f0-9]{64}"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Original application/yaml bytes",
+            "headers" : {
+              "ETag" : {
+                "description" : "Quoted SHA-256 of the original UTF-8 bytes",
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "content" : {
+              "application/yaml" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid name or digest"
+          },
+          "404" : {
+            "description" : "Kamelet revision not found"
+          }
+        }
+      }
+    },
+    "/api/v1/management/export" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "includeAudit",
+          "in" : "query",
+          "schema" : {
+            "type" : "boolean",
+            "default" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseBarnArchive"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Export",
+        "tags" : [ "Backup Resource" ]
+      }
+    },
+    "/api/v1/management/import" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "replace",
+          "in" : "query",
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BarnArchive"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseMapStringInteger"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request"
+          }
+        },
+        "summary" : "Import Archive",
+        "tags" : [ "Backup Resource" ]
       }
     },
     "/api/v1/management/info/version" : {
@@ -635,9 +2125,477 @@
         "tags" : [ "Statistics Resource" ]
       }
     },
+    "/api/v1/semantic-routers" : {
+      "get" : {
+        "summary" : "List saved router drafts",
+        "description" : "List saved router drafts. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListSemanticRouterDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Save a router draft",
+        "description" : "Save a router draft. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SemanticRouterDefinition"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseSemanticRouterDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/actions" : {
+      "get" : {
+        "summary" : "List eligible curated Kamelet actions",
+        "description" : "List current eligible native Kamelets. With definitionId, include exact historical revisions selected by that saved definition. The current flag identifies current catalog selections.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "definitionId",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListSemanticAction"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/experts" : {
+      "get" : {
+        "summary" : "List configured expert instances",
+        "description" : "List configured expert instances. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListSemanticExpert"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/files" : {
+      "post" : {
+        "summary" : "Inspect generated semantic router files",
+        "description" : "Generate all catalog files from a complete draft. The catalog name is semantic-preview and the revision is preview. This operation does not save a draft, publish a catalog, activate a runtime, or call an expert.",
+        "tags" : [ "Semantic routers" ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SemanticRouterDefinition"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Generated file paths and contents",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseMapStringString"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Name or tool name is invalid"
+          },
+          "422" : {
+            "description" : "Definition is incomplete or structurally invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/resolve" : {
+      "get" : {
+        "summary" : "Resolve a published semantic router by name",
+        "description" : "Resolve an exact saved name to immutable publication pins and a published expert snapshot. Draft edits do not select a new publication. An explicit revision overrides the current pointer. Legacy records can omit the expert snapshot.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string",
+            "pattern" : "\\S",
+            "maxLength" : 120
+          },
+          "required" : true
+        }, {
+          "name" : "revision",
+          "in" : "query",
+          "schema" : {
+            "type" : "string",
+            "minLength" : 1,
+            "maxLength" : 64
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Published selection resolved",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseSemanticResolvedPublication"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Name or revision is invalid"
+          },
+          "404" : {
+            "description" : "Router, publication, revision, or catalog not found"
+          },
+          "409" : {
+            "description" : "Name is ambiguous or several legacy publications have no current selection"
+          },
+          "500" : {
+            "description" : "Stored publication and archive are inconsistent"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/validate" : {
+      "post" : {
+        "summary" : "Validate configuration without inference",
+        "description" : "Validate configuration without inference. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SemanticRouterDefinition"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseSemanticValidation"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/{id}" : {
+      "put" : {
+        "summary" : "Update a router draft",
+        "description" : "Update a router draft. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SemanticRouterDefinition"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseSemanticRouterDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove a router draft",
+        "description" : "Remove a router draft. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseVoid"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      },
+      "get" : {
+        "summary" : "Read a router draft",
+        "description" : "Read a router draft. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseSemanticRouterDefinition"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/{id}/preview" : {
+      "post" : {
+        "summary" : "Classify without executing actions",
+        "description" : "Classify without executing actions. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SemanticPreviewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseSemanticPreview"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          },
+          "422" : {
+            "description" : "Definition is invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/{id}/publish" : {
+      "post" : {
+        "summary" : "Publish an immutable catalog revision",
+        "description" : "Publish an immutable catalog revision. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseSemanticPublication"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          },
+          "422" : {
+            "description" : "Definition is invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/semantic-routers/{id}/revisions" : {
+      "get" : {
+        "summary" : "List published revisions",
+        "description" : "List published revisions. Publication does not activate a runtime.",
+        "tags" : [ "Semantic routers" ],
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Operation completed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListSemanticPublication"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid request"
+          },
+          "404" : {
+            "description" : "Definition not found"
+          }
+        }
+      }
+    },
     "/api/v1/service-catalog" : {
       "get" : {
         "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
           "name" : "search",
           "in" : "query",
           "schema" : {
@@ -660,6 +2618,14 @@
         "tags" : [ "Service Catalog Resource" ]
       },
       "post" : {
+        "parameters" : [ {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -742,6 +2708,24 @@
           }
         },
         "summary" : "Get Deployment Instructions",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/removed" : {
+      "get" : {
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListMapStringObject"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Removed",
         "tags" : [ "Service Catalog Resource" ]
       }
     },
@@ -829,8 +2813,189 @@
         "tags" : [ "Service Catalog Resource" ]
       }
     },
+    "/api/v1/service-catalog/{name}/restore" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Restore",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/{name}/versions" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Versions",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/{name}/versions/{version}" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Version",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/{name}/versions/{version}/activate" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Activate Version",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
+    "/api/v1/service-catalog/{name}/versions/{version}/download" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Download Version",
+        "tags" : [ "Service Catalog Resource" ]
+      }
+    },
     "/api/v1/service-template/deploy" : {
       "post" : {
+        "parameters" : [ {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -944,6 +3109,20 @@
     "/api/v1/service-template/list" : {
       "get" : {
         "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
           "name" : "search",
           "in" : "query",
           "schema" : {
@@ -1016,6 +3195,49 @@
         "tags" : [ "Service Template Resource" ]
       }
     },
+    "/api/v1/service-template/removed" : {
+      "get" : {
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListMapStringObject"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Removed",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/restore" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Restore",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
     "/api/v1/service-template/validate" : {
       "post" : {
         "requestBody" : {
@@ -1049,8 +3271,155 @@
         "summary" : "Validate",
         "tags" : [ "Service Template Resource" ]
       }
+    },
+    "/api/v1/service-template/versions" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "from",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "to",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseListCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Versions",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/versions/activate" : {
+      "post" : {
+        "parameters" : [ {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }, {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Activate Version",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/versions/download" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseDataStore"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Download Version",
+        "tags" : [ "Service Template Resource" ]
+      }
+    },
+    "/api/v1/service-template/versions/get" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "version",
+          "in" : "query",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WanakuResponseCatalogVersion"
+                }
+              }
+            }
+          }
+        },
+        "summary" : "Version",
+        "tags" : [ "Service Template Resource" ]
+      }
     }
   },
+  "tags" : [ {
+    "name" : "Kamelets",
+    "description" : "Store and serve native Kamelets without running them"
+  }, {
+    "name" : "Semantic routers",
+    "description" : "Author, classify, and publish native Camel integrations"
+  } ],
   "info" : {
     "title" : "wanaku-barn-backend API",
     "version" : "0.3.0-SNAPSHOT"

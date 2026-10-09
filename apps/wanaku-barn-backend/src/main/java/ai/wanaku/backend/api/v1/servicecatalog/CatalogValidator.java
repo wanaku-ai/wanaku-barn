@@ -152,7 +152,11 @@ public class CatalogValidator {
             String routes = checkFileReference(props, PROP_ROUTES_PREFIX + system, entries, true, errors);
             checkFileReference(props, PROP_DEPENDENCIES_PREFIX + system, entries, false, errors);
 
-            checkCamelRoutes(routes, entries, errors);
+            if (entries.containsKey("service/semantic-router.properties")) {
+                checkSemanticRoutes(routes, entries, errors);
+            } else {
+                checkCamelRoutes(routes, entries, errors);
+            }
 
             String propertiesKey = PROP_PROPERTIES_PREFIX + system;
             if (ValidationResult.TYPE_CATALOG.equals(type) && props.getProperty(propertiesKey) != null) {
@@ -277,6 +281,38 @@ public class CatalogValidator {
             errors.add(new ValidationIssue(path, "Failed to validate the route file: %s".formatted(e.getMessage())));
         } finally {
             deleteQuietly(file);
+        }
+    }
+
+    private static void checkSemanticRoutes(String path, Map<String, byte[]> entries, List<ValidationIssue> errors) {
+        if (path == null) return;
+        try {
+            Properties manifest = new Properties();
+            manifest.load(new ByteArrayInputStream(entries.get("service/semantic-router.properties")));
+            if (!"1".equals(manifest.getProperty("contract.version"))
+                    || !ai.wanaku.backend.api.v1.semanticrouter.SemanticCatalogGenerator.CAMEL_VERSION.equals(
+                            manifest.getProperty("camel.version"))
+                    || !ai.wanaku.backend.api.v1.semanticrouter.SemanticCatalogGenerator.CAMEL_BUILD.equals(
+                            manifest.getProperty("camel.build"))) {
+                errors.add(new ValidationIssue(
+                        "service/semantic-router.properties", "Unsupported semantic runtime contract or Camel build"));
+                return;
+            }
+            if (!path.equals(manifest.getProperty("main")))
+                errors.add(new ValidationIssue(
+                        "service/semantic-router.properties#main", "Main YAML does not match the catalog index"));
+            for (String resource : manifest.getProperty("kamelets", "").split(",")) {
+                ServiceCatalogIndex.validateZipEntryPath(resource);
+                if (resource.isBlank() || !entries.containsKey(resource))
+                    errors.add(new ValidationIssue(
+                            "service/semantic-router.properties#kamelets", "An auxiliary Kamelet resource is missing"));
+            }
+            for (Error issue :
+                    ai.wanaku.backend.api.v1.semanticrouter.SemanticYamlValidator.validate(entries.get(path)))
+                errors.add(new ValidationIssue(issuePath(path, issue), describe(issue)));
+        } catch (Exception e) {
+            errors.add(new ValidationIssue(path, "Failed to validate native semantic Camel YAML"));
+            LOG.debug("Native semantic validation failed", e);
         }
     }
 

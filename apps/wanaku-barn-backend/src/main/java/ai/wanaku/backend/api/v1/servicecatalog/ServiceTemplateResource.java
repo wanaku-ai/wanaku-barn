@@ -11,13 +11,19 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.RestResponse;
 import ai.wanaku.backend.api.v1.exceptions.ServiceTemplateNotFoundException;
+import ai.wanaku.backend.audit.AuditContext;
+import ai.wanaku.backend.audit.Audited;
+import ai.wanaku.backend.common.Paging;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -26,6 +32,7 @@ import ai.wanaku.capabilities.sdk.api.types.ServiceTemplateSummary;
 import ai.wanaku.capabilities.sdk.api.types.ServiceTemplateSystem;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.capabilities.sdk.api.types.io.TemplateInstantiationRequest;
+import ai.wanaku.core.services.api.CatalogVersion;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
 import ai.wanaku.core.services.api.ValidationResult;
 import ai.wanaku.core.util.StringHelper;
@@ -40,6 +47,12 @@ import ai.wanaku.core.util.StringHelper;
 @Consumes(MediaType.APPLICATION_JSON)
 public class ServiceTemplateResource {
     private static final Logger LOG = Logger.getLogger(ServiceTemplateResource.class);
+
+    @Inject
+    AuditContext auditContext;
+
+    @Inject
+    CatalogLifecycle lifecycle;
 
     @Inject
     ServiceTemplateBean serviceTemplateBean;
@@ -57,7 +70,11 @@ public class ServiceTemplateResource {
      */
     @Path("/list")
     @GET
-    public WanakuResponse<List<ServiceTemplateSummary>> list(@QueryParam("search") String search) {
+    public RestResponse<WanakuResponse<List<ServiceTemplateSummary>>> list(
+            @QueryParam("search") String search,
+            @QueryParam("offset") Integer offset,
+            @QueryParam("limit") Integer limit) {
+        boolean paged = Paging.requested(offset, limit);
         if (search != null && !search.isBlank()) {
             LOG.debugf("REST: Listing service templates with search: %s", search);
         } else {
@@ -93,9 +110,13 @@ public class ServiceTemplateResource {
         }
 
         summaries.sort(Comparator.comparing(
-                ServiceTemplateSummary::getName, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)));
+                        ServiceTemplateSummary::getName, Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER))
+                .thenComparing(ServiceTemplateSummary::getId, Comparator.nullsFirst(Comparator.naturalOrder())));
 
-        return new WanakuResponse<>(summaries);
+        if (paged) {
+            return Paging.response(Paging.slice(summaries, offset, limit), (long) summaries.size());
+        }
+        return Paging.response(summaries, null);
     }
 
     /**
@@ -184,10 +205,118 @@ public class ServiceTemplateResource {
      */
     @Path("/deploy")
     @POST
-    public WanakuResponse<DataStore> deploy(DataStore dataStore) {
+    @Audited(operation = "service_template.deploy", targetType = "service_template", targetField = "name")
+    public WanakuResponse<DataStore> deploy(@QueryParam("expectedVersion") Long expectedVersion, DataStore dataStore) {
         LOG.debugf("REST: Deploying service template: %s", dataStore.getName());
-        DataStore result = serviceTemplateBean.deploy(dataStore);
+        auditContext.setTarget(dataStore.getName());
+        DataStore result = serviceTemplateBean.deploy(dataStore, CatalogLifecycle.ORIGIN_API, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
         return new WanakuResponse<>(result);
+    }
+
+    /**
+     * List the removed service templates. Removed templates keep their versions and can be restored.
+     * GET /api/v1/service-template/removed
+     *
+     * @return response with the name, removal time and active version of each removed template
+     */
+    @Path("/removed")
+    @GET
+    public WanakuResponse<List<Map<String, Object>>> removed() {
+        return new WanakuResponse<>(lifecycle.removedSummaries(ServiceTemplateBean.LABEL_TYPE_VALUE));
+    }
+
+    /**
+     * Restore a removed service template with its active version.
+     * POST /api/v1/service-template/restore?name={name}
+     *
+     * @param name the template name
+     * @return response with the restored template entry
+     */
+    @Path("/restore")
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Audited(operation = "service_template.restore", targetType = "service_template")
+    public WanakuResponse<DataStore> restore(@QueryParam("name") String name) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.restoreRemoved(ServiceTemplateBean.LABEL_TYPE_VALUE, name));
+    }
+
+    /**
+     * List the versions of a service template, newest first.
+     * GET /api/v1/service-template/versions?name={name}
+     *
+     * @param name the template name
+     * @return response with the version metadata
+     */
+    @Path("/versions")
+    @GET
+    public WanakuResponse<List<CatalogVersion>> versions(
+            @QueryParam("name") String name, @QueryParam("from") String from, @QueryParam("to") String to) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.versions(
+                ServiceTemplateBean.LABEL_TYPE_VALUE, name, instant("from", from), instant("to", to)));
+    }
+
+    /**
+     * Get the metadata of one version of a service template.
+     * GET /api/v1/service-template/versions/get?name={name}&amp;version={version}
+     *
+     * @param name the template name
+     * @param version the version number
+     * @return response with the version metadata
+     */
+    @Path("/versions/get")
+    @GET
+    public WanakuResponse<CatalogVersion> version(
+            @QueryParam("name") String name, @QueryParam("version") long version) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.version(ServiceTemplateBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Download the package of one version of a service template.
+     * GET /api/v1/service-template/versions/download?name={name}&amp;version={version}
+     *
+     * @param name the template name
+     * @param version the version number
+     * @return response with a DataStore that contains the Base64-encoded ZIP
+     */
+    @Path("/versions/download")
+    @GET
+    public WanakuResponse<DataStore> downloadVersion(
+            @QueryParam("name") String name, @QueryParam("version") long version) {
+        requireName(name);
+        return new WanakuResponse<>(lifecycle.content(ServiceTemplateBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Restore an earlier version of a service template. The restore creates a new version.
+     * POST /api/v1/service-template/versions/activate?name={name}&amp;version={version}
+     *
+     * @param name the template name
+     * @param version the version to restore
+     * @param expectedVersion optional active version that the caller expects; a mismatch returns 409
+     * @return response with the template entry
+     */
+    @Path("/versions/activate")
+    @POST
+    @Consumes(MediaType.WILDCARD)
+    @Audited(operation = "service_template.activate_version", targetType = "service_template")
+    public WanakuResponse<DataStore> activateVersion(
+            @QueryParam("name") String name,
+            @QueryParam("version") long version,
+            @QueryParam("expectedVersion") Long expectedVersion) {
+        requireName(name);
+        DataStore result = lifecycle.restore(ServiceTemplateBean.LABEL_TYPE_VALUE, name, version, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
+        return new WanakuResponse<>(result);
+    }
+
+    private static void requireName(String name) {
+        if (StringHelper.isBlank(name)) {
+            throw new WanakuException("Query parameter 'name' is required");
+        }
     }
 
     /**
@@ -218,6 +347,7 @@ public class ServiceTemplateResource {
      */
     @Path("/remove")
     @DELETE
+    @Audited(operation = "service_template.remove", targetType = "service_template")
     public WanakuResponse<Void> remove(@QueryParam("name") String name) {
         LOG.debugf("REST: Removing service template: %s", name);
 
@@ -262,8 +392,10 @@ public class ServiceTemplateResource {
      */
     @Path("/instantiate")
     @POST
+    @Audited(operation = "service_template.instantiate", targetType = "service_template")
     public WanakuResponse<DataStore> instantiate(TemplateInstantiationRequest request) {
         LOG.debugf("REST: Instantiating template: %s", request.getTemplateName());
+        auditContext.setTarget(request.getTemplateName());
 
         if (StringHelper.isBlank(request.getTemplateName())) {
             throw new WanakuException("Template name is required");
@@ -273,5 +405,16 @@ public class ServiceTemplateResource {
                 request.getTemplateName(), request.getProperties(),
                 request.getServiceName(), request.getServiceSystem());
         return new WanakuResponse<>(catalog);
+    }
+
+    private static Instant instant(String parameter, String value) {
+        if (StringHelper.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("'%s' must be an ISO 8601 UTC timestamp".formatted(parameter));
+        }
     }
 }

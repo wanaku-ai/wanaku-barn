@@ -21,6 +21,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.jboss.logging.Logger;
 import io.quarkus.runtime.StartupEvent;
+import ai.wanaku.backend.audit.AuditEvent;
+import ai.wanaku.backend.audit.AuditStore;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 
 @ApplicationScoped
@@ -30,6 +32,12 @@ public class ServiceTemplateInitializer {
 
     @Inject
     ServiceTemplateBean serviceTemplateBean;
+
+    @Inject
+    AuditStore auditStore;
+
+    @Inject
+    CatalogLifecycle lifecycle;
 
     void loadBuiltInTemplates(@Observes StartupEvent ev) {
         URL resource = Thread.currentThread().getContextClassLoader().getResource(TEMPLATES_RESOURCE);
@@ -76,8 +84,9 @@ public class ServiceTemplateInitializer {
             for (Path templateDir : dirs) {
                 String name = templateDir.getFileName().toString();
                 try {
-                    if (serviceTemplateBean.get(name) != null) {
-                        LOG.debugf("Built-in template '%s' already deployed, skipping", name);
+                    // A removed built-in template stays removed until an operator restores it
+                    if (lifecycle.findAny(ServiceTemplateBean.LABEL_TYPE_VALUE, name) != null) {
+                        LOG.debugf("Built-in template '%s' already deployed or removed, skipping", name);
                         continue;
                     }
 
@@ -86,11 +95,14 @@ public class ServiceTemplateInitializer {
                     dataStore.setName(name);
                     dataStore.setData(Base64.getEncoder().encodeToString(zipBytes));
 
-                    serviceTemplateBean.deploy(dataStore);
+                    serviceTemplateBean.deploy(dataStore, CatalogLifecycle.ORIGIN_STARTUP, null);
                     loaded++;
                     LOG.infof("Deployed built-in service template: %s", name);
+                    recordSeed(name, AuditEvent.DECISION_ALLOW, "seeded", "The built-in template was deployed.");
                 } catch (Exception e) {
                     LOG.errorf(e, "Failed to deploy built-in service template: %s", name);
+                    recordSeed(
+                            name, AuditEvent.DECISION_ERROR, "seed_failed", "The built-in template failed to deploy.");
                 }
             }
         } catch (IOException e) {
@@ -102,12 +114,20 @@ public class ServiceTemplateInitializer {
         }
     }
 
-    private byte[] zipDirectory(Path dir) throws IOException {
+    private void recordSeed(String name, String decision, String reasonCode, String explanation) {
+        AuditEvent event = AuditEvent.administrative("service_template.seed", decision, reasonCode, explanation);
+        event.setProtocol("startup");
+        event.setTargetType("service_template");
+        event.setTarget(name);
+        auditStore.record(event);
+    }
+
+    static byte[] zipDirectory(Path dir) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
             try (var walker = Files.walk(dir)) {
                 walker.filter(Files::isRegularFile).forEach(file -> {
-                    String entryName = dir.relativize(file).toString();
+                    String entryName = dir.relativize(file).toString().replace('\\', '/');
                     try {
                         zos.putNextEntry(new ZipEntry(entryName));
                         Files.copy(file, zos);

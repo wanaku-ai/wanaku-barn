@@ -196,50 +196,9 @@ There is this patch command to change the configuration value. In this example i
 kubectl -n ingress-nginx patch cm/ingress-nginx-controller --type=merge -p '{"data": {"proxy-buffer-size": "16k"}}'
 ```
 
-## MCP Server Registration
+## MCP Server Connections
 
-### Downstream MCP servers start but don't appear in the router
-
-**Symptoms:**
-
-- MCP server starts successfully and passes health checks
-- The admin UI shows no registered services
-- Service logs show warnings like `Unable to register service because of: Connection refused`
-
-**Why this happens:**
-
-The registration URI defaults to `http://localhost:8080` via the `@WithDefault` annotation in `WanakuServiceConfig`. This works when the router runs on the same host, but fails in Docker, Kubernetes, or multi-host setups. After 12 failed retries (approximately 60 seconds), the service gives up permanently with no re-registration mechanism.
-
-**Fix:**
-
-Set the registration URI to the router's actual address:
-
-```shell
-export WANAKU_SERVICE_REGISTRATION_URI=http://<router-host>:8080/
-```
-
-Ensure the router is started and healthy before starting downstream MCP servers. In Docker Compose, use `depends_on` with `condition: service_healthy`.
-
-### MCP server registers but router cannot call it back
-
-**Symptoms:**
-
-- Capability appears in the admin UI
-- Tool invocations fail with connection timeouts
-- Router logs show connection errors to an unexpected IP address
-
-**Why this happens:**
-
-The `announce-address` configuration defaults to `auto`, which picks the first non-loopback network interface. In Docker, this is often an internal bridge IP. In multi-NIC environments, it may select a VPN tunnel interface.
-
-**Fix:**
-
-Explicitly set the announce address to an IP the router can reach:
-
-```properties
-# In the MCP server's application.properties
-wanaku.service.registration.announce-address=<reachable-ip>
-```
+Add downstream MCP endpoints to Wanaku with `wanaku forwards add`. Use an endpoint reachable from the Wanaku host and inspect the downstream server logs for connection failures.
 
 ## Docker Compose and Deployment
 
@@ -419,24 +378,6 @@ Infinispan is configured in `LOCAL` cache mode. Each router instance maintains i
 **Fix:**
 
 Currently, Wanaku supports single-instance deployments only. Running multiple replicas requires architectural changes to enable distributed Infinispan cache modes. For high availability, use a single replica with persistent storage.
-
-### Crashed MCP servers are not detected for up to 60 seconds
-
-**Symptoms:**
-
-- An MCP server crashes but tool calls to it continue failing for about a minute before the router marks it as unhealthy
-
-**Why this happens:**
-
-The router's periodic health check runs every 60 seconds (`wanaku.router.health-check.interval-seconds=60`). Between checks, the router assumes previously registered MCP servers are still healthy.
-
-**Fix:**
-
-Reduce the health check interval for faster detection (at the cost of increased network traffic):
-
-```properties
-wanaku.router.health-check.interval-seconds=15
-```
 
 ## Getting Help
 

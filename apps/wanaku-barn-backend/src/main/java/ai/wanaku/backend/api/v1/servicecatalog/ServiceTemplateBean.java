@@ -1,8 +1,6 @@
 package ai.wanaku.backend.api.v1.servicecatalog;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import java.io.IOException;
@@ -21,7 +19,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
 import ai.wanaku.backend.api.v1.exceptions.ServiceTemplateNotFoundException;
-import ai.wanaku.backend.core.persistence.api.DataStoreRepository;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.SafeZip;
@@ -54,20 +51,13 @@ public class ServiceTemplateBean {
     private static final Pattern SYSTEM_IDENTIFIER_PATTERN = Pattern.compile("[A-Za-z0-9._-]+");
 
     @Inject
-    Instance<DataStoreRepository> dataStoreRepositoryInstance;
-
-    @Inject
     ServiceCatalogBean serviceCatalogBean;
 
     @Inject
     ForageDependencyResolver forageDependencyResolver;
 
-    private DataStoreRepository dataStoreRepository;
-
-    @PostConstruct
-    void init() {
-        dataStoreRepository = dataStoreRepositoryInstance.get();
-    }
+    @Inject
+    CatalogLifecycle lifecycle;
 
     /**
      * List all service template entries, optionally filtered by search term.
@@ -77,8 +67,7 @@ public class ServiceTemplateBean {
      */
     public List<DataStore> list(String search) {
         LOG.debug("Listing service templates");
-        List<DataStore> all =
-                dataStoreRepository.findAllFilterByLabelExpression(LABEL_TYPE_KEY + "=" + LABEL_TYPE_VALUE);
+        List<DataStore> all = lifecycle.list(LABEL_TYPE_VALUE);
 
         if (StringHelper.isBlank(search)) {
             return all;
@@ -97,30 +86,32 @@ public class ServiceTemplateBean {
      */
     public DataStore get(String name) {
         LOG.debugf("Getting service template: %s", name);
-        List<DataStore> templates = list(null);
-
-        for (DataStore ds : templates) {
-            try {
-                ServiceCatalogIndex index = ServiceCatalogIndex.fromBase64(ds.getData());
-                if (name.equals(index.getName())) {
-                    return ds;
-                }
-            } catch (WanakuException e) {
-                LOG.debugf("Failed to parse template index for '%s': %s", ds.getName(), e.getMessage());
-            }
-        }
-        return null;
+        return lifecycle.find(LABEL_TYPE_VALUE, name);
     }
 
     /**
      * Deploy a service template ZIP package.
-     * Validates the ZIP structure, then stores it as a DataStore entry with template labels.
      *
      * @param dataStore the data store entry containing the Base64-encoded ZIP
      * @return the persisted data store entry
      * @throws WanakuException if validation fails
      */
     public DataStore deploy(DataStore dataStore) throws WanakuException {
+        return deploy(dataStore, CatalogLifecycle.ORIGIN_API, null);
+    }
+
+    /**
+     * Deploy a service template ZIP package as a new version.
+     * Validates the ZIP structure, then stores the package as the active version of the template with the name
+     * from {@code index.properties}. A redeploy keeps the identifier of the template entry.
+     *
+     * @param dataStore the data store entry containing the Base64-encoded ZIP
+     * @param origin how the deploy was started
+     * @param expectedVersion the active version that the caller expects, or {@code null} to skip the check
+     * @return the persisted data store entry
+     * @throws WanakuException if validation fails
+     */
+    public DataStore deploy(DataStore dataStore, String origin, Long expectedVersion) throws WanakuException {
         LOG.debugf("Deploying service template: %s", dataStore.getName());
 
         if (StringHelper.isBlank(dataStore.getName())) {
@@ -130,45 +121,18 @@ public class ServiceTemplateBean {
             throw new WanakuException("Template data (Base64-encoded ZIP) is required");
         }
 
-        // Validate ZIP structure by parsing the index
-        ServiceCatalogIndex index = ServiceCatalogIndex.fromBase64(dataStore.getData());
-
-        // Set template label
-        Map<String, String> labels = dataStore.getLabels();
-        if (labels == null) {
-            labels = new HashMap<>();
-        } else {
-            labels = new HashMap<>(labels);
-        }
-        labels.put(LABEL_TYPE_KEY, LABEL_TYPE_VALUE);
-        dataStore.setLabels(labels);
-
-        // Check for existing template with same name and remove it
-        DataStore existing = get(index.getName());
-        if (existing != null) {
-            LOG.debugf("Replacing existing template: %s", dataStore.getName());
-            if (!dataStoreRepository.deleteById(existing.getId())) {
-                LOG.warnf("Failed to delete existing template before replace: %s", existing.getId());
-            }
-        }
-
-        return dataStoreRepository.persist(dataStore);
+        return lifecycle.deploy(LABEL_TYPE_VALUE, dataStore, origin, expectedVersion);
     }
 
     /**
-     * Remove a service template by name.
+     * Remove a service template by name. The template and its versions are kept and can be restored.
      *
      * @param name the template name to remove
      * @return the number of entries removed
      */
     public int remove(String name) {
         LOG.debugf("Removing service template: %s", name);
-        DataStore template = get(name);
-        if (template == null) {
-            return 0;
-        }
-        boolean removed = dataStoreRepository.deleteById(template.getId());
-        return removed ? 1 : 0;
+        return lifecycle.remove(LABEL_TYPE_VALUE, name) ? 1 : 0;
     }
 
     /**
@@ -286,7 +250,7 @@ public class ServiceTemplateBean {
             DataStore catalog = new DataStore();
             catalog.setName(effectiveName);
             catalog.setData(Base64.getEncoder().encodeToString(CatalogZipWriter.assemble(entries)));
-            return serviceCatalogBean.deploy(catalog);
+            return serviceCatalogBean.deploy(catalog, CatalogLifecycle.ORIGIN_INSTANTIATE, null);
         } catch (IOException e) {
             throw new WanakuException("Failed to build catalog ZIP: %s".formatted(e.getMessage()));
         }

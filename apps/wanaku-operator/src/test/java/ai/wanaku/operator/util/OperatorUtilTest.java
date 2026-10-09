@@ -65,11 +65,6 @@ class OperatorUtilTest {
     }
 
     @Test
-    void getInternalRegistrationUriConstructsCorrectUrl() {
-        assertEquals("http://internal-my-router:8080/", OperatorUtil.getInternalRegistrationUri("my-router"));
-    }
-
-    @Test
     void validateImageAllowedAllowsAnyImageWhenAllowlistEmpty() {
         assertDoesNotThrow(() -> OperatorUtil.validateImageAllowed("docker.io/library/anything:latest", ""));
         assertDoesNotThrow(() -> OperatorUtil.validateImageAllowed("docker.io/library/anything:latest", "  "));

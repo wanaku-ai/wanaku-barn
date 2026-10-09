@@ -6,5 +6,7 @@
  */
 
 export type GetApiV1ServiceTemplateListParams = {
+  limit?: number;
+  offset?: number;
   search?: string;
 };

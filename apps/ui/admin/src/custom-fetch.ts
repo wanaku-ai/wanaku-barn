@@ -30,6 +30,14 @@ import {getPluginHost, getBackendUrl, isPluginMode, SERVICE_ID} from "./plugin-h
   const REDIRECT_TS_KEY = 'wanaku_auth_redirect_ts';
   const REDIRECT_LOOP_MS = 10_000;
 
+  const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (typeof error === 'string') return error;
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+      return error.message;
+    }
+    return fallback;
+  };
+
   async function pluginFetch<T>(url: string, options: RequestInit): Promise<T> {
     const host = getPluginHost();
     if (!host) {
@@ -67,7 +75,7 @@ import {getPluginHost, getBackendUrl, isPluginMode, SERVICE_ID} from "./plugin-h
 
     const errorData = data as Record<string, unknown> | null;
     if (errorData && typeof errorData === 'object' && 'error' in errorData && errorData.error) {
-      throw new Error(String(errorData.error));
+      throw new Error(getErrorMessage(errorData.error, 'Backend request failed'));
     }
 
     // Hosts can return an unwrapped payload; callers expect the Barn response envelope.
@@ -113,7 +121,7 @@ import {getPluginHost, getBackendUrl, isPluginMode, SERVICE_ID} from "./plugin-h
 
     if (!response.ok) {
       const errorData = data as Record<string, unknown> | null;
-      const message = (errorData?.error as string) || `Request failed with status ${response.status}`;
+      const message = getErrorMessage(errorData?.error, `Request failed with status ${response.status}`);
       throw new Error(message);
     }
 

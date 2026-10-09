@@ -7,6 +7,7 @@ import io.quarkus.picocli.runtime.annotations.TopCommand;
 import io.quarkus.runtime.QuarkusApplication;
 import ai.wanaku.cli.main.commands.BaseCommand;
 import ai.wanaku.cli.main.commands.auth.Auth;
+import ai.wanaku.cli.main.commands.backup.Backup;
 import ai.wanaku.cli.main.commands.completion.Completion;
 import ai.wanaku.cli.main.commands.configure.Configure;
 import ai.wanaku.cli.main.commands.datastores.DataStores;
@@ -39,7 +40,8 @@ import picocli.CommandLine;
             DataStores.class,
             Configure.class,
             Service.class,
-            Skill.class
+            Skill.class,
+            Backup.class
         })
 public class CliMain implements Callable<Integer>, QuarkusApplication {
     @Inject

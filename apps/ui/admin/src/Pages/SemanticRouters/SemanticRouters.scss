@@ -1,0 +1,165 @@
+@use "@carbon/react/scss/spacing";
+@use "@carbon/react/scss/theme";
+
+.semantic-routers-page {
+  min-width: 0;
+
+  > #page-content {
+    background: theme.$background;
+    padding-top: spacing.$spacing-07;
+  }
+
+  .title {
+    margin: 0;
+    padding: spacing.$spacing-06 spacing.$spacing-07;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1.25;
+    color: theme.$text-primary;
+  }
+
+  .description {
+    margin: 0;
+    padding: 0 spacing.$spacing-07 spacing.$spacing-06;
+    max-width: 600px;
+    font-size: 0.875rem;
+    line-height: 1.43;
+    color: theme.$text-secondary;
+  }
+}
+
+.semantic-router-header {
+  background: theme.$layer-01;
+}
+
+.semantic-router-content {
+  background: theme.$layer-01;
+  padding: 0 spacing.$spacing-07 spacing.$spacing-06;
+  min-width: 0;
+}
+
+.semantic-router-toolbar {
+  position: relative;
+  width: 100%;
+}
+
+.semantic-router-fields {
+  display: grid;
+  gap: spacing.$spacing-05;
+}
+.semantic-router-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: spacing.$spacing-03;
+}
+.semantic-router-action {
+  display: grid;
+  gap: spacing.$spacing-04;
+}
+.semantic-router-progress {
+  margin-block: spacing.$spacing-05 spacing.$spacing-06;
+}
+.semantic-router-step-title {
+  margin-bottom: spacing.$spacing-05;
+}
+.semantic-router-digest {
+  overflow-wrap: anywhere;
+}
+.semantic-router-list {
+  width: 100%;
+  margin: spacing.$spacing-05 0 0;
+  padding-inline: 0;
+  row-gap: spacing.$spacing-05;
+}
+.semantic-router-column {
+  display: flex;
+  min-width: 0;
+  container-type: inline-size;
+}
+// Keep the card layout above Carbon Tile rules loaded later by the plugin.
+.semantic-router-card.cds--tile {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-04;
+  width: 100%;
+  min-width: 0;
+  min-height: 100cqi;
+  padding: spacing.$spacing-05;
+  border: 1px solid theme.$border-subtle;
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: theme.$text-primary;
+  }
+
+  p {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: theme.$text-secondary;
+  }
+
+  .semantic-router-buttons {
+    margin-top: auto;
+    padding-top: spacing.$spacing-04;
+  }
+
+  .cds--btn {
+    max-width: 100%;
+    height: auto;
+    min-height: spacing.$spacing-07;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+}
+.semantic-router-generated-files {
+  padding: spacing.$spacing-05;
+  border: 1px solid theme.$border-subtle;
+  min-width: 0;
+
+  &[hidden] {
+    display: none;
+  }
+
+  &:not([hidden]) {
+    display: grid;
+    gap: spacing.$spacing-05;
+  }
+
+  .cds--snippet--multi {
+    max-width: 100%;
+  }
+}
+
+.semantic-router-errors {
+  padding-left: spacing.$spacing-06;
+  list-style: disc;
+}
+
+@media (max-width: 671px) {
+  .semantic-routers-page {
+    .title {
+      padding-inline: spacing.$spacing-05;
+    }
+
+    .description {
+      padding-inline: spacing.$spacing-05;
+    }
+  }
+
+  .semantic-router-content {
+    padding-inline: spacing.$spacing-05;
+  }
+
+  .semantic-router-progress {
+    overflow-x: auto;
+  }
+  .semantic-router-buttons .cds--btn {
+    width: 100%;
+    max-width: none;
+  }
+}

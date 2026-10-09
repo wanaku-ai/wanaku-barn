@@ -16,15 +16,8 @@ echo "service-catalogs-deleted=$?"
 # Expected: service-catalogs-deleted=0
 ```
 
-### 2. Delete WanakuCapability resources
 
-```bash
-oc delete wanakucapability --all -n "${WANAKU_NAMESPACE}" --ignore-not-found=true
-echo "capabilities-deleted=$?"
-# Expected: capabilities-deleted=0
-```
-
-### 3. Delete WanakuRouter resources
+### 2. Delete WanakuRouter resources
 
 ```bash
 oc delete wanakurouter --all -n "${WANAKU_NAMESPACE}" --ignore-not-found=true
@@ -32,12 +25,11 @@ echo "routers-deleted=$?"
 # Expected: routers-deleted=0
 ```
 
-### 4. Wait for operator-managed resources to be cleaned up
+### 3. Wait for operator-managed resources to be cleaned up
 
 ```bash
 # Wait for operator-managed deployments to be garbage-collected (excludes the operator itself and keycloak)
 oc wait --for=delete deployment -l component=wanaku-barn-backend -n "${WANAKU_NAMESPACE}" --timeout=60s 2>/dev/null || true
-oc wait --for=delete deployment -l component=wanaku-capability -n "${WANAKU_NAMESPACE}" --timeout=60s 2>/dev/null || true
 
 # Verify no operator-managed deployments remain (except the operator itself and keycloak)
 REMAINING=$(oc get deployments -n "${WANAKU_NAMESPACE}" \

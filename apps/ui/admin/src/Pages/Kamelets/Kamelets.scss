@@ -1,0 +1,110 @@
+@use "@carbon/react/scss/spacing";
+@use "@carbon/react/scss/theme";
+
+.kamelets-page {
+  min-width: 0;
+
+  > #page-content {
+    background: theme.$background;
+    padding-top: spacing.$spacing-07;
+  }
+
+  .title {
+    margin: 0;
+    padding: spacing.$spacing-06 spacing.$spacing-07;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1.25;
+  }
+
+  .description {
+    margin: 0;
+    max-width: 600px;
+    padding: 0 spacing.$spacing-07 spacing.$spacing-06;
+    color: theme.$text-secondary;
+    font-size: 0.875rem;
+    line-height: 1.43;
+  }
+}
+
+.kamelets-header,
+.kamelets-content {
+  background: theme.$layer-01;
+}
+
+.kamelets-content {
+  padding: 0 spacing.$spacing-07 spacing.$spacing-06;
+  min-width: 0;
+}
+
+.kamelets-grid {
+  width: 100%;
+  padding-inline: 0;
+  margin-top: spacing.$spacing-05;
+  row-gap: spacing.$spacing-05;
+}
+
+.kamelet-column {
+  display: flex;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.kamelet-card.cds--tile {
+  display: flex;
+  flex-direction: column;
+  gap: spacing.$spacing-04;
+  width: 100%;
+  min-width: 0;
+  min-height: 100cqi;
+  border: 1px solid theme.$border-subtle;
+  padding: spacing.$spacing-05;
+  overflow-wrap: anywhere;
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  p {
+    color: theme.$text-secondary;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+}
+
+.kamelet-tags,
+.kamelet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: spacing.$spacing-03;
+}
+
+.kamelet-actions {
+  margin-top: auto;
+
+  .cds--btn {
+    max-width: 100%;
+    height: auto;
+    min-height: spacing.$spacing-07;
+    white-space: normal;
+  }
+}
+
+.kamelet-upload-fields {
+  display: grid;
+  gap: spacing.$spacing-05;
+}
+
+@media (max-width: 671px) {
+  .kamelets-page .title,
+  .kamelets-page .description,
+  .kamelets-content {
+    padding-inline: spacing.$spacing-05;
+  }
+
+  .kamelet-actions .cds--btn {
+    width: 100%;
+  }
+}
