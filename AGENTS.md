@@ -78,7 +78,7 @@ make install
 
 ## Operator
 
-- CRDs: `WanakuRouter`, `WanakuCapability`, `WanakuServiceCatalog`, `WanakuCamelRoute` (all `wanaku.ai/v1alpha1`)
+- CRDs: `WanakuRouter`, `WanakuServiceCatalog` (all `wanaku.ai/v1alpha1`). The `WanakuCapability`, `WanakuCamelRoute` and `WanakuCamelCodeExecutionEngine` CRDs were removed — deploy capabilities as regular Deployments and register them with `wanaku forwards add`
 - Helm chart: `apps/wanaku-operator/deploy/helm/wanaku-operator/`
 - When adding new CRDs, RBAC rules must be added to the Helm chart (see `docs/contributing.md`)
 - CRD manifests are auto-generated during build in `target/kubernetes/`, must be copied to `crds/`

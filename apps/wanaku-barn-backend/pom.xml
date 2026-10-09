@@ -32,6 +32,15 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- Native Kamelet schema reading and safe Camel YAML serialization. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
         <dependency>
             <groupId>ai.wanaku</groupId>
             <artifactId>core-util</artifactId>

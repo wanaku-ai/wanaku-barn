@@ -1,10 +1,29 @@
 import React, {useEffect, useState} from "react";
-import {ToastNotification} from "@carbon/react";
+import {InlineLoading, InlineNotification} from "@carbon/react";
 import {AddDataStoreModal} from "./AddDataStoreModal";
 import {ViewDataStoreModal} from "./ViewDataStoreModal";
 import {DataStoresTable} from "./DataStoresTable";
 import {useDataStores} from "../../hooks/api/use-data-stores";
 import type {DataStore} from "../../models";
+
+function prepareDownload(stored: DataStore | undefined, fallbackName?: string): { blob: Blob; filename: string } {
+  if (!stored?.data) throw new Error("No data is available for this file.");
+  const filename = stored.name || fallbackName || "download";
+  const type = stored.labels?.["wanaku.type"];
+  if (type === "semantic-definition" || type === "semantic-publication" || type === "semantic-current-publication") {
+    // Semantic route records are stored as plain JSON.
+    return {
+      blob: new Blob([stored.data], { type: "application/json;charset=utf-8" }),
+      filename: filename.endsWith(".json") ? filename : `${filename}.json`,
+    };
+  }
+  const isSemanticCatalog = type === "catalog" && stored.labels?.["semantic.immutable"] === "true";
+  const bytes = Uint8Array.from(atob(stored.data), (character) => character.charCodeAt(0));
+  return {
+    blob: new Blob([bytes], { type: isSemanticCatalog ? "application/zip" : "application/octet-stream" }),
+    filename: isSemanticCatalog && !filename.endsWith(".zip") ? `${filename}.zip` : filename,
+  };
+}
 
 export const DataStoresPage: React.FC = () => {
   const [fetchedData, setFetchedData] = useState<DataStore[]>([]);
@@ -12,7 +31,8 @@ export const DataStoresPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [viewDataStore, setViewDataStore] = useState<DataStore | null>(null);
-  const { listDataStores, addDataStore, deleteDataStore } = useDataStores();
+  const [downloading, setDownloading] = useState(false);
+  const { listDataStores, getDataStore, addDataStore, deleteDataStore } = useDataStores();
 
   // Fetch data on mount
   useEffect(() => {
@@ -26,14 +46,6 @@ export const DataStoresPage: React.FC = () => {
         setIsLoading(false);
       });
   }, [listDataStores]);
-
-  // Auto-dismiss error messages
-  useEffect(() => {
-    if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(null), 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [errorMessage]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -67,52 +79,44 @@ export const DataStoresPage: React.FC = () => {
     }
   };
 
-  const handleDownload = (dataStore: DataStore) => {
-    if (!dataStore.data) {
-      setErrorMessage("No data to download");
-      return;
-    }
-
+  const handleDownload = async (dataStore: DataStore) => {
+    setDownloading(true);
+    setErrorMessage(null);
     try {
-      // Decode base64 to binary
-      const binaryString = atob(dataStore.data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      // Create blob and download
-      const blob = new Blob([bytes]);
+      const stored = dataStore.id ? (await getDataStore(dataStore.id)).data.data : dataStore;
+      const { blob, filename } = prepareDownload(stored, dataStore.name);
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = dataStore.name || "download";
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch {
-      setErrorMessage("Failed to download file. Data may be corrupted.");
+      // Let the browser consume the Blob before releasing its URL.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setErrorMessage(`Failed to download file. ${error instanceof Error ? error.message : "Please try again."}`);
+    } finally {
+      setDownloading(false);
     }
   };
 
   return (
     <div>
       {errorMessage && (
-        <ToastNotification
+        <InlineNotification
           kind="error"
           title="Error"
           subtitle={errorMessage}
           onCloseButtonClick={() => setErrorMessage(null)}
-          timeout={10000}
-          style={{ float: "right" }}
         />
       )}
       <h1 className="title">Data Stores</h1>
       <p className="description">
-        Manage stored data files. Upload files as base64-encoded data stores
-        that can be retrieved and downloaded later.
+        Manage stored data files. Download published semantic catalogs as ZIP files
+        and semantic definitions or publication records as JSON files.
       </p>
+      {downloading && <InlineLoading description="Preparing download…" />}
       <div id="page-content">
         <DataStoresTable
           dataStores={fetchedData}
@@ -120,6 +124,7 @@ export const DataStoresPage: React.FC = () => {
           onAdd={() => setIsAddModalOpen(true)}
           onDownload={handleDownload}
           onView={(dataStore) => setViewDataStore(dataStore)}
+          downloading={downloading}
         />
       </div>
       {isAddModalOpen && (

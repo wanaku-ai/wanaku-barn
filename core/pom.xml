@@ -19,7 +19,6 @@
         <module>core-services-api</module>
 
         <!-- capabilities core -->
-        <module>core-service-discovery</module>
 
         <!-- router core -->
         <module>core-mcp-client</module>

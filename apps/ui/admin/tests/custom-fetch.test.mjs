@@ -103,3 +103,14 @@ test('standalone preserves HTTP errors', async () => {
   globalThis.fetch = async () => Response.json({ error: 'Invalid catalog' }, { status: 400 });
   await assert.rejects(customFetch('/api/v1/service/catalog', {}), /Invalid catalog/);
 });
+
+test('standalone exposes the message in a Barn WanakuError response', async () => {
+  globalThis.VITE_API_URL = 'http://localhost:8080';
+  globalThis.fetch = async () => Response.json({ error: { message: 'Stored file is unavailable.' } }, { status: 404 });
+  await assert.rejects(customFetch('/api/v1/data-store/missing', {}), /Stored file is unavailable\./);
+});
+
+test('plugin exposes the message in a Barn WanakuError response', async () => {
+  useHost({ data: null, error: { message: 'Stored file is unavailable.' } });
+  await assert.rejects(customFetch('/api/v1/data-store/missing', {}), /Stored file is unavailable\./);
+});

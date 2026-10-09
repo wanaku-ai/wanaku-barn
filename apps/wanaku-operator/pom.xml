@@ -136,10 +136,8 @@
                             <target>
                                 <property name="helm.templates" value="${project.build.directory}/helm/kubernetes/wanaku-operator/templates" />
                                 <!-- Prefix roleRef names to match namespace-prefixed ClusterRoles -->
-                                <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-capability-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-capability-cluster-role" />
                                 <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-router-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-router-cluster-role" />
                                 <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-service-catalog-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-service-catalog-cluster-role" />
-                                <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-camel-route-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-camel-route-cluster-role" />
                                 <replace dir="${helm.templates}" includes="validating-clusterrolebinding.yaml" token="name: josdk-crd-validating-cluster-role" value="name: {{ $.Release.Namespace }}-josdk-crd-validating-cluster-role" />
                                 <!-- Prefix the JOSDK validating ClusterRoleBinding resource name with Release.Namespace -->
                                 <replace file="${helm.templates}/validating-clusterrolebinding.yaml" token="name: {{ .Chart.Name }}-crd-validating-role-binding" value="name: {{ .Release.Namespace }}-crd-validating-role-binding" />

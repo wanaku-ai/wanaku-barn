@@ -25,7 +25,7 @@ public class ServiceInstructions extends BaseCommand {
 
     @CommandLine.Option(
             names = {"--model"},
-            description = "Deployment model: local, docker, kubernetes",
+            description = "Deployment model: local, docker",
             required = true)
     private String model;
 

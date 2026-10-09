@@ -126,4 +126,32 @@ public interface ServiceTemplateService {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     WanakuResponse<DataStore> instantiate(TemplateInstantiationRequest request);
+
+    @Path("/versions")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<List<CatalogVersion>> versions(@QueryParam("name") String name);
+
+    @Path("/versions/download")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> downloadVersion(@QueryParam("name") String name, @QueryParam("version") long version);
+
+    @Path("/versions/activate")
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> activateVersion(
+            @QueryParam("name") String name,
+            @QueryParam("version") long version,
+            @QueryParam("expectedVersion") Long expectedVersion);
+
+    @Path("/removed")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<List<Map<String, Object>>> removed();
+
+    @Path("/restore")
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> restore(@QueryParam("name") String name);
 }

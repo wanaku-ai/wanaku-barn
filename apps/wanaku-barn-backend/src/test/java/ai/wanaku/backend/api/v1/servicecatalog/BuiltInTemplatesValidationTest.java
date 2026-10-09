@@ -1,17 +1,12 @@
 package ai.wanaku.backend.api.v1.servicecatalog;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Base64;
-import java.util.List;
 import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.ValidationResult;
 
@@ -44,28 +39,10 @@ class BuiltInTemplatesValidationTest {
     void testBuiltInTemplateIsValid(Path template) throws IOException {
         DataStore dataStore = new DataStore();
         dataStore.setName(template.getFileName().toString() + ".service.zip");
-        dataStore.setData(zip(template));
+        dataStore.setData(Base64.getEncoder().encodeToString(ServiceTemplateInitializer.zipDirectory(template)));
 
         ValidationResult result = validator.validateTemplate(dataStore);
 
         assertTrue(result.valid(), () -> "%s is invalid: %s".formatted(template.getFileName(), result.errors()));
-    }
-
-    private static String zip(Path template) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
-            List<Path> files = new ArrayList<>();
-            try (Stream<Path> walk = Files.walk(template)) {
-                walk.filter(Files::isRegularFile).forEach(files::add);
-            }
-
-            for (Path file : files) {
-                zos.putNextEntry(
-                        new ZipEntry(template.relativize(file).toString().replace('\\', '/')));
-                zos.write(Files.readAllBytes(file));
-                zos.closeEntry();
-            }
-        }
-        return Base64.getEncoder().encodeToString(baos.toByteArray());
     }
 }

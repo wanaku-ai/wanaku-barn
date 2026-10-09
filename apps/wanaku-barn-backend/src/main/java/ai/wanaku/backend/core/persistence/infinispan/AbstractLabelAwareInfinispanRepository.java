@@ -42,12 +42,20 @@ public abstract class AbstractLabelAwareInfinispanRepository<A extends LabelsAwa
 
     @Override
     public int removeIf(String labelExpression) throws LabelExpressionParseException {
-        int size;
         Cache<K, A> cache = cacheManager.getCache(entityName());
         @SuppressWarnings("unchecked")
         Predicate<A> predicate = (Predicate<A>) LabelExpressionParser.parse(labelExpression);
-        size = cache.values().stream().filter(predicate).toList().size();
-        cache.values().removeIf(predicate);
-        return size;
+        try {
+            lock.lock();
+            int removed = 0;
+            for (var entry : List.copyOf(cache.entrySet())) {
+                if (predicate.test(entry.getValue()) && cache.remove(entry.getKey(), entry.getValue())) {
+                    removed++;
+                }
+            }
+            return removed;
+        } finally {
+            lock.unlock();
+        }
     }
 }

@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import {defineConfig} from "vite";
+import { defineConfig } from "vite";
 
 const outDir = "./dist";
 
@@ -8,6 +8,13 @@ export default defineConfig({
   plugins: [react()],
   define: {
     VITE_API_URL: JSON.stringify(process.env.VITE_API_URL ?? ""),
+  },
+  server: {
+    proxy: process.env.BARN_URL
+      ? {
+          "/api": { target: process.env.BARN_URL, changeOrigin: true },
+        }
+      : undefined,
   },
   build: {
     outDir,

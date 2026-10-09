@@ -54,7 +54,7 @@ spec:
             periodSeconds: 10
             failureThreshold: 30
           volumeMounts:
-            mountPath: /home/default/.wanaku/barn
+            - mountPath: /home/default/.wanaku/barn
               name: router-volume
       volumes:
         - name: router-volume

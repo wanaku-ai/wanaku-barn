@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.jboss.logging.Logger;
+import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.DeploymentInstructions;
@@ -32,18 +33,13 @@ public class DeploymentInstructionsBean {
     static final String TEMPLATE_LOCAL_NATIVE = "local-native";
     static final String TEMPLATE_DOCKER_CIC = "docker-cic";
     static final String TEMPLATE_DOCKER_NATIVE = "docker-native";
-    static final String TEMPLATE_KUBERNETES_HEADER = "kubernetes-header";
-    static final String TEMPLATE_KUBERNETES_CAPABILITY_CIC = "kubernetes-capability-cic";
-    static final String TEMPLATE_KUBERNETES_CAPABILITY_NATIVE = "kubernetes-capability-native";
 
     private static final Map<String, String> AUTH_OPTIONS = Map.of(
             TEMPLATE_LOCAL_CIC, "--client-id wanaku-service \\\n  ",
             TEMPLATE_DOCKER_CIC,
                     "-e TOKEN_ENDPOINT=<token-endpoint> \\\n  -e CLIENT_ID=wanaku-service \\\n  -e CLIENT_SECRET=<client-secret> \\\n  ",
             TEMPLATE_DOCKER_NATIVE,
-                    "-e AUTH_SERVER=<auth-server> \\\n  -e QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET=<client-secret> \\\n  ",
-            TEMPLATE_KUBERNETES_HEADER,
-                    "auth:\n    authServer: <auth-server-address>\n    authProxy: \"auto\"\n    secrets:\n      oidcCredentialsSecret: <credentials-secret>\n  ");
+                    "-e AUTH_SERVER=<auth-server> \\\n  -e QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET=<client-secret> \\\n  ");
 
     @Inject
     ServiceCatalogBean serviceCatalogBean;
@@ -56,9 +52,6 @@ public class DeploymentInstructionsBean {
         templates.put(TEMPLATE_LOCAL_NATIVE, loadTemplate("local-native.tpl"));
         templates.put(TEMPLATE_DOCKER_CIC, loadTemplate("docker-cic.tpl"));
         templates.put(TEMPLATE_DOCKER_NATIVE, loadTemplate("docker-native.tpl"));
-        templates.put(TEMPLATE_KUBERNETES_HEADER, loadTemplate("kubernetes-header.tpl"));
-        templates.put(TEMPLATE_KUBERNETES_CAPABILITY_CIC, loadTemplate("kubernetes-capability-cic.tpl"));
-        templates.put(TEMPLATE_KUBERNETES_CAPABILITY_NATIVE, loadTemplate("kubernetes-capability-native.tpl"));
     }
 
     private String loadTemplate(String fileName) {
@@ -88,7 +81,7 @@ public class DeploymentInstructionsBean {
 
         DataStore catalog = serviceCatalogBean.get(catalogName);
         if (catalog == null) {
-            throw new WanakuException("Service catalog not found: %s".formatted(catalogName));
+            throw new DataStoreResourceNotFoundException("Service catalog not found: %s".formatted(catalogName));
         }
 
         ServiceCatalogIndex index = serviceCatalogBean.parseIndex(catalog);
@@ -108,13 +101,9 @@ public class DeploymentInstructionsBean {
                         index, catalogType, TEMPLATE_DOCKER_CIC, TEMPLATE_DOCKER_NATIVE, "shell");
                 placeholders = getDockerPlaceholders(catalogType);
                 break;
-            case "kubernetes":
-                systems = generateKubernetesInstructions(index, catalogType);
-                placeholders = getKubernetesPlaceholders();
-                break;
             default:
                 throw new WanakuException(
-                        "Unsupported deployment model: %s. Use: local, docker, kubernetes".formatted(deploymentModel));
+                        "Unsupported deployment model: %s. Use: local, docker".formatted(deploymentModel));
         }
 
         return new DeploymentInstructions(catalogName, catalogType, deploymentModel, systems, placeholders);
@@ -138,24 +127,6 @@ public class DeploymentInstructionsBean {
             String rendered = renderTemplate(templateKey, index.getName(), system);
             instructions.add(new SystemInstruction(system, rendered, format));
         }
-        return instructions;
-    }
-
-    private List<SystemInstruction> generateKubernetesInstructions(ServiceCatalogIndex index, String catalogType) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(renderTemplate(TEMPLATE_KUBERNETES_HEADER, index.getName(), ""));
-
-        String capabilityTemplate = TYPE_CIC.equals(catalogType)
-                ? TEMPLATE_KUBERNETES_CAPABILITY_CIC
-                : TEMPLATE_KUBERNETES_CAPABILITY_NATIVE;
-
-        for (String system : index.getServiceNames()) {
-            sb.append("\n");
-            sb.append(renderTemplate(capabilityTemplate, index.getName(), system));
-        }
-
-        List<SystemInstruction> instructions = new ArrayList<>();
-        instructions.add(new SystemInstruction("all", sb.toString(), "yaml"));
         return instructions;
     }
 
@@ -206,24 +177,6 @@ public class DeploymentInstructionsBean {
                     "http://host.docker.internal:8080/",
                     "url"));
         }
-        return placeholders;
-    }
-
-    private List<PlaceholderDefinition> getKubernetesPlaceholders() {
-        List<PlaceholderDefinition> placeholders = new ArrayList<>();
-        Collections.addAll(
-                placeholders,
-                new PlaceholderDefinition(
-                        "auth-server-address",
-                        "Auth Server Address",
-                        "Address of the authentication server (e.g., Keycloak URL)",
-                        "http://",
-                        "url"),
-                new PlaceholderDefinition(
-                        "credentials-secret", "Credentials Secret",
-                        "OIDC credentials secret (create with 'wanaku credentials' command)", ""));
-        placeholders.add(new PlaceholderDefinition(
-                "router-name", "Router Name", "Name of the WanakuRouter CR (find with 'oc get wanakurouter')", ""));
         return placeholders;
     }
 }

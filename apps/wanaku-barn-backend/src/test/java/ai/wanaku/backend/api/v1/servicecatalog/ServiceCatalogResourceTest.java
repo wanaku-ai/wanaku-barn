@@ -9,6 +9,7 @@ import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import ai.wanaku.backend.api.v1.exceptions.InvalidPayloadException;
+import ai.wanaku.backend.audit.AuditContext;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
@@ -42,6 +43,9 @@ class ServiceCatalogResourceTest {
     @Spy
     CatalogValidator catalogValidator = new CatalogValidator();
 
+    @Spy
+    AuditContext auditContext = new AuditContext();
+
     @InjectMocks
     ServiceCatalogResource resource;
 
@@ -62,7 +66,8 @@ class ServiceCatalogResourceTest {
     void testListEmpty() {
         when(serviceCatalogBean.list(null)).thenReturn(Collections.emptyList());
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list(null);
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list(null, null, null).getEntity();
         assertNotNull(response);
         assertNotNull(response.data());
         assertTrue(response.data().isEmpty());
@@ -73,7 +78,8 @@ class ServiceCatalogResourceTest {
         when(serviceCatalogBean.list(null)).thenReturn(List.of(testCatalog));
         when(serviceCatalogBean.parseIndex(testCatalog)).thenReturn(testIndex);
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list(null);
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list(null, null, null).getEntity();
         assertNotNull(response);
         assertEquals(1, response.data().size());
 
@@ -87,7 +93,8 @@ class ServiceCatalogResourceTest {
         when(serviceCatalogBean.list("test")).thenReturn(List.of(testCatalog));
         when(serviceCatalogBean.parseIndex(testCatalog)).thenReturn(testIndex);
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list("test");
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list("test", null, null).getEntity();
         assertNotNull(response);
         assertEquals(1, response.data().size());
         verify(serviceCatalogBean).list("test");
@@ -109,7 +116,8 @@ class ServiceCatalogResourceTest {
         when(serviceCatalogBean.parseIndex(zeta)).thenReturn(ServiceCatalogIndex.fromBase64(zeta.getData()));
         when(serviceCatalogBean.parseIndex(alpha)).thenReturn(ServiceCatalogIndex.fromBase64(alpha.getData()));
 
-        WanakuResponse<List<Map<String, Object>>> response = resource.list(null);
+        WanakuResponse<List<Map<String, Object>>> response =
+                resource.list(null, null, null).getEntity();
         assertNotNull(response);
         assertEquals(2, response.data().size());
         assertEquals("alpha-catalog", response.data().get(0).get("name"));
@@ -169,12 +177,12 @@ class ServiceCatalogResourceTest {
         input.setName("test.service.zip");
         input.setData(createTestZipBase64("test", "desc", "sys1"));
 
-        when(serviceCatalogBean.deploy(any())).thenReturn(testCatalog);
+        when(serviceCatalogBean.deploy(any(), any(), any())).thenReturn(testCatalog);
 
-        WanakuResponse<DataStore> response = resource.deploy(input);
+        WanakuResponse<DataStore> response = resource.deploy(null, input);
         assertNotNull(response);
         assertEquals("test-id", response.data().getId());
-        verify(serviceCatalogBean).deploy(input);
+        verify(serviceCatalogBean).deploy(input, CatalogLifecycle.ORIGIN_API, null);
     }
 
     @Test

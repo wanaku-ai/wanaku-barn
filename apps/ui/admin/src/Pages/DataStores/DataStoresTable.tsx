@@ -22,12 +22,13 @@ interface DataStoresTableProps {
   onAdd: () => void;
   onDownload: (dataStore: DataStore) => void;
   onView: (dataStore: DataStore) => void;
+  downloading: boolean;
 }
 
 const headers = [
   { key: "id", header: "ID" },
   { key: "name", header: "Name" },
-  { key: "dataTruncated", header: "Data (Base64)" },
+  { key: "dataTruncated", header: "Content" },
   { key: "actions", header: "Actions" },
 ];
 
@@ -37,6 +38,7 @@ export const DataStoresTable: React.FC<DataStoresTableProps> = ({
   onAdd,
   onDownload,
   onView,
+  downloading,
 }) => {
   const truncateData = (data?: string): string => {
     if (!data) return "";
@@ -81,7 +83,7 @@ export const DataStoresTable: React.FC<DataStoresTableProps> = ({
               ) : (
                 rows.map((row) => {
                   const { key, ...rowProps } = getRowProps({ row });
-                  const dataStore = dataStores.find((ds) => ds.id === row.id);
+                  const dataStore = dataStores.find((ds, index) => (ds.id || `datastore-${index}`) === row.id);
 
                   return (
                     <TableRow key={key} {...rowProps}>
@@ -110,6 +112,7 @@ export const DataStoresTable: React.FC<DataStoresTableProps> = ({
                                 renderIcon={Download}
                                 hasIconOnly
                                 iconDescription="Download"
+                                disabled={downloading}
                                 onClick={() => dataStore && onDownload(dataStore)}
                               />
                               <Button

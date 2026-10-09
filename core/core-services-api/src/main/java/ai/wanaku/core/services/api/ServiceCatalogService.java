@@ -108,4 +108,32 @@ public interface ServiceCatalogService {
     @Produces(MediaType.APPLICATION_JSON)
     WanakuResponse<DeploymentInstructions> getDeploymentInstructions(
             @QueryParam("name") String name, @QueryParam("model") String model);
+
+    @Path("/{name}/versions")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<List<CatalogVersion>> versions(@PathParam("name") String name);
+
+    @Path("/{name}/versions/{version}/download")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> downloadVersion(@PathParam("name") String name, @PathParam("version") long version);
+
+    @Path("/{name}/versions/{version}/activate")
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> activateVersion(
+            @PathParam("name") String name,
+            @PathParam("version") long version,
+            @QueryParam("expectedVersion") Long expectedVersion);
+
+    @Path("/removed")
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<List<Map<String, Object>>> removed();
+
+    @Path("/{name}/restore")
+    @POST
+    @Produces(MediaType.APPLICATION_JSON)
+    WanakuResponse<DataStore> restore(@PathParam("name") String name);
 }

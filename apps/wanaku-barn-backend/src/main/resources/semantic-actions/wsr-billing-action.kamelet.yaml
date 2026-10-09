@@ -1,0 +1,48 @@
+apiVersion: camel.apache.org/v1
+kind: Kamelet
+metadata:
+  name: wsr-billing-action
+  labels:
+    camel.apache.org/kamelet.type: action
+  annotations:
+    barn.wanaku.ai/semantic-action: "true"
+    barn.wanaku.ai/routing-description: Questions about invoices, payments, and refunds.
+    barn.wanaku.ai/contract-profile: message-to-string/v1
+spec:
+  definition:
+    title: Billing support
+    description: Return a local billing demonstration response.
+    type: object
+    required:
+      - prefix
+    properties:
+      prefix:
+        title: Response prefix
+        description: Deployment-specific prefix for the demonstration response.
+        type: string
+        default: Support
+        minLength: 1
+        maxLength: 120
+      credentialRef:
+        title: Credential reference
+        description: Optional environment variable reference. No credential value is accepted.
+        type: string
+        x-secret-reference: true
+  types:
+    in:
+      mediaType: text/plain
+      schema:
+        type: string
+    out:
+      mediaType: text/plain
+      schema:
+        type: string
+  dependencies:
+    - camel:core
+  template:
+    from:
+      uri: kamelet:source
+      steps:
+        - setBody:
+            constant: "{{prefix}}: Billing demo response"
+        - to: kamelet:sink

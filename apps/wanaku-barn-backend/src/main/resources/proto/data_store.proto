@@ -4,10 +4,17 @@ package ai.wanaku.capabilities.sdk.api.types;
 
 /**
  * Protocol buffer definition for DataStore entity.
+ * Fields 5-9 hold record metadata managed by the repository.
+ * Timestamps are milliseconds since the epoch (UTC). A value of 0 means unknown.
  */
 message DataStore {
   string id = 1;
   string name = 2;
   string data = 3;
   map<string, string> labels = 4;
+  int64 created_at = 5;
+  int64 updated_at = 6;
+  string created_by = 7;
+  string updated_by = 8;
+  int64 revision = 9;
 }

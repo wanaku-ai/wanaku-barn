@@ -3,12 +3,14 @@ package ai.wanaku.core.services.api;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 
 import java.util.List;
@@ -30,7 +32,7 @@ public interface DataStoresService {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<DataStore> add(DataStore dataStore);
+    WanakuResponse<DataStoreRecord> add(DataStore dataStore);
 
     /**
      * List all data stores, optionally filtered by label expression.
@@ -40,14 +42,14 @@ public interface DataStoresService {
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<List<DataStore>> list(@QueryParam("labelFilter") String labelFilter);
+    WanakuResponse<List<DataStoreRecord>> list(@QueryParam("labelFilter") String labelFilter);
 
     /**
      * List all data stores without filtering.
      *
      * @return response with list of all data stores
      */
-    default WanakuResponse<List<DataStore>> list() {
+    default WanakuResponse<List<DataStoreRecord>> list() {
         return list(null);
     }
 
@@ -60,7 +62,7 @@ public interface DataStoresService {
     @Path("/{id}")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<DataStore> getById(@PathParam("id") String id);
+    WanakuResponse<DataStoreRecord> getById(@PathParam("id") String id);
 
     /**
      * Get data stores by name.
@@ -70,7 +72,7 @@ public interface DataStoresService {
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<List<DataStore>> getByName(@QueryParam("name") String name);
+    WanakuResponse<List<DataStoreRecord>> getByName(@QueryParam("name") String name);
 
     /**
      * Remove a data store by ID.
@@ -112,5 +114,19 @@ public interface DataStoresService {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    WanakuResponse<Void> update(DataStore dataStore);
+    WanakuResponse<Void> update(@HeaderParam(HttpHeaders.IF_MATCH) String ifMatch, DataStore dataStore);
+
+    /**
+     * Updates a data store entry. When the entry is a {@link DataStoreRecord} read from the server, the update
+     * sends its revision in {@code If-Match}, so the server rejects it with HTTP 409 if the entry changed.
+     *
+     * @param dataStore the entry to update
+     * @return the server response
+     */
+    default WanakuResponse<Void> update(DataStore dataStore) {
+        String ifMatch = dataStore instanceof DataStoreRecord stored && stored.getRevision() > 0
+                ? DataStoreRecord.entityTag(stored.getRevision())
+                : null;
+        return update(ifMatch, dataStore);
+    }
 }

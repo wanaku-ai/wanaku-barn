@@ -6,5 +6,7 @@
  */
 
 export type GetApiV1ServiceCatalogParams = {
+  limit?: number;
+  offset?: number;
   search?: string;
 };

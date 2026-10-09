@@ -12,6 +12,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -19,13 +21,19 @@ import java.util.List;
 import java.util.Map;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.reactive.RestResponse;
+import ai.wanaku.backend.audit.AuditContext;
+import ai.wanaku.backend.audit.Audited;
+import ai.wanaku.backend.common.Paging;
 import ai.wanaku.capabilities.sdk.api.exceptions.DataStoreResourceNotFoundException;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
+import ai.wanaku.core.services.api.CatalogVersion;
 import ai.wanaku.core.services.api.DeploymentInstructions;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
 import ai.wanaku.core.services.api.ValidationResult;
+import ai.wanaku.core.util.StringHelper;
 
 /**
  * REST API resource for service catalog operations.
@@ -37,7 +45,13 @@ public class ServiceCatalogResource {
     private static final Logger LOG = Logger.getLogger(ServiceCatalogResource.class);
 
     @Inject
+    AuditContext auditContext;
+
+    @Inject
     ServiceCatalogBean serviceCatalogBean;
+
+    @Inject
+    CatalogLifecycle lifecycle;
 
     @Inject
     DeploymentInstructionsBean deploymentInstructionsBean;
@@ -54,7 +68,11 @@ public class ServiceCatalogResource {
      * @return response with list of catalog summaries
      */
     @GET
-    public WanakuResponse<List<Map<String, Object>>> list(@QueryParam("search") String search) {
+    public RestResponse<WanakuResponse<List<Map<String, Object>>>> list(
+            @QueryParam("search") String search,
+            @QueryParam("offset") Integer offset,
+            @QueryParam("limit") Integer limit) {
+        boolean paged = Paging.requested(offset, limit);
         if (search != null && !search.isBlank()) {
             LOG.debugf("REST: Listing service catalogs with search: %s", search);
         } else {
@@ -62,6 +80,18 @@ public class ServiceCatalogResource {
         }
 
         List<DataStore> catalogs = serviceCatalogBean.list(search);
+        Long total = null;
+        if (paged && StringHelper.isBlank(search)) {
+            // Sort by the name label, so only the catalogs of the page are decoded
+            List<DataStore> sorted = catalogs.stream()
+                    .sorted(Comparator.comparing(
+                                    (DataStore ds) -> ds.getLabels().get(CatalogLifecycle.CATALOG_NAME_LABEL),
+                                    Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER))
+                            .thenComparing(DataStore::getId))
+                    .toList();
+            total = (long) sorted.size();
+            catalogs = Paging.slice(sorted, offset, limit);
+        }
         List<Map<String, Object>> summaries = new ArrayList<>();
 
         for (DataStore ds : catalogs) {
@@ -84,10 +114,15 @@ public class ServiceCatalogResource {
         }
 
         summaries.sort(Comparator.comparing(
-                (Map<String, Object> m) -> (String) m.get("name"),
-                Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER)));
+                        (Map<String, Object> m) -> (String) m.get("name"),
+                        Comparator.nullsFirst(String.CASE_INSENSITIVE_ORDER))
+                .thenComparing(m -> (String) m.get("id"), Comparator.nullsFirst(Comparator.naturalOrder())));
 
-        return new WanakuResponse<>(summaries);
+        if (paged && total == null) {
+            total = (long) summaries.size();
+            summaries = Paging.slice(summaries, offset, limit);
+        }
+        return Paging.response(summaries, total);
     }
 
     /**
@@ -104,7 +139,7 @@ public class ServiceCatalogResource {
 
         DataStore catalog = serviceCatalogBean.get(name);
         if (catalog == null) {
-            throw new WanakuException("Service catalog not found: " + name);
+            throw new DataStoreResourceNotFoundException("Service catalog not found: " + name);
         }
 
         ServiceCatalogIndex index = serviceCatalogBean.parseIndex(catalog);
@@ -146,7 +181,7 @@ public class ServiceCatalogResource {
 
         DataStore catalog = serviceCatalogBean.get(name);
         if (catalog == null) {
-            throw new WanakuException("Service catalog not found: " + name);
+            throw new DataStoreResourceNotFoundException("Service catalog not found: " + name);
         }
 
         return new WanakuResponse<>(catalog);
@@ -160,9 +195,103 @@ public class ServiceCatalogResource {
      * @return response with the created data store entry
      */
     @POST
-    public WanakuResponse<DataStore> deploy(DataStore dataStore) {
+    @Audited(operation = "service_catalog.deploy", targetType = "service_catalog", targetField = "name")
+    public WanakuResponse<DataStore> deploy(@QueryParam("expectedVersion") Long expectedVersion, DataStore dataStore) {
         LOG.debugf("REST: Deploying service catalog: %s", dataStore.getName());
-        DataStore result = serviceCatalogBean.deploy(dataStore);
+        auditContext.setTarget(dataStore.getName());
+        DataStore result = serviceCatalogBean.deploy(dataStore, CatalogLifecycle.ORIGIN_API, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
+        return new WanakuResponse<>(result);
+    }
+
+    /**
+     * List the removed service catalogs. Removed catalogs keep their versions and can be restored.
+     * GET /api/v1/service-catalog/removed
+     *
+     * @return response with the name, removal time and active version of each removed catalog
+     */
+    @Path("/removed")
+    @GET
+    public WanakuResponse<List<Map<String, Object>>> removed() {
+        return new WanakuResponse<>(lifecycle.removedSummaries(ServiceCatalogBean.LABEL_TYPE_VALUE));
+    }
+
+    /**
+     * Restore a removed service catalog with its active version.
+     * POST /api/v1/service-catalog/{name}/restore
+     *
+     * @param name the catalog name
+     * @return response with the restored catalog entry
+     */
+    @Path("/{name}/restore")
+    @POST
+    @Audited(operation = "service_catalog.restore", targetType = "service_catalog")
+    public WanakuResponse<DataStore> restore(@PathParam("name") String name) {
+        return new WanakuResponse<>(lifecycle.restoreRemoved(ServiceCatalogBean.LABEL_TYPE_VALUE, name));
+    }
+
+    /**
+     * List the versions of a service catalog, newest first.
+     * GET /api/v1/service-catalog/{name}/versions
+     *
+     * @param name the catalog name
+     * @return response with the version metadata
+     */
+    @Path("/{name}/versions")
+    @GET
+    public WanakuResponse<List<CatalogVersion>> versions(
+            @PathParam("name") String name, @QueryParam("from") String from, @QueryParam("to") String to) {
+        return new WanakuResponse<>(lifecycle.versions(
+                ServiceCatalogBean.LABEL_TYPE_VALUE, name, instant("from", from), instant("to", to)));
+    }
+
+    /**
+     * Get the metadata of one version of a service catalog.
+     * GET /api/v1/service-catalog/{name}/versions/{version}
+     *
+     * @param name the catalog name
+     * @param version the version number
+     * @return response with the version metadata
+     */
+    @Path("/{name}/versions/{version}")
+    @GET
+    public WanakuResponse<CatalogVersion> version(@PathParam("name") String name, @PathParam("version") long version) {
+        return new WanakuResponse<>(lifecycle.version(ServiceCatalogBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Download the package of one version of a service catalog.
+     * GET /api/v1/service-catalog/{name}/versions/{version}/download
+     *
+     * @param name the catalog name
+     * @param version the version number
+     * @return response with a DataStore that contains the Base64-encoded ZIP
+     */
+    @Path("/{name}/versions/{version}/download")
+    @GET
+    public WanakuResponse<DataStore> downloadVersion(
+            @PathParam("name") String name, @PathParam("version") long version) {
+        return new WanakuResponse<>(lifecycle.content(ServiceCatalogBean.LABEL_TYPE_VALUE, name, version));
+    }
+
+    /**
+     * Restore an earlier version of a service catalog. The restore creates a new version.
+     * POST /api/v1/service-catalog/{name}/versions/{version}/activate
+     *
+     * @param name the catalog name
+     * @param version the version to restore
+     * @param expectedVersion optional active version that the caller expects; a mismatch returns 409
+     * @return response with the catalog entry
+     */
+    @Path("/{name}/versions/{version}/activate")
+    @POST
+    @Audited(operation = "service_catalog.activate_version", targetType = "service_catalog")
+    public WanakuResponse<DataStore> activateVersion(
+            @PathParam("name") String name,
+            @PathParam("version") long version,
+            @QueryParam("expectedVersion") Long expectedVersion) {
+        DataStore result = lifecycle.restore(ServiceCatalogBean.LABEL_TYPE_VALUE, name, version, expectedVersion);
+        auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
         return new WanakuResponse<>(result);
     }
 
@@ -196,6 +325,7 @@ public class ServiceCatalogResource {
      */
     @Path("/{name}")
     @DELETE
+    @Audited(operation = "service_catalog.remove", targetType = "service_catalog")
     public WanakuResponse<Void> remove(@PathParam("name") String name) {
         LOG.debugf("REST: Removing service catalog: %s", name);
 
@@ -231,5 +361,16 @@ public class ServiceCatalogResource {
 
         DeploymentInstructions instructions = deploymentInstructionsBean.generateInstructions(name, model);
         return new WanakuResponse<>(instructions);
+    }
+
+    private static Instant instant(String parameter, String value) {
+        if (StringHelper.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException("'%s' must be an ISO 8601 UTC timestamp".formatted(parameter));
+        }
     }
 }

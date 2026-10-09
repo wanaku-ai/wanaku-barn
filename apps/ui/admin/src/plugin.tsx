@@ -1,9 +1,17 @@
 import "./process-shim";
-import {StrictMode} from "react";
-import {createRoot, Root} from "react-dom/client";
-import {setPluginHost, clearPluginHost, setBackendUrl, type PluginHost} from "./plugin-host";
-import {DataStoresPage} from "./Pages/DataStores/DataStoresPage";
-import {ServiceCatalogPage} from "./Pages/ServiceCatalog/ServiceCatalogPage";
+import { StrictMode } from "react";
+import { createRoot, Root } from "react-dom/client";
+import {
+  setPluginHost,
+  clearPluginHost,
+  setBackendUrl,
+  type PluginHost,
+} from "./plugin-host";
+import { DataStoresPage } from "./Pages/DataStores/DataStoresPage";
+import { ServiceCatalogPage } from "./Pages/ServiceCatalog/ServiceCatalogPage";
+import { SemanticRoutersPage } from "./Pages/SemanticRouters/SemanticRoutersPage";
+import { KameletsPage } from "./Pages/Kamelets/KameletsPage";
+import { ChangeHistoryPage } from "./Pages/ChangeHistory/ChangeHistoryPage";
 import "./plugin-styles.scss";
 
 interface Disposable {
@@ -20,7 +28,7 @@ function mountPage(container: HTMLElement, Page: React.FC): Disposable {
   root.render(
     <StrictMode>
       <Page />
-    </StrictMode>
+    </StrictMode>,
   );
   return {
     dispose() {
@@ -44,7 +52,7 @@ export async function activate(host: PluginHost) {
       label: "Data Stores",
       route: "/wanaku/data-stores",
       order: 100,
-    })
+    }),
   );
 
   disposables.push(
@@ -53,21 +61,60 @@ export async function activate(host: PluginHost) {
       label: "Service Catalog",
       route: "/wanaku/service-catalog",
       order: 110,
-    })
+    }),
   );
 
   disposables.push(
     host.pages.register({
       route: "/wanaku/data-stores",
       mount: (container) => mountPage(container, DataStoresPage),
-    })
+    }),
   );
 
   disposables.push(
     host.pages.register({
       route: "/wanaku/service-catalog",
       mount: (container) => mountPage(container, ServiceCatalogPage),
-    })
+    }),
+  );
+
+  disposables.push(
+    host.navigation.add({
+      id: "wanaku-semantic-routers",
+      label: "Semantic Routers",
+      route: "/wanaku/semantic-routers",
+      order: 120,
+    }),
+  );
+  disposables.push(
+    host.pages.register({
+      route: "/wanaku/semantic-routers",
+      mount: (container) => mountPage(container, SemanticRoutersPage),
+    }),
+  );
+  disposables.push(
+    host.navigation.add({
+      id: "wanaku-kamelets",
+      label: "Kamelets",
+      route: "/wanaku/kamelets",
+      order: 130,
+    }),
+    host.pages.register({
+      route: "/wanaku/kamelets",
+      mount: (container) => mountPage(container, KameletsPage),
+    }),
+  );
+  disposables.push(
+    host.navigation.add({
+      id: "wanaku-change-history",
+      label: "Change History",
+      route: "/wanaku/change-history",
+      order: 140,
+    }),
+    host.pages.register({
+      route: "/wanaku/change-history",
+      mount: (container) => mountPage(container, ChangeHistoryPage),
+    }),
   );
 }
 

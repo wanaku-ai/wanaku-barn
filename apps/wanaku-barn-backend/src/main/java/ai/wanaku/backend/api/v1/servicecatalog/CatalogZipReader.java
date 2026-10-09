@@ -10,11 +10,11 @@ import java.util.zip.ZipInputStream;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.core.services.api.SafeZip;
 
-final class CatalogZipReader {
+public final class CatalogZipReader {
 
     private CatalogZipReader() {}
 
-    static Map<String, byte[]> readEntries(byte[] zipBytes) throws WanakuException {
+    public static Map<String, byte[]> readEntries(byte[] zipBytes) throws WanakuException {
         try {
             return doRead(zipBytes);
         } catch (IOException e) {
@@ -22,7 +22,7 @@ final class CatalogZipReader {
         }
     }
 
-    static Map<String, String> readEntriesAsText(byte[] zipBytes) throws WanakuException {
+    public static Map<String, String> readEntriesAsText(byte[] zipBytes) throws WanakuException {
         return toTextView(readEntries(zipBytes));
     }
 
@@ -44,6 +44,9 @@ final class CatalogZipReader {
                 if (++entryCount > SafeZip.MAX_ENTRIES) {
                     throw new IOException("ZIP has too many entries (max %d)".formatted(SafeZip.MAX_ENTRIES));
                 }
+                ai.wanaku.core.services.api.ServiceCatalogIndex.validateZipEntryPath(entry.getName());
+                if (entries.containsKey(entry.getName()))
+                    throw new IOException("Duplicate ZIP entry " + entry.getName());
                 if (!entry.isDirectory()) {
                     byte[] content = SafeZip.readEntry(zis, SafeZip.MAX_ENTRY_BYTES);
                     totalBytes += content.length;

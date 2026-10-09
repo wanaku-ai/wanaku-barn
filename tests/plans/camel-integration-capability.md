@@ -2,11 +2,9 @@
 
 ## Overview
 
-This test plan verifies the Camel Integration Capability (CIC) deployed on OpenShift via the Wanaku operator CRDs. The CIC loads Apache Camel routes from YAML and exposes them as MCP tools and resources. It registers with a Wanaku MCP Router for AI agent discovery.
+This test plan verifies the Camel Integration Capability (CIC) deployed on OpenShift. The CIC loads Apache Camel routes from YAML and exposes them as MCP tools and resources. It registers with a Wanaku MCP Router for AI agent discovery.
 
-The operator manages the entire lifecycle: the WanakuCamelRoute CRD packages routes into a service catalog ZIP, deploys the catalog to the router via REST API, and creates a CIC Deployment and Service automatically. The WanakuCapability CRD (with `type: "camel-integration-capability"`) and WanakuServiceCatalog CRD provide alternative deployment modes.
-
-No manual Deployment, Service, or ConfigMap resources should be created for CIC -- the operator handles all of that.
+The CIC is deployed as a regular `Deployment` and registered with the router using `wanaku forwards add`; packaged catalogs can be deployed through the `WanakuServiceCatalog` CRD. The operator only manages `WanakuRouter` and `WanakuServiceCatalog` (see #151).
 
 Every step is fully automatable.
 
@@ -213,18 +211,6 @@ done
 ## Phase 2: Operator Installation
 
 Follow [common/operator-deployment.md](common/operator-deployment.md) to install the operator via Helm and verify CRDs, RBAC, and health endpoints.
-
-### Test 2.1: Verify WanakuCamelRoute CRD is registered
-
-**Description:** Confirm the WanakuCamelRoute CRD was installed by the Helm chart.
-
-```bash
-oc get crd wanakucamelroutes.wanaku.ai
-echo "camelroute-crd-exists=$?"
-# Expected: camelroute-crd-exists=0
-```
-
----
 
 ## Phase 3: WanakuRouter Setup
 

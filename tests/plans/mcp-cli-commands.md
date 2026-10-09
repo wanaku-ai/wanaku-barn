@@ -487,52 +487,6 @@ oc wait wanakurouter/wanaku-mcp-test-router \
   -n "${WANAKU_NAMESPACE}"
 ```
 
-### Step 8.5: Create WanakuCapability (HTTP tool service)
-
-```bash
-cat <<EOF | oc apply -n "${WANAKU_NAMESPACE}" -f -
-apiVersion: "wanaku.ai/v1alpha1"
-kind: WanakuCapability
-metadata:
-  name: wanaku-mcp-test-capabilities
-spec:
-  auth:
-    authServer: "http://keycloak:8080"
-    authProxy: "auto"
-  secrets:
-    oidcCredentialsSecret: "${WANAKU_OIDC_SECRET}"
-  routerRef: wanaku-mcp-test-router
-  capabilities:
-    - name: wanaku-http
-      image: ${WANAKU_CAPABILITY_HTTP_IMAGE}
-      imagePullPolicy: Always
-    - name: wanaku-static-file
-      image: ${WANAKU_PROVIDER_STATIC_FILE_IMAGE}
-      imagePullPolicy: Always
-EOF
-```
-
-**Wait for Ready:**
-
-```bash
-oc wait wanakucapability/wanaku-mcp-test-capabilities \
-  --for=condition=Ready \
-  --timeout=120s \
-  -n "${WANAKU_NAMESPACE}"
-```
-
-### Step 8.6: Wait for all pods to be ready
-
-```bash
-oc wait --for=condition=ready pod -l app=wanaku-http \
-  --timeout=120s -n "${WANAKU_NAMESPACE}"
-echo "PASS: HTTP capability pod is ready"
-
-oc wait --for=condition=ready pod -l app=wanaku-static-file \
-  --timeout=120s -n "${WANAKU_NAMESPACE}"
-echo "PASS: static file provider pod is ready"
-```
-
 ### Step 8.7: Set router URL variables
 
 ```bash
@@ -828,8 +782,6 @@ fi
 ### Step 14.1: Delete capability and router CRs
 
 ```bash
-oc delete wanakucapability wanaku-mcp-test-capabilities -n "${WANAKU_NAMESPACE}" --ignore-not-found=true
-wait_for_deletion deployment wanaku-http "${WANAKU_NAMESPACE}" 60
 
 oc delete wanakurouter wanaku-mcp-test-router -n "${WANAKU_NAMESPACE}" --ignore-not-found=true
 wait_for_deletion deployment wanaku-mcp-test-router-mcp-router "${WANAKU_NAMESPACE}" 60

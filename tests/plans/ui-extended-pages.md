@@ -2,7 +2,7 @@
 
 ## Overview
 
-This test plan describes Playwright e2e tests for Wanaku admin UI pages that are not covered by the basic UI test suite. It targets: Forwards, Data Stores, Namespaces, Service Catalog, Targets (Capabilities), Tool Call Debugger, and cross-page Navigation.
+This test plan describes Playwright e2e tests for Wanaku admin UI pages that are not covered by the basic UI test suite. It targets: Forwards, Data Stores, Namespaces, Service Catalog, Tool Call Debugger, and cross-page Navigation.
 
 The basic UI tests (`basic-ui-test.md`) cover Dashboard, Tools, Resources, and Prompts. This plan extends coverage to the remaining pages.
 
@@ -406,50 +406,6 @@ fi
 
 ---
 
-## Phase 5: Targets (Capabilities) Page
-
-**Route:** `#/capabilities`
-**Page title:** "Capabilities"
-**Page description contains:** "connected to Wanaku"
-
-### Test 5.1: Targets page loads with title and description
-
-**Spec file:** `targets.spec.ts`
-
-1. Navigate to `#/capabilities`.
-2. Wait for `Loading...` to disappear.
-3. Assert `h1.title` text is `"Capabilities"`.
-4. Assert `p.description` text contains `"connected to Wanaku"`.
-
-### Test 5.2: Table structure is correct
-
-1. Navigate to `#/capabilities`.
-2. Assert the DataTable has headers: `"Service"`, `"Service Type"`, `"Host"`, `"Port"`, `"Status"`, `"Last Seen"`, `"Reason"`.
-3. Assert the table has the correct `aria-label` of `"Targets table"`.
-
-### Test 5.3: Empty state when no capabilities are registered
-
-1. If no capability services are running, assert the empty state component is visible in the table body.
-
-### Test 5.4: Capability rows display status (if capabilities exist)
-
-1. If capabilities are registered, assert each row shows:
-   - A service name.
-   - A service type value.
-   - A host value.
-   - A port value.
-   - A status value (one of: `"Healthy"`, `"Down"`, `"Pending"`, or similar capitalized format).
-   - A last-seen timestamp.
-
-### Test 5.5: No error notification on page load
-
-1. Navigate to `#/capabilities`.
-2. Assert no error toast notification (`.cds--toast-notification--error`) is visible.
-
-**Note:** The Targets page is read-only -- there are no add/edit/delete operations. SSE connectivity is tested implicitly: if the page loads and shows status values, SSE was established. Explicit SSE testing (mocking EventSource events) is out of scope for this plan but could be added as a follow-up.
-
----
-
 ## Phase 6: Tool Call Debugger Page
 
 **Route:** `#/tool-calls`
@@ -519,7 +475,6 @@ For each sidebar link, click it and verify the correct page loads:
 | Tools | `#/tools` | `Tools` |
 | Resources | `#/resources` | `Resources` |
 | Prompts | `#/prompts` | `Prompts` |
-| Capabilities | `#/capabilities` | `Capabilities` |
 | Namespaces | `#/namespaces` | `Namespaces` |
 | Forwards | `#/forwards` | `Forwards` |
 | Service Catalog | `#/service-catalog` | `Service Catalog` |
@@ -556,7 +511,6 @@ Developer submenu items (require expanding the `"Developer"` menu first):
 | `DataStoresPage` | `pages/data-stores.page.ts` | `BasePage` |
 | `NamespacesPage` | `pages/namespaces.page.ts` | `BasePage` |
 | `ServiceCatalogPage` | `pages/service-catalog.page.ts` | `BasePage` |
-| `TargetsPage` | `pages/targets.page.ts` | `BasePage` |
 | `ToolCallsPage` | `pages/tool-calls.page.ts` | `BasePage` |
 
 ### New API helpers to add
@@ -618,11 +572,6 @@ Extend `helpers/test-data.ts` with:
 | 4 | 4.9 | Service Templates tab -- search bar | Medium |
 | 4 | 4.10 | Service Templates tab -- card structure | High |
 | 4 | 4.11 | Service Templates tab -- instantiate wizard | High |
-| 5 | 5.1 | Targets page loads with title and description | High |
-| 5 | 5.2 | Table structure is correct | High |
-| 5 | 5.3 | Empty state when no capabilities | Medium |
-| 5 | 5.4 | Capability rows display status | High |
-| 5 | 5.5 | No error notification on load | Medium |
 | 6 | 6.1 | Tool Call Debugger loads with title and description | High |
 | 6 | 6.2 | Filter controls are present | High |
 | 6 | 6.3 | Action buttons are present | Medium |

@@ -1,108 +1,10 @@
 # Performance Tests
 
-This document describes how to run Wanaku performance tests. All test infrastructure lives under `tests/load/`.
+The standalone k6 scripts under `tests/load/` exercise an MCP router over SSE. Run them against a separately deployed Wanaku instance and downstream MCP server. Barn supplies management and persistence APIs and does not run the MCP request path.
 
-## Prerequisites
+Install k6 with the `k6/x/mcp` extension. The scripts currently target `http://localhost:8080/public/mcp/sse`; adjust that URL and the tool/resource names to match your test deployment before running:
 
-- Java 21+ (25 recommended)
-- Maven 3.9+
-- [k6](https://grafana.com/docs/k6/) with the [xk6-mcp](https://github.com/nicholasgasior/xk6-mcp) extension
-- Podman (for Keycloak)
-- Python 3 (for report generation)
-
-Ensure `k6` is on your `PATH` or set `K6_BIN` to its location.
-
-## Architecture Overview
-
-There are two test paths, each targeting a different bridge type:
-
-```text
-                          ┌─────────────────────────────────┐
-                          │         Wanaku Router            │
-  k6 ──SSE──►  /public/mcp/sse  ──── MCP bridge ──► mock MCP server (SSE forward)
-                          └─────────────────────────────────┘
-```
-
-| Bridge | Backend | Tool name | Resource URI | Test module |
-|--------|---------|-----------|--------------|-------------|
-| MCP (forward) | `wanaku-performance-test-mock-mcp` | `mockTool` | `file:///mock/data` | `tests/mcp-servers/wanaku-performance-test-mock-mcp` |
-
-## Quick Reference
-
-### File Layout
-
-```text
-tests/load/
-├── run-perf-test.sh          # Single-run test runner (any bridge)
-├── run-perf-evaluation.sh    # Full baseline-vs-patched evaluation (capability, CI-based)
-├── generate-perf-report.py   # Comparison report generator
-├── mcp-tools-invoke-sse.js   # k6 script: tool invocation via SSE
-└── mcp-resources-read-sse.js # k6 script: resource read via SSE
-
-tests/mcp-servers/wanaku-performance-test-mock-mcp/   # Mock MCP server for MCP bridge tests
-```
-
-### Key Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `K6_BIN` | `$HOME/bin/k6` | Path to k6 binary |
-| `WANAKU_BIN` | `$HOME/bin/wanaku` | Path to wanaku CLI |
-| `JAVA_OPTS` | `-XX:+UseNUMA -Xmx4G -Xms4G` | JVM options for router and MCP servers |
-| `EVAL_DIR` | `$HOME/perf-evaluation-<timestamp>` | Output directory for evaluation results |
-| `TEST_SCOPE` | `all` | `all`, `tools`, or `resources` |
-| `SKIP_BASELINE` | `false` | Skip the baseline run in evaluations |
-| `SKIP_PATCHED` | `false` | Skip the patched run in evaluations |
-| `SKIP_BUILD` | `false` | Skip the Maven build step |
-| `BASELINE_BRANCH` | `main` | Branch to use as baseline |
-
-## Test Scenarios
-
-### 1. MCP Bridge Tests (via mock MCP server)
-
-Tests the MCP bridge path where the router forwards requests to a remote MCP server over SSE.
-
-#### Build
-
-```bash
-mvn package -pl apps/wanaku-barn-backend,tests/mcp-servers/wanaku-performance-test-mock-mcp -am -DskipTests -T1C -q
-```
-
-#### Run Manually
-
-Start the components in this order:
-
-```bash
-# 1. Ensure Keycloak is running (port 8543)
-podman run -d --name keycloak --rm -p 0.0.0.0:8543:8080 \
-  -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
-  -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
-  -v keycloak-dev:/opt/keycloak/data \
-  quay.io/keycloak/keycloak:26.7 start-dev
-
-# 2. Start the router
-java -XX:+UseNUMA -Xmx4G -Xms4G \
-  -Dquarkus.http.host=0.0.0.0 \
-  -Dauth.server="http://$(hostname -f):8543" \
-  -jar apps/wanaku-barn-backend/target/quarkus-app/quarkus-run.jar &
-
-# 3. Wait for router to be ready
-until curl -fsSo /dev/null http://localhost:8080 2>/dev/null; do sleep 2; done
-
-# 4. Start the mock MCP server
-java -XX:+UseNUMA -Xmx1G -Xms1G \
-  -Dwanaku.service.registration.uri="http://localhost:8080" \
-  -Dwanaku.service.performance.delay=0 \
-  -Dwanaku.mcp.service.namespace=public \
-  -jar tests/mcp-servers/wanaku-performance-test-mock-mcp/target/quarkus-app/quarkus-run.jar &
-
-# 5. Wait for registration (~15 seconds)
-sleep 15
-
-# 6. Verify registration
-curl -s http://localhost:8080/api/v1/forwards/list | python3 -m json.tool
-
-# 7. Run k6
+```shell
 k6 run --vus 10 --duration 30s tests/load/mcp-tools-invoke-sse.js
 k6 run --vus 10 --duration 30s tests/load/mcp-resources-read-sse.js
 ```
@@ -122,13 +24,13 @@ All properties can be overridden via `-D` flags on the command line.
 
 #### Data Store
 
-The router persists forwards in `~/.wanaku/router/`. If you see stale data between runs, clear it:
+The router persists forwards in `~/.wanaku/barn/`. If you see stale data between runs, clear it:
 
 ```bash
-rm -rf ~/.wanaku/router/forward/{data,index}/*
-rm -rf ~/.wanaku/router/namespace/{data,index}/*
-rm -rf ~/.wanaku/router/tool/{data,index}/*
-rm -rf ~/.wanaku/router/resource/{data,index}/*
+rm -rf ~/.wanaku/barn/forward/{data,index}/*
+rm -rf ~/.wanaku/barn/namespace/{data,index}/*
+rm -rf ~/.wanaku/barn/tool/{data,index}/*
+rm -rf ~/.wanaku/barn/resource/{data,index}/*
 ```
 
 ### 2. Full Baseline vs Patched Evaluation
@@ -246,7 +148,7 @@ tests/load/run-perf-test.sh \
 
 **Tools/resources not listed via SSE**: Check the namespace. The k6 scripts target `/public/mcp/sse`. If the forward registered with a non-public namespace, tools will only appear under the corresponding authenticated namespace endpoint (e.g., `/ns-9/mcp/sse`). Override with `-Dwanaku.mcp.service.namespace=public`.
 
-**Stale forward registrations**: The router persists forwards in `~/.wanaku/router/`. Clear the data store (see [Data Store](#data-store) above) and restart.
+**Stale forward registrations**: The router persists forwards in `~/.wanaku/barn/`. Clear the data store (see [Data Store](#data-store) above) and restart.
 
 **High latency at 500+ VUs**: Expected. The SSE transport creates a new connection per iteration. At high concurrency, connection queuing dominates. The median latency stays low but P95 increases significantly.
 

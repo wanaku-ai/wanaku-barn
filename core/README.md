@@ -9,7 +9,6 @@ Core library modules providing fundamental functionality for the Wanaku ecosyste
 This directory contains essential libraries and infrastructure used throughout Wanaku:
 
 - MCP protocol client implementation
-- Service discovery mechanisms
 - Service API interfaces
 - Common utilities
 
@@ -22,10 +21,6 @@ MCP protocol client implementation for communicating with downstream MCP servers
 ### core-services-api
 
 Service API interfaces that define the contracts for tools, resources, namespaces, MCP servers, and other domain services.
-
-### core-service-discovery
-
-Service registration, discovery, and health monitoring mechanisms.
 
 ### core-util
 
