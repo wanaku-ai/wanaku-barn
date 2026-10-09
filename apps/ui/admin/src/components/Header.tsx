@@ -54,6 +54,9 @@ function HeaderComponent({
         <HeaderMenuItem as={Link} to={Links.Kamelets}>
           Kamelets
         </HeaderMenuItem>
+        <HeaderMenuItem as={Link} to={Links.ChangeHistory}>
+          Change History
+        </HeaderMenuItem>
       </HeaderNavigation>
       <HeaderGlobalBar>
         <HeaderGlobalAction
