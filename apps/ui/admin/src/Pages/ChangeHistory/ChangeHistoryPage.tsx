@@ -14,7 +14,6 @@ import {
   TableRow,
   Tag,
 } from "@carbon/react";
-import {useSearchParams} from "react-router-dom";
 import {getApiV1AuditEvents} from "../../api/wanaku-router-api";
 import type {AuditEvent} from "../../models";
 
@@ -36,6 +35,10 @@ const headers = [
   { key: "status", header: "Status" },
 ];
 
+// Read without React Router: in plugin mode the host mounts this page outside a router.
+const initialTargetType = () =>
+  new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("type") ?? "";
+
 const decisionColors: Record<string, "green" | "red" | "magenta"> = {
   allow: "green",
   reject_malformed: "magenta",
@@ -43,8 +46,7 @@ const decisionColors: Record<string, "green" | "red" | "magenta"> = {
 };
 
 export const ChangeHistoryPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const targetType = searchParams.get("type") ?? "";
+  const [targetType, setTargetType] = useState(initialTargetType);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [events, setEvents] = useState<AuditEvent[]>([]);
@@ -70,7 +72,7 @@ export const ChangeHistoryPage: React.FC = () => {
 
   const selectTargetType = (value: string) => {
     setPage(1);
-    setSearchParams(value ? { type: value } : {});
+    setTargetType(value);
   };
 
   return (

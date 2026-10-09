@@ -4,7 +4,7 @@ import {ServiceCatalogCards} from "./ServiceCatalogCards";
 import {ServiceTemplateCards} from "./ServiceTemplateCards";
 import {useServiceCatalog} from "../../hooks/api/use-service-catalog";
 import {useServiceTemplate} from "../../hooks/api/use-service-template";
-import {Link} from "react-router-dom";
+import {isPluginMode} from "../../plugin-host";
 import "./ServiceCatalogPage.scss";
 
 interface ServiceCatalogSystem {
@@ -156,8 +156,9 @@ export const ServiceCatalogPage: React.FC = () => {
       )}
       <h1 className="title">Service Catalog</h1>
       <p className="description">
-        View and manage deployed service catalogs and service templates.{" "}
-        <Link to="/change-history?type=service_catalog">View the change history</Link>
+        View and manage deployed service catalogs and service templates.
+        {/* The plugin host has no navigation between plugin pages */}
+        {!isPluginMode() && <> <a href="#/change-history?type=service_catalog">View the change history</a></>}
       </p>
       <Tabs>
         <TabList aria-label="Service catalog tabs">

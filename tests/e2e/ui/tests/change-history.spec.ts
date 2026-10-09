@@ -36,7 +36,6 @@ test('filter the change history to service catalogs', async ({ page }) => {
   await history.resource().selectOption('service_catalog');
   await expect(history.rows()).toHaveCount(2);
   await expect(history.rows().first()).toContainText('billing');
-  await expect(page).toHaveURL(/type=service_catalog/);
   expect(requested).toContain('service_catalog');
 });
 

@@ -18,7 +18,7 @@ import type {
 import { getErrorMessage } from "../../utils/error";
 import { semanticRouterApi } from "./api";
 import { SemanticRouterWizard } from "./SemanticRouterWizard";
-import { Link } from "react-router-dom";
+import { isPluginMode } from "../../plugin-host";
 import "./SemanticRouters.scss";
 
 type CatalogState =
@@ -120,8 +120,9 @@ export function SemanticRoutersPage() {
           returns structured answers like true/false decisions, categories, or
           scores. These semantic answers can instantly drive dynamic message
           filtering, classification, and routing in your pipeline, allowing you
-          to build intelligent automation without writing complex code.{" "}
-          <Link to="/change-history?type=semantic_router">View the change history</Link>
+          to build intelligent automation without writing complex code.
+          {/* The plugin host has no navigation between plugin pages */}
+          {!isPluginMode() && <> <a href="#/change-history?type=semantic_router">View the change history</a></>}
         </p>
       </div>
       <div id="page-content">

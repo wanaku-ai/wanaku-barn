@@ -11,6 +11,7 @@ import { DataStoresPage } from "./Pages/DataStores/DataStoresPage";
 import { ServiceCatalogPage } from "./Pages/ServiceCatalog/ServiceCatalogPage";
 import { SemanticRoutersPage } from "./Pages/SemanticRouters/SemanticRoutersPage";
 import { KameletsPage } from "./Pages/Kamelets/KameletsPage";
+import { ChangeHistoryPage } from "./Pages/ChangeHistory/ChangeHistoryPage";
 import "./plugin-styles.scss";
 
 interface Disposable {
@@ -101,6 +102,18 @@ export async function activate(host: PluginHost) {
     host.pages.register({
       route: "/wanaku/kamelets",
       mount: (container) => mountPage(container, KameletsPage),
+    }),
+  );
+  disposables.push(
+    host.navigation.add({
+      id: "wanaku-change-history",
+      label: "Change History",
+      route: "/wanaku/change-history",
+      order: 140,
+    }),
+    host.pages.register({
+      route: "/wanaku/change-history",
+      mount: (container) => mountPage(container, ChangeHistoryPage),
     }),
   );
 }

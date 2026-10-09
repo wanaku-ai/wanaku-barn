@@ -115,7 +115,8 @@ The admin UI shows the audit trail on the **Change History** page.
 
 - Select a resource type in **Resource** to show only the events of that type, for example **Service catalogs** or **Semantic routers**.
 - The page shows the newest events first, with the operation, target, decision, reason code and HTTP status.
-- The **Service Catalog** and **Semantic Routers** pages have a **View the change history** link. The link opens the Change History page with the matching filter.
+- In the standalone admin UI, the **Service Catalog** and **Semantic Routers** pages have a **View the change history** link. The link opens the Change History page with the matching filter.
+- When Barn runs as a Wanaku plugin, the **Change History** page is in the Wanaku navigation. The plugin host does not support links between plugin pages, so the pages do not show the link.
 
 ## Configuration
 
