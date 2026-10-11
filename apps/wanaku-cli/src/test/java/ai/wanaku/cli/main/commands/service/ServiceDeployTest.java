@@ -72,7 +72,6 @@ class ServiceDeployTest {
         props.setProperty("catalog.description", "test");
         props.setProperty("catalog.services", "sys1");
         props.setProperty("catalog.routes.sys1", "sys1/sys1.camel.yaml");
-        props.setProperty("catalog.rules.sys1", "sys1/sys1.wanaku-rules.yaml");
 
         File indexFile = new File(rootDir, "index.properties");
         try (FileWriter fw = new FileWriter(indexFile, StandardCharsets.UTF_8)) {

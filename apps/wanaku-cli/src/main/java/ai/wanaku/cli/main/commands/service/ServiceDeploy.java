@@ -89,16 +89,6 @@ public class ServiceDeploy extends BaseCommand {
                 printer.printErrorMessage(String.format("Route file not found: %s", routesPath));
                 return EXIT_ERROR;
             }
-
-            String rulesPath = props.getProperty("catalog.rules." + systemName);
-            if (rulesPath == null) {
-                printer.printErrorMessage(String.format("Missing 'catalog.rules.%s' in index.properties", systemName));
-                return EXIT_ERROR;
-            }
-            if (!new File(baseDir, rulesPath).exists()) {
-                printer.printErrorMessage(String.format("Rules file not found: %s", rulesPath));
-                return EXIT_ERROR;
-            }
         }
 
         printer.printInfoMessage(String.format("Packaging service catalog '%s'...", catalogName));
