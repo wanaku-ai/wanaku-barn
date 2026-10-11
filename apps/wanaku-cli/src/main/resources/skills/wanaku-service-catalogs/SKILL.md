@@ -1,6 +1,6 @@
 ---
 name: wanaku-service-catalogs
-description: Create, package, deploy, and manage Wanaku service catalogs and instantiate service templates. Covers the wanaku service CLI workflow (init, expose, package, deploy), listing and instantiating templates with properties, and preparing catalogs for Kubernetes deployment. Use when building or operating Wanaku capabilities.
+description: Create, package, deploy, and manage Wanaku service catalogs and instantiate service templates. Covers the wanaku service CLI workflow (init, expose, validate, package, deploy), listing and instantiating templates with properties, and preparing catalogs for Kubernetes deployment. Use when building or operating Wanaku capabilities.
 ---
 
 # Wanaku Service Catalogs
@@ -89,7 +89,17 @@ wanaku service expose --path=my-service --namespace=production   # optional name
 Only route-level IDs (the `id` directly under `- route:`) are extracted; step-level IDs are
 ignored.
 
-### 4. Package
+### 4. Validate
+
+```shell
+wanaku service validate --path=my-service --host=http://localhost:8080
+wanaku service validate --template --path=my-template   # validate a service template
+```
+
+Lists every error and warning (file and property or YAML location) without deploying; exits
+non-zero when the catalog is invalid.
+
+### 5. Package
 
 ```shell
 wanaku service package --path=my-service                    # creates my-service.b64
@@ -98,7 +108,7 @@ wanaku service package --path=my-service -o /tmp/my-service.b64
 
 The output is a Base64-encoded ZIP, suitable for the Kubernetes operator or version control.
 
-### 5. Deploy
+### 6. Deploy
 
 Deploy directly to a router (validates the catalog, packages it, and uploads it via the REST
 API):
@@ -109,7 +119,7 @@ wanaku service deploy --path=my-service --host=http://localhost:8080
 
 Once deployed, the catalog appears in the admin UI under the **Service Catalog** page.
 
-### 6. Manage deployed catalogs
+### 7. Manage deployed catalogs
 
 ```shell
 wanaku service catalog list --host=http://localhost:8080

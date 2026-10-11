@@ -86,7 +86,7 @@ make install
 
 ## Service Catalogs
 
-- CLI workflow: `init` -> `expose` -> `package` -> `deploy`
+- CLI workflow: `init` -> `expose` -> `validate` -> `package` -> `deploy`
 - `wanaku service package` creates Base64-encoded ZIP for operator/ConfigMap use
 - `wanaku service deploy` packages and deploys directly to router REST API
 - Route ID extraction uses indentation-aware parsing (route-level only, ignores step-level IDs)

@@ -13,6 +13,7 @@ import picocli.CommandLine;
             ServiceExpose.class,
             ServicePackage.class,
             ServiceDeploy.class,
+            ServiceValidate.class,
             ServiceTemplate.class,
             ServiceCatalog.class,
             ServiceInstructions.class,

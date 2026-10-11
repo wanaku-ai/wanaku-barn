@@ -114,7 +114,7 @@ public class ServicePackage extends BaseCommand {
         return EXIT_OK;
     }
 
-    private byte[] createZipArchive(File baseDir) throws IOException {
+    static byte[] createZipArchive(File baseDir) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
             addDirectoryToZip(zos, baseDir, "");
@@ -122,7 +122,7 @@ public class ServicePackage extends BaseCommand {
         return baos.toByteArray();
     }
 
-    private void addDirectoryToZip(ZipOutputStream zos, File dir, String prefix) throws IOException {
+    private static void addDirectoryToZip(ZipOutputStream zos, File dir, String prefix) throws IOException {
         File[] files = dir.listFiles();
         if (files == null) {
             return;

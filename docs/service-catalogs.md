@@ -206,7 +206,30 @@ wanaku service expose --path=my-service --namespace=production
 > [!IMPORTANT]
 > The `expose` command only extracts **route-level IDs** (the `id` field directly under `- route:`). Step-level IDs (on individual processors like `setHeader` or `bean`) are ignored.
 
-### Step 4: Package
+### Step 4: Validate
+
+Check the catalog for structural errors before packaging or deploying it:
+
+```shell
+wanaku service validate --path=my-service --host=http://localhost:8080
+```
+
+The command packages the directory and sends it to the validation endpoint, so nothing is deployed.
+It lists every problem found, each one pointing at the file (and property or YAML location) at
+fault, for example:
+
+```text
+index.properties#catalog.description: Required property 'catalog.description' is missing or empty in index.properties
+my-service/my-service.camel.yaml#/0/route: Invalid Camel YAML DSL: required property 'from' not found
+index.properties#catalog.icon: Optional property 'catalog.icon' is not set: a default icon will be used
+Service catalog 'my-service' is invalid: 2 error(s), 1 warning(s)
+```
+
+Errors make the command exit with a non-zero status, which makes it suitable for CI pipelines.
+Warnings are printed but do not fail the validation. Add `--template` to validate a service
+template instead of a catalog.
+
+### Step 5: Package
 
 Create a Base64-encoded ZIP package:
 
@@ -222,7 +245,7 @@ wanaku service package --path=my-service -o /tmp/my-service.b64
 
 The packaged file is useful for deploying via the Kubernetes operator or storing in version control.
 
-### Step 5: Deploy
+### Step 6: Deploy
 
 Deploy the service catalog directly to the Wanaku router:
 
@@ -247,7 +270,7 @@ wanaku service catalog list --host=http://localhost:8080
 wanaku service catalog remove --host=http://localhost:8080 --name=my-catalog
 ```
 
-### Step 6: Remove a Catalog
+### Step 7: Remove a Catalog
 
 Remove a deployed service catalog by name:
 
@@ -269,7 +292,7 @@ See [Removal and Restore](#removal-and-restore).
 > [!TIP]
 > Use `wanaku service deploy` for quick iteration during development. Use the operator approach (below) for production deployments on Kubernetes.
 
-### Step 7: Inspect and Restore Earlier Versions
+### Step 8: Inspect and Restore Earlier Versions
 
 Barn keeps the version history of each catalog.
 Each deploy creates a new version, and you can restore an earlier version at any time.
@@ -502,7 +525,8 @@ curl -X POST \
 ### Validate a Catalog
 
 Validates a packaged catalog without deploying it. Useful to check a package before shipping it, from
-CI pipelines, external tools or the admin UI.
+CI pipelines, external tools or the admin UI. The `wanaku service validate` command is a CLI front end
+for this endpoint.
 
 **Endpoint:** `POST /api/v1/service-catalog/validate`
 

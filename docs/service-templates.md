@@ -109,6 +109,17 @@ wanaku service deploy --template /path/to/template
 
 This packages the template directory into a ZIP and deploys it to the router's template registry.
 
+### Validate a Template
+
+To check a local template directory for structural errors without deploying it:
+
+```shell
+wanaku service validate --template --path=/path/to/template
+```
+
+Every error and warning is listed with the file and property at fault. The command exits with a
+non-zero status when the template is invalid.
+
 ### Template Version History
 
 Barn keeps the version history of each template, in the same way as for service catalogs.
@@ -462,8 +473,9 @@ If deployment fails with a ZIP parsing error:
 - Ensure the ZIP contains an `index.properties` file at the root.
 - Check that service directories match the names declared in `catalog.services`.
 - Verify that file paths in `index.properties` match the actual file locations in the ZIP.
-- Post the package to `POST /api/v1/service-template/validate` to get the full list of problems, each
-  one pointing at the file and property that is at fault.
+- Run `wanaku service validate --template --path=<dir>` (or post the package to
+  `POST /api/v1/service-template/validate`) to get the full list of problems, each one pointing at
+  the file and property that is at fault.
 
 ## Related Documentation
 
