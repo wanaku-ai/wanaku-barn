@@ -1,5 +1,7 @@
 package ai.wanaku.cli.main.commands.tools;
 
+import java.io.File;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -65,6 +67,24 @@ public class ToolsGenerate extends BaseCommand {
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {
         try {
+            if ("file".equals(specLocation.getProtocol())) {
+                File specFile = new File(specLocation.toURI());
+                if (!specFile.isFile()) {
+                    System.err.println("File not found: " + specFile.getPath());
+                    return EXIT_ERROR;
+                }
+            } else if ("http".equals(specLocation.getProtocol()) || "https".equals(specLocation.getProtocol())) {
+                HttpURLConnection connection = (HttpURLConnection) specLocation.openConnection();
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(5000);
+                connection.setRequestMethod("HEAD");
+                int responseCode = connection.getResponseCode();
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    System.err.println("File not found: " + specLocation);
+                    return EXIT_ERROR;
+                }
+            }
+
             OpenAPI openAPI = loadAndResolveOpenAPI(specLocation.toString());
 
             if (openAPI == null

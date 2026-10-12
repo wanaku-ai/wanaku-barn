@@ -1,17 +1,24 @@
 package ai.wanaku.cli.main.commands.tools;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.StringWriter;
+import java.net.InetSocketAddress;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.jboss.logging.Logger;
 import org.skyscreamer.jsonassert.JSONAssert;
 import ai.wanaku.cli.main.CliMain;
+import com.sun.net.httpserver.HttpServer;
 import picocli.CommandLine;
 
 import org.junit.jupiter.api.Assertions;
@@ -33,6 +40,8 @@ public class ToolsGenerateTest {
     private static final String EXPECTED_TOOLS_FILE = "tools/expectedPetStoreTools.json";
 
     private static final String YAHOO_FINANCE_EXPECTED_TOOLS_FILE = "tools/expectedPetStoreTools.json";
+
+    private static final Pattern STACK_FRAME = Pattern.compile("\\sat\\s+\\S+\\.java:\\d+");
 
     @TempDir
     Path tempDir;
@@ -156,6 +165,110 @@ public class ToolsGenerateTest {
         Assertions.assertTrue(
                 content.contains("\"name\" : \"get_v1_forecast\""),
                 "Generated tool should have fallback name 'get_v1_forecast'");
+    }
+
+    @Test
+    public void nonExistentSpecFileTest() {
+        Path missing = tempDir.resolve("nonexistent-openapi-spec.yaml");
+        Path output = tempDir.resolve("out.json");
+
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        int exitCode = executeCapturingStderr(stderr, "tools", "generate", "-o", output.toString(), missing.toString());
+        String err = stderr.toString(StandardCharsets.UTF_8);
+
+        assertEquals(1, exitCode);
+        Assertions.assertTrue(
+                err.contains("File not found: " + missing), "Expected a 'File not found' message but got: " + err);
+        Assertions.assertFalse(STACK_FRAME.matcher(err).find(), "Stack trace found in stderr: " + err);
+        Assertions.assertFalse(Files.exists(output));
+    }
+
+    @Test
+    public void nonExistentSpecFileVerboseTest() {
+        Path missing = tempDir.resolve("nonexistent-openapi-spec.yaml");
+
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        int exitCode = executeCapturingStderr(stderr, "tools", "generate", "--verbose", missing.toString());
+        String err = stderr.toString(StandardCharsets.UTF_8);
+
+        assertEquals(1, exitCode);
+        Assertions.assertTrue(err.contains("File not found: " + missing));
+        Assertions.assertFalse(STACK_FRAME.matcher(err).find(), "Stack trace found in stderr: " + err);
+    }
+
+    @Test
+    public void httpUrlNotFoundTest() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/spec.yaml", exchange -> {
+            exchange.sendResponseHeaders(404, -1);
+            exchange.close();
+        });
+        server.start();
+        try {
+            int port = server.getAddress().getPort();
+            Path output = tempDir.resolve("out.json");
+
+            ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+            int exitCode = executeCapturingStderr(
+                    stderr, "tools", "generate", "-o", output.toString(), "http://127.0.0.1:" + port + "/spec.yaml");
+            String err = stderr.toString(StandardCharsets.UTF_8);
+
+            assertEquals(1, exitCode);
+            Assertions.assertTrue(
+                    err.contains("File not found:"), "Expected a 'File not found' message but got: " + err);
+            Assertions.assertFalse(STACK_FRAME.matcher(err).find(), "Stack trace found in stderr: " + err);
+            Assertions.assertFalse(Files.exists(output));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    public void httpUrlFoundTest() throws Exception {
+        byte[] specBytes;
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("openapi/pet-store.yaml")) {
+            specBytes = is.readAllBytes();
+        }
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/spec.yaml", exchange -> {
+            exchange.getResponseHeaders().set("Content-Type", "application/yaml");
+            exchange.sendResponseHeaders(200, specBytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(specBytes);
+            }
+            exchange.close();
+        });
+        server.start();
+        try {
+            int port = server.getAddress().getPort();
+            Path output = tempDir.resolve("out.json");
+
+            int exitCode = new CommandLine(new CliMain())
+                    .execute(
+                            "tools",
+                            "generate",
+                            "-u",
+                            "https://petstore3.swagger.io/api/v3",
+                            "-o",
+                            output.toString(),
+                            "http://127.0.0.1:" + port + "/spec.yaml");
+
+            assertEquals(EXIT_CODE_SUCCESS, exitCode);
+            Assertions.assertTrue(Files.exists(output));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private int executeCapturingStderr(ByteArrayOutputStream captured, String... args) {
+        PrintStream originalErr = System.err;
+        System.setErr(new PrintStream(captured, true, StandardCharsets.UTF_8));
+        try {
+            return new CommandLine(new CliMain()).execute(args);
+        } finally {
+            System.setErr(originalErr);
+        }
     }
 
     private String copyFromResourceToTempDir(String resourcePath, String resource) throws IOException {
