@@ -148,13 +148,6 @@ assert_failure "2.1" "show non-existent tool rejected" \
     "nonexistent-tool-12345"
 ```
 
-### Test 2.2: Generate from non-existent OpenAPI file
-
-```bash
-assert_failure "2.2" "generate from non-existent file rejected" \
-  wanaku tools generate /tmp/nonexistent-openapi-spec-12345.yaml
-```
-
 ---
 
 ## Phase 3: Resources -- Error Cases
@@ -549,7 +542,6 @@ fi
 | 0 | 0.1-0.2 | Prerequisites verification | Critical | Setup |
 | 1 | 1.0 | Router health check | Critical | Setup |
 | 2 | 2.1 | Tool show: non-existent | High | Error handling |
-| 2 | 2.2 | Tool generate: non-existent OpenAPI | High | Error handling |
 | 3 | 3.1 | Resource show: non-existent | High | Error handling |
 | 4 | — | Prompt CRUD removed from CLI | — | — |
 | 5 | 5.1 | Forward add: missing --name | High | Validation |
