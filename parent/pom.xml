@@ -80,7 +80,7 @@
         <quarkus-helm.version>1.4.2</quarkus-helm.version>
         <wanaku-capabilities-sdk.version>0.3.0-SNAPSHOT</wanaku-capabilities-sdk.version>
         <forage.version>1.6.1</forage.version>
-        <commonmark.version>0.29.0</commonmark.version>
+        <commonmark.version>0.30.1</commonmark.version>
         <oauth2-oidc-sdk.version>11.38.2</oauth2-oidc-sdk.version>
         <operator-framework.version>5.3.4</operator-framework.version>
         <palantir-format.version>2.71.0</palantir-format.version>
