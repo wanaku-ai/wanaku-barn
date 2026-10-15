@@ -26,10 +26,10 @@ When you create these custom resources, the operator automatically provisions:
 
 For a `WanakuRouter` named `wanaku-dev`, the operator creates (among others) the
 `wanaku-dev-server` Deployment, the `server-wanaku-dev` external service, the
-`wanaku-dev-barn` Deployment and `barn-wanaku-dev` internal service when `spec.router.enabled`
+`wanaku-dev-barn` Deployment and `barn-wanaku-dev` internal service when `spec.barn.enabled`
 is `true`, and — when `spec.auth.enabled` is `true` — an
 `oauth2-proxy` Deployment and service. `WanakuServiceCatalog` resources require the referenced
-router to have `spec.router.enabled: true`, so that Wanaku Barn is deployed for the catalogs
+router to have `spec.barn.enabled: true`, so that Wanaku Barn is deployed for the catalogs
 to register against.
 
 On OpenShift, the operator creates two Routes: `wanaku-dev` for the management API and
@@ -60,11 +60,13 @@ the new `wanaku-server` volume.
 
 The optional Barn Deployment is now named `<router>-barn` instead of `<router>-mcp-router`,
 its Service is `barn-<router>` instead of `internal-<router>`, and its PVC is
-`barn-volume-claim` instead of `router-volume-claim`. Stop the old Barn workload, migrate
+`<router>-barn-data` instead of `router-volume-claim`. Stop the old Barn workload, migrate
 its data to the new PVC, and remove the old Deployment and Service after verification.
 Update any explicit Barn URLs to `http://barn-<router>:8080`. The operator updates the
 Wanaku Server and service catalog URLs automatically, but does not migrate storage or
-remove the old workloads. Barn is still configured through `spec.router`.
+remove the old workloads. Configure Barn through `spec.barn`; the deprecated `spec.router`
+field still works when `spec.barn` is not set. A `barn-volume-claim` PVC that the router already
+owns stays in use, so existing data is kept.
 
 ## Prerequisites
 
@@ -149,10 +151,12 @@ host networking, so Wanaku Server reaches Barn at `http://localhost:8180`.
 |-------|------|-------------|
 | `spec.imagePullPolicy` | string | Image pull policy applied to the managed workloads |
 | `spec.exposure` | object | How the Server listeners are exposed outside the cluster. See [Exposure](#exposure) |
-| `spec.router` | object | The Wanaku Barn deployment. Set `enabled: true` to deploy Barn alongside Wanaku Server |
-| `spec.router.enabled` | bool | Whether Wanaku Barn is deployed (required for `WanakuServiceCatalog`) |
-| `spec.router.image` | string | Container image for Wanaku Barn |
-| `spec.router.env` | list | Extra environment variables (`name`/`value`) for Wanaku Barn |
+| `spec.barn` | object | The Wanaku Barn deployment. See [Wanaku Barn](#wanaku-barn) |
+| `spec.barn.enabled` | bool | Whether Wanaku Barn is deployed (required for `WanakuServiceCatalog`) |
+| `spec.barn.image`, `spec.barn.imagePullPolicy` | string | Container image and pull policy for Wanaku Barn |
+| `spec.barn.env` | list | Extra environment variables (`name`/`value`) for Wanaku Barn |
+| `spec.barn.storage` | object | `size` (default `5Gi`), `storageClassName` and `existingClaim` for the Barn data |
+| `spec.router` | object | Deprecated name of `spec.barn` (without `storage`). The operator reads it only when `spec.barn` is not set |
 | `spec.server` | object | The Wanaku router engine: `image`, `env`, `imagePullPolicy` |
 | `spec.auth` | object | Authentication via oauth2-proxy instances placed in front of Wanaku |
 | `spec.auth.enabled` | bool | Whether the oauth2-proxies are deployed |
@@ -207,6 +211,39 @@ The `AuthConfigured` condition reports the authentication configuration:
 
 Earlier operator versions appended `/realms/wanaku` to `issuerUrl`. Resources that set only the Keycloak base URL continue to work, with the `DeprecatedIssuerFormat` reason.
 
+#### Wanaku Barn
+
+Wanaku Barn is optional. Set `spec.barn.enabled: true` to deploy it:
+
+```yaml
+spec:
+  barn:
+    enabled: true
+    storage:
+      size: 10Gi
+```
+
+When Barn is enabled, the operator does these steps:
+
+- It creates the `<router>-barn` Deployment, the `barn-<router>` Service and the Barn PVC. The probes use `/q/health/started`, `/q/health/ready` and `/q/health/live`.
+- It sets the Barn persistence folder to the PVC mount path. The data does not depend on the home directory of the container user.
+- It writes the `<router>-server-config` ConfigMap and mounts it as `/etc/wanaku/wanaku.yaml` in the Wanaku Server. The file points the `wanaku-barn` plugin service `wanaku-barn-api` at `http://barn-<router>:8080`. The Server then proxies `/api/plugins/wanaku-barn/wanaku-barn-api/...` to Barn. When the file changes, the Server restarts.
+- It publishes the internal Barn URL in `status.barnUrl`. Other clients, for example the Camel Integration Capability (`REGISTRATION_URL`) and the semantic router (`WSR_BARN_URL`), use this URL.
+- It reports the Barn availability in the `BarnAvailable` condition. `Ready` requires it.
+
+The operator selects the Barn PVC in this order:
+
+1. `spec.barn.storage.existingClaim`. The operator does not create or change this PVC.
+2. The legacy `barn-volume-claim` PVC, when this router owns it.
+3. `<router>-barn-data`, which the operator creates with `storage.size` and `storage.storageClassName`.
+
+`WanakuServiceCatalog` resources wait while Barn is not available. Their `Ready` condition has the reason `BarnUnavailable`, and the operator tries again every 15 seconds.
+
+When you set `spec.barn.enabled: false`, the operator deletes the Barn Deployment, the Barn Service and the Server plugin configuration. It keeps the Barn PVC, so that the data is not lost. To delete the data, delete the PVC manually.
+
+Values that you set earlier through `PUT /api/v1/plugins/wanaku-barn/config` override the operator configuration.
+The admin UI plugin archive is a separate installation step (`POST /api/v1/plugins/install`). The headless Server does not need it.
+
 #### Exposure
 
 `spec.exposure` selects the Server listeners that the operator exposes outside the cluster, and how it exposes them.
@@ -258,7 +295,7 @@ The `ExposureReady` condition is `True` when the OpenShift router admits all Rou
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `spec.routerRef` | string | Name of the `WanakuRouter` resource. The referenced router must have `spec.router.enabled: true` |
+| `spec.routerRef` | string | Name of the `WanakuRouter` resource. The referenced router must have `spec.barn.enabled: true` |
 | `spec.catalogs` | list | Catalogs to deploy, each with a `name` and a `configMapRef` |
 
 The referenced ConfigMap must contain the packaged catalog (`catalog.zip`), created with
@@ -275,7 +312,7 @@ kind: WanakuRouter
 metadata:
   name: wanaku-dev
 spec:
-  router:
+  barn:
     enabled: true
 ```
 
@@ -295,7 +332,7 @@ kind: WanakuRouter
 metadata:
   name: wanaku-dev
 spec:
-  router:
+  barn:
     enabled: true
   auth:
     enabled: true
@@ -363,14 +400,15 @@ spec:
         - name: cic
           image: quay.io/wanaku/camel-integration-capability:latest
           env:
-            - name: WANAKU_SERVICE_REGISTRATION_URL
+            # Barn base URL for data-store and service-catalog downloads
+            - name: REGISTRATION_URL
               value: http://barn-wanaku-dev:8080
 ```
 
 Then register the running service with the router as a forward:
 
 ```shell
-wanaku forwards add --service="http://camel-integration-capability:8080" --name cic
+wanaku forwards add --service="http://camel-integration-capability:9090/mcp" --name cic
 ```
 
 See [usage.md](usage.md#forwarding-other-mcp-servers-via-the-mcp-forwarder) for the forward
@@ -412,7 +450,7 @@ The operator records the observed generation in `status.observedGeneration` and 
 | `ExposureReady` | Always | A Route is not yet admitted, or the OpenShift router rejected it. See [Exposure](#exposure). |
 | `AuthConfigured` | Always | The authentication configuration is not valid. See [Authentication](#authentication). |
 | `AuthProxyAvailable` | `spec.auth.enabled: true` | The `<router>-oauth2-proxy` Deployment is not available. |
-| `BarnAvailable` | `spec.router.enabled: true` | The `<router>-barn` Deployment is not available. |
+| `BarnAvailable` | `spec.barn.enabled: true` | The `<router>-barn` Deployment is not available. |
 | `Ready` | Always | One of the conditions above is `False`. The reason and the message identify the first failed condition. |
 
 A workload condition uses these reasons:

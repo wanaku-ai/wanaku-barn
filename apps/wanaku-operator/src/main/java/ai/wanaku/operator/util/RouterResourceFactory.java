@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.jboss.logging.Logger;
+import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
@@ -13,9 +15,12 @@ import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePortBuilder;
 import io.fabric8.kubernetes.api.model.ServiceSpec;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
+import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentSpec;
 import io.fabric8.kubernetes.api.model.networking.v1.HTTPIngressPath;
@@ -55,6 +60,17 @@ public final class RouterResourceFactory {
     private RouterResourceFactory() {}
 
     public static Deployment makeDesiredBarnDeployment(WanakuRouter resource, Context<WanakuRouter> context) {
+        return makeDesiredBarnDeployment(
+                resource, context, barnClaimName(resource.getMetadata().getName()));
+    }
+
+    /**
+     * Builds the Wanaku Barn Deployment.
+     *
+     * @param claimName the PVC that holds the Barn data
+     */
+    public static Deployment makeDesiredBarnDeployment(
+            WanakuRouter resource, Context<WanakuRouter> context, String claimName) {
         Deployment desiredDeployment =
                 ReconcilerUtilsInternal.loadYaml(Deployment.class, WanakuRouterReconciler.class, BARN_DEPLOYMENT_FILE);
 
@@ -72,6 +88,9 @@ public final class RouterResourceFactory {
         serviceSpec.getTemplate().getMetadata().getLabels().put("component", "wanaku-barn-backend");
 
         setupBackendContainer(resource, serviceSpec);
+        serviceSpec.getTemplate().getSpec().getVolumes().stream()
+                .filter(v -> "barn-volume".equals(v.getName()))
+                .forEach(v -> v.getPersistentVolumeClaim().setClaimName(claimName));
 
         managed(desiredDeployment, desiredDeployment.getSpec());
         desiredDeployment.addOwnerReference(resource);
@@ -147,6 +166,73 @@ public final class RouterResourceFactory {
     public static final String EXPOSURE_INGRESS = "Ingress";
     public static final String EXPOSURE_NONE = "None";
     public static final String LISTENER_LABEL = "wanaku.ai/listener";
+
+    /** Where the Barn PVC is mounted; also the Barn persistence base folder. */
+    public static final String BARN_DATA_PATH = "/home/default/.wanaku/barn";
+
+    public static final String SERVER_CONFIG_HASH_ANNOTATION = "wanaku.ai/server-config-hash";
+    public static final String BARN_PLUGIN_ID = "wanaku-barn";
+    public static final String BARN_PLUGIN_SERVICE = "wanaku-barn-api";
+
+    /**
+     * Returns the Barn settings: {@code spec.barn}, or the deprecated {@code spec.router} when
+     * {@code spec.barn} is unset.
+     */
+    public static WanakuRouterSpec.RouterSpec barnSpec(WanakuRouter resource) {
+        return resource.getSpec().getBarn() != null
+                ? resource.getSpec().getBarn()
+                : resource.getSpec().getRouter();
+    }
+
+    public static boolean isBarnEnabled(WanakuRouter resource) {
+        final WanakuRouterSpec.RouterSpec barn = barnSpec(resource);
+        return barn != null && barn.isEnabled();
+    }
+
+    /** The default name of the Barn PVC for a router. */
+    public static String barnClaimName(String routerName) {
+        return routerName + "-barn-data";
+    }
+
+    /** The in-cluster URL of the Barn API for a router. */
+    public static String barnUrl(String routerName) {
+        return OperatorUtil.getRouterBaseUrl(routerName);
+    }
+
+    public static String serverConfigMapName(String routerName) {
+        return routerName + "-server-config";
+    }
+
+    /**
+     * Builds the {@code wanaku.yaml} the Server reads at startup. It points the Barn plugin service at the
+     * Barn API, so the Server proxies {@code /api/plugins/wanaku-barn/wanaku-barn-api/...} to Barn.
+     */
+    public static ConfigMap makeServerConfigMap(WanakuRouter resource) {
+        final String name = resource.getMetadata().getName();
+        final ConfigMap configMap = new ConfigMapBuilder()
+                .withNewMetadata()
+                .withName(serverConfigMapName(name))
+                .withNamespace(resource.getMetadata().getNamespace())
+                .addToLabels("app", serverName(name))
+                .addToLabels("component", "wanaku-server")
+                .endMetadata()
+                .addToData("wanaku.yaml", serverConfig(name))
+                .build();
+        managed(configMap, configMap.getData());
+        configMap.addOwnerReference(resource);
+        return configMap;
+    }
+
+    private static String serverConfig(String routerName) {
+        return """
+                plugins:
+                  - id: %s
+                    services:
+                      %s:
+                        target: %s
+                """
+                .formatted(BARN_PLUGIN_ID, BARN_PLUGIN_SERVICE, barnUrl(routerName));
+    }
 
     public static String exposureType(WanakuRouter resource) {
         final WanakuTypes.ExposureSpec exposure = resource.getSpec().getExposure();
@@ -320,13 +406,28 @@ public final class RouterResourceFactory {
     }
 
     public static PersistentVolumeClaim makeBarnVolumePVC(WanakuRouter resource) {
+        return makeBarnVolumePVC(resource, barnClaimName(resource.getMetadata().getName()));
+    }
+
+    /** Builds the Barn PVC with the size and storage class from {@code spec.barn.storage}. */
+    public static PersistentVolumeClaim makeBarnVolumePVC(WanakuRouter resource, String claimName) {
         PersistentVolumeClaim pvc = ReconcilerUtilsInternal.loadYaml(
                 PersistentVolumeClaim.class, WanakuRouterReconciler.class, SERVICES_VOLUME_PVC_FILE);
 
         String deploymentName = resource.getMetadata().getName();
         String ns = resource.getMetadata().getNamespace();
 
-        pvc.getMetadata().setName(BARN_VOLUME_CLAIM);
+        final WanakuRouterSpec.StorageSpec storage = resource.getSpec().getBarn() != null
+                ? resource.getSpec().getBarn().getStorage()
+                : null;
+        if (storage != null && StringHelper.isNotEmpty(storage.getSize())) {
+            pvc.getSpec().getResources().getRequests().put("storage", new Quantity(storage.getSize()));
+        }
+        if (storage != null && StringHelper.isNotEmpty(storage.getStorageClassName())) {
+            pvc.getSpec().setStorageClassName(storage.getStorageClassName());
+        }
+
+        pvc.getMetadata().setName(claimName);
         pvc.getMetadata().setNamespace(ns);
         pvc.getMetadata().getLabels().put("app", barnName(deploymentName));
         pvc.getMetadata().getLabels().put("component", "wanaku-barn-storage");
@@ -345,7 +446,7 @@ public final class RouterResourceFactory {
 
         List<EnvVar> envVars = new java.util.ArrayList<>();
 
-        final WanakuRouterSpec.RouterSpec routerSpec = resource.getSpec().getRouter();
+        final WanakuRouterSpec.RouterSpec routerSpec = barnSpec(resource);
 
         String componentPolicy = routerSpec != null ? routerSpec.getImagePullPolicy() : null;
         String globalPolicy = resource.getSpec().getImagePullPolicy();
@@ -382,6 +483,9 @@ public final class RouterResourceFactory {
 
         EnvironmentVariableHelper.applyAnnotationEnvVars(
                 envVars, resource.getMetadata().getAnnotations());
+
+        // Do not depend on user.home: OpenShift runs the image with an arbitrary UID that may have no home
+        addIfAbsent(envVars, envVar("WANAKU_PERSISTENCE_INFINISPAN_BASE_FOLDER", BARN_DATA_PATH + "/"));
 
         service.setEnv(envVars);
     }
@@ -433,12 +537,7 @@ public final class RouterResourceFactory {
                 .findFirst()
                 .get();
 
-        String classicUrl = OperatorUtil.getRouterBaseUrl(deploymentName);
         List<EnvVar> envVars = new java.util.ArrayList<>();
-        envVars.add(new EnvVarBuilder()
-                .withName("WANAKU_CLASSIC_URL")
-                .withValue(classicUrl)
-                .build());
 
         final WanakuRouterSpec.ServerSpec serverSpec = resource.getSpec().getServer();
         if (serverSpec != null) {
@@ -484,6 +583,37 @@ public final class RouterResourceFactory {
             }
         }
         serverContainer.setEnv(envVars);
+
+        if (isBarnEnabled(resource)) {
+            // Mount only the file: the image keeps its other files in /etc/wanaku
+            serverContainer
+                    .getVolumeMounts()
+                    .add(new VolumeMountBuilder()
+                            .withName("server-config")
+                            .withMountPath("/etc/wanaku/wanaku.yaml")
+                            .withSubPath("wanaku.yaml")
+                            .withReadOnly(true)
+                            .build());
+            serviceSpec
+                    .getTemplate()
+                    .getSpec()
+                    .getVolumes()
+                    .add(new VolumeBuilder()
+                            .withName("server-config")
+                            .withNewConfigMap()
+                            .withName(serverConfigMapName(deploymentName))
+                            .endConfigMap()
+                            .build());
+            // A subPath mount is not refreshed in running pods, so a config change rolls the Server
+            final Map<String, String> podAnnotations = new HashMap<>();
+            if (serviceSpec.getTemplate().getMetadata().getAnnotations() != null) {
+                podAnnotations.putAll(serviceSpec.getTemplate().getMetadata().getAnnotations());
+            }
+            podAnnotations.put(
+                    SERVER_CONFIG_HASH_ANNOTATION,
+                    Integer.toHexString(serverConfig(deploymentName).hashCode()));
+            serviceSpec.getTemplate().getMetadata().setAnnotations(podAnnotations);
+        }
 
         managed(desiredDeployment, desiredDeployment.getSpec());
         desiredDeployment.addOwnerReference(resource);

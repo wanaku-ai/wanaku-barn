@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
 import io.fabric8.kubernetes.api.model.Condition;
+import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ContainerStateWaiting;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Event;
@@ -140,6 +141,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     static final String RECONCILED_CONDITION = "Reconciled";
     static final String AUTH_CONFIGURED_CONDITION = "AuthConfigured";
     static final String EXPOSURE_READY_CONDITION = "ExposureReady";
+    public static final String BARN_AVAILABLE_CONDITION = "BarnAvailable";
     private static final Pattern BASE64_TEXT = Pattern.compile("^[A-Za-z0-9+/_-]+$");
 
     private static final Duration NOT_READY_RECHECK = Duration.ofSeconds(30);
@@ -373,9 +375,8 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         if (RouterResourceFactory.isAuthEnabled(resource)) {
             components.add(new ComponentWorkload("AuthProxyAvailable", name + "-oauth2-proxy"));
         }
-        WanakuRouterSpec.RouterSpec routerSpec = resource.getSpec().getRouter();
-        if (routerSpec != null && routerSpec.isEnabled()) {
-            components.add(new ComponentWorkload("BarnAvailable", name + "-barn"));
+        if (RouterResourceFactory.isBarnEnabled(resource)) {
+            components.add(new ComponentWorkload(BARN_AVAILABLE_CONDITION, name + "-barn"));
         }
         return components;
     }
@@ -620,9 +621,12 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         wanakuStatus.setSseEndpoint("https://%s/mcp/sse".formatted(mcpHost));
         wanakuStatus.setStreamableEndpoint("https://%s/mcp/".formatted(mcpHost));
 
-        WanakuRouterSpec.RouterSpec routerSpec = resource.getSpec().getRouter();
-        if (routerSpec != null && routerSpec.isEnabled()) {
+        if (RouterResourceFactory.isBarnEnabled(resource)) {
             deployBarnBackend(resource, context, namespace);
+            wanakuStatus.setBarnUrl(
+                    RouterResourceFactory.barnUrl(resource.getMetadata().getName()));
+        } else {
+            removeBarnBackend(resource, namespace);
         }
         return exposure;
     }
@@ -671,18 +675,41 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     }
 
     private void deployBarnBackend(WanakuRouter resource, Context<WanakuRouter> context, String namespace) {
-        final PersistentVolumeClaim barnPVC = RouterResourceFactory.makeBarnVolumePVC(resource);
-        PersistentVolumeClaim existingBarnPVC = kubernetesClient
-                .persistentVolumeClaims()
-                .inNamespace(namespace)
-                .withName(RouterResourceFactory.BARN_VOLUME_CLAIM)
-                .get();
-        if (!match(barnPVC, existingBarnPVC)) {
-            LOG.infof("Creating or updating PVC barn-volume-claim in %s", namespace);
-            kubernetesClient
+        final String claimName = barnClaimName(resource, namespace);
+        final WanakuRouterSpec.StorageSpec storage = resource.getSpec().getBarn() != null
+                ? resource.getSpec().getBarn().getStorage()
+                : null;
+        if (storage == null || StringHelper.isBlank(storage.getExistingClaim())) {
+            final PersistentVolumeClaim barnPVC = RouterResourceFactory.makeBarnVolumePVC(resource, claimName);
+            PersistentVolumeClaim existingBarnPVC = kubernetesClient
                     .persistentVolumeClaims()
                     .inNamespace(namespace)
-                    .resource(barnPVC)
+                    .withName(claimName)
+                    .get();
+            if (!match(barnPVC, existingBarnPVC)) {
+                LOG.infof("Creating or updating PVC %s in %s", claimName, namespace);
+                kubernetesClient
+                        .persistentVolumeClaims()
+                        .inNamespace(namespace)
+                        .resource(barnPVC)
+                        .createOr(Replaceable::update);
+            }
+        }
+
+        final ConfigMap serverConfig = RouterResourceFactory.makeServerConfigMap(resource);
+        final ConfigMap existingConfig = kubernetesClient
+                .configMaps()
+                .inNamespace(namespace)
+                .withName(serverConfig.getMetadata().getName())
+                .get();
+        if (existingConfig == null || !OperatorUtil.sameDesiredHash(serverConfig, existingConfig)) {
+            LOG.infof(
+                    "Creating or updating ConfigMap %s in %s",
+                    serverConfig.getMetadata().getName(), namespace);
+            kubernetesClient
+                    .configMaps()
+                    .inNamespace(namespace)
+                    .resource(serverConfig)
                     .createOr(Replaceable::update);
         }
 
@@ -703,7 +730,8 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     .createOr(Replaceable::update);
         }
 
-        final Deployment desiredDeployment = RouterResourceFactory.makeDesiredBarnDeployment(resource, context);
+        final Deployment desiredDeployment =
+                RouterResourceFactory.makeDesiredBarnDeployment(resource, context, claimName);
         Deployment existingDeployment = kubernetesClient
                 .apps()
                 .deployments()
@@ -721,6 +749,67 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     .resource(desiredDeployment)
                     .createOr(Replaceable::update);
         }
+    }
+
+    /**
+     * Chooses the Barn PVC: {@code spec.barn.storage.existingClaim}, the legacy {@code barn-volume-claim}
+     * when this router already owns it (so existing data is kept), or {@code <router>-barn-data}.
+     */
+    private String barnClaimName(WanakuRouter resource, String namespace) {
+        final WanakuRouterSpec.StorageSpec storage = resource.getSpec().getBarn() != null
+                ? resource.getSpec().getBarn().getStorage()
+                : null;
+        if (storage != null && StringHelper.isNotEmpty(storage.getExistingClaim())) {
+            return storage.getExistingClaim();
+        }
+        final PersistentVolumeClaim legacy = kubernetesClient
+                .persistentVolumeClaims()
+                .inNamespace(namespace)
+                .withName(RouterResourceFactory.BARN_VOLUME_CLAIM)
+                .get();
+        if (legacy != null && isOwnedBy(legacy, resource)) {
+            return RouterResourceFactory.BARN_VOLUME_CLAIM;
+        }
+        return RouterResourceFactory.barnClaimName(resource.getMetadata().getName());
+    }
+
+    /** Removes the Barn workload and the Server plugin configuration. The Barn PVC is kept for its data. */
+    private void removeBarnBackend(WanakuRouter resource, String namespace) {
+        final String name = resource.getMetadata().getName();
+        final List<HasMetadata> barnObjects = new ArrayList<>();
+        Optional.ofNullable(kubernetesClient
+                        .apps()
+                        .deployments()
+                        .inNamespace(namespace)
+                        .withName(name + "-barn")
+                        .get())
+                .ifPresent(barnObjects::add);
+        Optional.ofNullable(kubernetesClient
+                        .services()
+                        .inNamespace(namespace)
+                        .withName("barn-" + name)
+                        .get())
+                .ifPresent(barnObjects::add);
+        Optional.ofNullable(kubernetesClient
+                        .configMaps()
+                        .inNamespace(namespace)
+                        .withName(RouterResourceFactory.serverConfigMapName(name))
+                        .get())
+                .ifPresent(barnObjects::add);
+        for (HasMetadata object : barnObjects) {
+            if (isOwnedBy(object, resource)) {
+                LOG.infof(
+                        "Deleting %s %s in %s: Barn is disabled",
+                        object.getKind(), object.getMetadata().getName(), namespace);
+                kubernetesClient.resource(object).delete();
+            }
+        }
+    }
+
+    private static boolean isOwnedBy(HasMetadata object, WanakuRouter resource) {
+        return nullSafe(object.getMetadata().getOwnerReferences()).stream()
+                .anyMatch(ref ->
+                        Objects.equals(ref.getUid(), resource.getMetadata().getUid()));
     }
 
     private void deployServerStorageAndService(WanakuRouter resource, String namespace) {

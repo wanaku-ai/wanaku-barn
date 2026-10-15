@@ -47,6 +47,33 @@ spec:
                   secretName:
                     type: "string"
                 type: "object"
+              barn:
+                properties:
+                  enabled:
+                    type: "boolean"
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: "string"
+                        value:
+                          type: "string"
+                      type: "object"
+                    type: "array"
+                  image:
+                    type: "string"
+                  imagePullPolicy:
+                    type: "string"
+                  storage:
+                    properties:
+                      existingClaim:
+                        type: "string"
+                      size:
+                        type: "string"
+                      storageClassName:
+                        type: "string"
+                    type: "object"
+                type: "object"
               exposure:
                 properties:
                   annotations:
@@ -130,6 +157,8 @@ spec:
             type: "object"
           status:
             properties:
+              barnUrl:
+                type: "string"
               conditions:
                 items:
                   properties:

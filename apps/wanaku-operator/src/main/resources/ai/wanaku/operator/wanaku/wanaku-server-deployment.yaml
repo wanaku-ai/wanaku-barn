@@ -29,8 +29,6 @@ spec:
               drop:
                 - ALL
           env:
-            - name: WANAKU_CLASSIC_URL
-              value: ""
             - name: WANAKU_MGMT_LISTEN
               value: "0.0.0.0:8080"
             - name: WANAKU_A2A_LISTEN

@@ -12,8 +12,10 @@ import ai.wanaku.operator.wanaku.WanakuTypes;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RouterResourceFactoryTest {
 
@@ -44,10 +46,90 @@ class RouterResourceFactoryTest {
         assertEquals(
                 service.getSpec().getSelector(),
                 deployment.getSpec().getSelector().getMatchLabels());
-        assertEquals("barn-volume-claim", pvc.getMetadata().getName());
+        assertEquals("test-router-barn-data", pvc.getMetadata().getName());
         assertEquals(
                 pvc.getMetadata().getName(),
                 pod.getSpec().getVolumes().getFirst().getPersistentVolumeClaim().getClaimName());
+    }
+
+    @Test
+    void barnStorageSettingsApplyToThePvc() {
+        WanakuRouter router = createRouter(null);
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(true);
+        WanakuRouterSpec.StorageSpec storage = new WanakuRouterSpec.StorageSpec();
+        storage.setSize("20Gi");
+        storage.setStorageClassName("fast");
+        barn.setStorage(storage);
+        router.getSpec().setBarn(barn);
+
+        var pvc = RouterResourceFactory.makeBarnVolumePVC(router, "custom-claim");
+        Deployment deployment = RouterResourceFactory.makeDesiredBarnDeployment(router, null, "custom-claim");
+
+        assertEquals("custom-claim", pvc.getMetadata().getName());
+        assertEquals(
+                "20Gi",
+                pvc.getSpec().getResources().getRequests().get("storage").toString());
+        assertEquals("fast", pvc.getSpec().getStorageClassName());
+        assertEquals(
+                "custom-claim",
+                deployment
+                        .getSpec()
+                        .getTemplate()
+                        .getSpec()
+                        .getVolumes()
+                        .getFirst()
+                        .getPersistentVolumeClaim()
+                        .getClaimName());
+        assertEquals(
+                RouterResourceFactory.BARN_DATA_PATH + "/",
+                getEnvValue(deployment, "WANAKU_PERSISTENCE_INFINISPAN_BASE_FOLDER"));
+    }
+
+    @Test
+    void barnSpecTakesPrecedenceOverDeprecatedRouterSpec() {
+        WanakuRouterSpec.RouterSpec legacy = new WanakuRouterSpec.RouterSpec();
+        legacy.setEnabled(true);
+        legacy.setImage("quay.io/wanaku/legacy:1");
+        WanakuRouter router = createRouter(legacy);
+        assertTrue(RouterResourceFactory.isBarnEnabled(router));
+
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(false);
+        router.getSpec().setBarn(barn);
+
+        assertFalse(RouterResourceFactory.isBarnEnabled(router));
+    }
+
+    @Test
+    void serverReadsBarnPluginConfigOnlyWhenBarnIsEnabled() {
+        WanakuRouter withoutBarn = createRouter(null);
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(true);
+        WanakuRouter withBarn = createRouter(null);
+        withBarn.getSpec().setBarn(barn);
+
+        var config = RouterResourceFactory.makeServerConfigMap(withBarn);
+        Deployment server = RouterResourceFactory.makeDesiredServerDeployment(withBarn, null);
+        Deployment plainServer = RouterResourceFactory.makeDesiredServerDeployment(withoutBarn, null);
+
+        assertEquals("test-router-server-config", config.getMetadata().getName());
+        assertTrue(config.getData().get("wanaku.yaml").contains("id: wanaku-barn"));
+        assertTrue(config.getData().get("wanaku.yaml").contains("wanaku-barn-api:"));
+        assertTrue(config.getData().get("wanaku.yaml").contains("target: http://barn-test-router:8080"));
+        var mount = server.getSpec().getTemplate().getSpec().getContainers().getFirst().getVolumeMounts().stream()
+                .filter(m -> "server-config".equals(m.getName()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("/etc/wanaku/wanaku.yaml", mount.getMountPath());
+        assertEquals("wanaku.yaml", mount.getSubPath());
+        assertNotNull(server.getSpec()
+                .getTemplate()
+                .getMetadata()
+                .getAnnotations()
+                .get(RouterResourceFactory.SERVER_CONFIG_HASH_ANNOTATION));
+        assertTrue(plainServer.getSpec().getTemplate().getSpec().getVolumes().stream()
+                .noneMatch(v -> "server-config".equals(v.getName())));
     }
 
     @Test
@@ -78,9 +160,8 @@ class RouterResourceFactoryTest {
                 "quay.io/wanaku/wanaku-server:latest",
                 pod.getSpec().getContainers().getFirst().getImage());
         assertEquals("server-test-router", service.getMetadata().getName());
-        assertEquals(
-                OperatorUtil.getRouterBaseUrl("test-router"),
-                getContainerEnvValue(deployment, "wanaku-server", "WANAKU_CLASSIC_URL"));
+        // The Server has no such setting: Barn is wired through the plugin configuration
+        assertNull(getContainerEnv(deployment, "wanaku-server", "WANAKU_CLASSIC_URL"));
         assertEquals(
                 deployment.getSpec().getSelector().getMatchLabels(),
                 service.getSpec().getSelector());

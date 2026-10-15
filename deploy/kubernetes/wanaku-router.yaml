@@ -22,7 +22,7 @@ spec:
     # annotations to set in the ingress resource
     # annotations:
     #   haproxy.router.openshift.io/timeout: 5s
-  router:
+  barn:
     enabled: true
     image: wanaku-image-replace
     imagePullPolicy: Always

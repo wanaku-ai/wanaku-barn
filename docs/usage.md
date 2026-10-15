@@ -377,7 +377,7 @@ kind: WanakuRouter
 metadata:
   name: wanaku-dev
 spec:
-  router:
+  barn:
     enabled: true
 ```
 
@@ -480,7 +480,7 @@ kind: WanakuRouter
 metadata:
   name: wanaku-dev
 spec:
-  router:
+  barn:
     enabled: true
   auth:
     enabled: true

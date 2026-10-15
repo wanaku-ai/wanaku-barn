@@ -7,6 +7,7 @@ import io.fabric8.kubernetes.api.model.Condition;
 public class WanakuRouterStatus {
     private Long observedGeneration;
     private Map<String, String> endpoints;
+    private String barnUrl;
     private String host;
     private String sseEndpoint;
     private String streamableEndpoint;
@@ -27,6 +28,15 @@ public class WanakuRouterStatus {
 
     public void setEndpoints(Map<String, String> endpoints) {
         this.endpoints = endpoints;
+    }
+
+    /** In-cluster URL of the Wanaku Barn API, set when Barn is enabled. */
+    public String getBarnUrl() {
+        return barnUrl;
+    }
+
+    public void setBarnUrl(String barnUrl) {
+        this.barnUrl = barnUrl;
     }
 
     public String getHost() {
