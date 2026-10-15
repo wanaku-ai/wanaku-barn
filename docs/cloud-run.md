@@ -1,15 +1,15 @@
 # Running Integrations in the Cloud
 
-The `wanaku cloud` commands run your Camel routes in a Kubernetes or OpenShift cluster, next to a Wanaku router that the Wanaku operator manages.
+The `wanaku cloud` commands run your Camel routes and semantic routes in a Kubernetes or OpenShift cluster, next to a Wanaku router that the Wanaku operator manages.
 You write a route file on your machine; one command packages it, starts it in the cluster, and makes its tools available through the router.
 
 The commands work with any cluster that you can reach with `kubectl`. They do not depend on a cloud provider.
 
 ## Prerequisites
 
-- The Wanaku operator is installed in the cluster, at a version that serves the `WanakuIntegration` resource. See the [Kubernetes Operator Guide](operator.md).
+- The Wanaku operator is installed in the cluster, at a version that serves the `WanakuIntegration` and `WanakuSemanticRouter` resources. See the [Kubernetes Operator Guide](operator.md).
 - A `WanakuRouter` is ready in the namespace that you use.
-- Your kubeconfig can reach the cluster. Your account can create ConfigMaps and `WanakuIntegration` resources in the namespace.
+- Your kubeconfig can reach the cluster. Your account can create ConfigMaps, `WanakuIntegration` and `WanakuSemanticRouter` resources in the namespace.
 
 ## Setting the Target
 
@@ -81,6 +81,38 @@ When you run the command again with the same name, it updates the route files an
 The Camel Integration Capability registers itself with the router. This needs a capability image that supports self-registration (wanaku-ai/camel-integration-capability#153). An older image does not register and does not become ready, so the command times out with `0/1 replicas available`. In this case, use `--image` to select a newer image, and `--image-pull-policy Always` if you reuse a tag.
 
 When the integration fails or is not ready before the timeout, the command also prints why its pods are not ready: the waiting reason of each container (for example `ImagePullBackOff`), the reason of the last container stop, and the latest Warning event of the pod (for example `Readiness probe failed: HTTP probe failed with statuscode: 404`). This needs permission to list pods and events in the namespace.
+
+## Running a Semantic Router
+
+The input of `wanaku cloud run semantic` is a semantic route for the Wanaku Semantic Router (WSR). The route needs its `semantic-router.properties` manifest in the same directory, as in the WSR local-files mode. The manifest names the main route, the dependencies file, the configuration file and the Kamelets, relative to the directory that `main` is relative to:
+
+```text
+catalog/
+  support/
+    semantic-router.properties   # main=support/support.camel.yaml, kamelets=support/kamelets, ...
+    support.camel.yaml
+    support.dependencies.txt
+    service.properties
+    kamelets/
+      classify.kamelet.yaml
+```
+
+To run the semantic route, use this command:
+
+```shell
+wanaku cloud run semantic catalog/support/support.camel.yaml
+```
+
+The command does these steps:
+
+1. It checks the files. The manifest must set `main`, `dependencies`, `configuration`, `kamelets`, `tool.name` and `expert.bean`. `main` must name the route file. The referenced files must exist inside the route tree. All files together must be smaller than 900 KiB.
+2. It checks that the target `WanakuRouter` exists and is ready.
+3. It writes all files into the `<name>-semantic` ConfigMap, and creates or updates the `<name>` `WanakuSemanticRouter` resource. ConfigMap keys cannot hold `/`, so each key replaces `/` with `--`, and the resource maps each key back to its path.
+4. It waits until the operator reports `Ready=True`.
+
+The forward name is the `tool.name` of the manifest. Use `--forward-name` to set another name. The options are the same as for `run integration`, except `--tags`. The default timeout is 600 seconds, because the runtime resolves Maven dependencies at startup.
+
+To check, read the logs of, or delete a semantic router, use `wanaku cloud status semantic <name>`, `kubectl logs deployment/<name>-wsr` and `wanaku cloud delete semantic <name>`. When you delete it, the runtime removes its forward from the router if it still owns the forward.
 
 ## Exit Codes
 
