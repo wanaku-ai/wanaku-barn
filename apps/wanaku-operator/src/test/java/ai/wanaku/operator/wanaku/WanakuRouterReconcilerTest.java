@@ -128,6 +128,17 @@ class WanakuRouterReconcilerTest {
         assertTrue(result.errorMessage.contains("listeners.management.host"));
     }
 
+    @Test
+    void unknownServerVariantFailsValidation() {
+        WanakuRouter resource = createRouter(null);
+        WanakuRouterSpec.ServerSpec server = new WanakuRouterSpec.ServerSpec();
+        server.setVariant("minimal");
+        resource.getSpec().setServer(server);
+        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
+        assertFalse(result.valid);
+        assertTrue(result.errorMessage.contains("spec.server.variant"));
+    }
+
     // ── cookie secret validation ─────────────────────────────────────────────
 
     @Test

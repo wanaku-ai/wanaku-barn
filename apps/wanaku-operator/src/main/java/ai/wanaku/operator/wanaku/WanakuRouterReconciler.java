@@ -142,6 +142,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     static final String AUTH_CONFIGURED_CONDITION = "AuthConfigured";
     static final String EXPOSURE_READY_CONDITION = "ExposureReady";
     public static final String BARN_AVAILABLE_CONDITION = "BarnAvailable";
+    static final String ADMIN_UI_ENDPOINT = "adminUi";
     private static final Pattern BASE64_TEXT = Pattern.compile("^[A-Za-z0-9+/_-]+$");
 
     private static final Duration NOT_READY_RECHECK = Duration.ofSeconds(30);
@@ -615,6 +616,10 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         exposure.hosts.forEach((listener, host) -> endpoints.put(
                 listener.id(),
                 listener == ServerListener.MCP ? "https://%s/mcp".formatted(host) : "https://%s/".formatted(host)));
+        final String managementHost = exposure.hosts.get(ServerListener.MANAGEMENT);
+        if (managementHost != null && !RouterResourceFactory.isHeadless(resource)) {
+            endpoints.put(ADMIN_UI_ENDPOINT, "https://%s/admin/".formatted(managementHost));
+        }
         wanakuStatus.setEndpoints(endpoints.isEmpty() ? null : endpoints);
         final String mcpHost = exposure.hosts.getOrDefault(ServerListener.MCP, exposure.host);
         wanakuStatus.setHost("https://" + exposure.hosts.getOrDefault(ServerListener.MANAGEMENT, exposure.host));
@@ -1167,6 +1172,15 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
             } else if (ingress && StringHelper.isBlank(exposureSpec.getHost())) {
                 return ValidateSpecResult.invalid("spec.exposure.host is required when spec.exposure.type is Ingress");
             }
+        }
+
+        WanakuRouterSpec.ServerSpec serverSpec =
+                resource.getSpec() != null ? resource.getSpec().getServer() : null;
+        if (serverSpec != null
+                && serverSpec.getVariant() != null
+                && !RouterResourceFactory.SERVER_VARIANT_STANDARD.equals(serverSpec.getVariant())
+                && !RouterResourceFactory.SERVER_VARIANT_HEADLESS.equals(serverSpec.getVariant())) {
+            return ValidateSpecResult.invalid("spec.server.variant must be standard or headless");
         }
 
         WanakuRouterSpec.AuthSpec authSpec =

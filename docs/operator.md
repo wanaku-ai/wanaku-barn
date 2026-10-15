@@ -157,7 +157,8 @@ host networking, so Wanaku Server reaches Barn at `http://localhost:8180`.
 | `spec.barn.env` | list | Extra environment variables (`name`/`value`) for Wanaku Barn |
 | `spec.barn.storage` | object | `size` (default `5Gi`), `storageClassName` and `existingClaim` for the Barn data |
 | `spec.router` | object | Deprecated name of `spec.barn` (without `storage`). The operator reads it only when `spec.barn` is not set |
-| `spec.server` | object | The Wanaku router engine: `image`, `env`, `imagePullPolicy` |
+| `spec.server` | object | The Wanaku router engine: `variant`, `image`, `env`, `imagePullPolicy` |
+| `spec.server.variant` | string | `standard` (default) or `headless`. See [Server variants](#server-variants) |
 | `spec.auth` | object | Authentication via oauth2-proxy instances placed in front of Wanaku |
 | `spec.auth.enabled` | bool | Whether the oauth2-proxies are deployed |
 | `spec.auth.issuerUrl` | string | Full public OIDC issuer URL, including the realm (for example, `https://keycloak.example.com/realms/wanaku`) |
@@ -210,6 +211,31 @@ The `AuthConfigured` condition reports the authentication configuration:
 | `False` | `DeprecatedFields` | The resource uses `spec.auth.authServer` or `spec.auth.authProxy`. These fields have no effect. Replace them with `enabled`, `issuerUrl`, `clientId` and `secretName`. |
 
 Earlier operator versions appended `/realms/wanaku` to `issuerUrl`. Resources that set only the Keycloak base URL continue to work, with the `DeprecatedIssuerFormat` reason.
+
+#### Server variants
+
+The Wanaku Server has two container images:
+
+| Variant | Default image | Admin UI |
+|---------|---------------|----------|
+| `standard` | `quay.io/wanaku/wanaku-server:latest` | Embedded at `/admin/` |
+| `headless` | `quay.io/wanaku/wanaku-server-headless:latest` | None |
+
+To deploy the headless variant, set `spec.server.variant: headless`:
+
+```yaml
+spec:
+  server:
+    variant: headless
+```
+
+The variant selects the default image. If you set `spec.server.image`, the operator uses that image, and the variant only controls how the operator advertises the admin UI.
+
+The headless variant keeps the management APIs, MCP, inference, A2A, persistence, probes and authentication. The probes use `/healthz`, which does not depend on the admin UI. In the headless variant:
+
+- `GET /` and `GET /admin/` return `404`.
+- `status.endpoints.adminUi` is not set. The standard variant sets it when the management listener is exposed.
+- When authentication is enabled, the management proxy returns `401` for requests without a token on all paths, instead of a redirect to the login page.
 
 #### Wanaku Barn
 

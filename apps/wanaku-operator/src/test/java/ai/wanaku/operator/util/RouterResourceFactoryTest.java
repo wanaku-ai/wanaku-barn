@@ -499,6 +499,21 @@ class RouterResourceFactoryTest {
     }
 
     @Test
+    void headlessManagementProxyAnswersUnauthorizedOnEveryPath() {
+        WanakuRouter router = createRouterWithAuth();
+        WanakuRouterSpec.ServerSpec server = new WanakuRouterSpec.ServerSpec();
+        server.setVariant("headless");
+        router.getSpec().setServer(server);
+
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        assertEquals("^/.*", getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_API_ROUTES"));
+        assertEquals(
+                "^/healthz$,^/health$",
+                getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_SKIP_AUTH_ROUTES"));
+    }
+
+    @Test
     void oauth2ProxyServiceExposesBothPorts() {
         WanakuRouter router = createRouterWithAuth();
         io.fabric8.kubernetes.api.model.Service service = RouterResourceFactory.makeOauth2ProxyService(router);

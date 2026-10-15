@@ -164,9 +164,22 @@ public class WanakuRouterSpec {
     }
 
     public static class ServerSpec {
+        private String variant;
         private String image;
         private List<WanakuTypes.EnvVar> env;
         private String imagePullPolicy;
+
+        /**
+         * {@code standard} (default) serves the embedded admin UI; {@code headless} omits it. The variant
+         * selects the default image and whether the operator advertises the admin UI.
+         */
+        public String getVariant() {
+            return variant;
+        }
+
+        public void setVariant(String variant) {
+            this.variant = variant;
+        }
 
         public String getImage() {
             return image;

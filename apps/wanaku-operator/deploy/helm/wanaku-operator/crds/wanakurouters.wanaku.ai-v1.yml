@@ -153,6 +153,8 @@ spec:
                     type: "string"
                   imagePullPolicy:
                     type: "string"
+                  variant:
+                    type: "string"
                 type: "object"
             type: "object"
           status:

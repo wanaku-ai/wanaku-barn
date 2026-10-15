@@ -234,6 +234,16 @@ public final class RouterResourceFactory {
                 .formatted(BARN_PLUGIN_ID, BARN_PLUGIN_SERVICE, barnUrl(routerName));
     }
 
+    public static final String SERVER_VARIANT_STANDARD = "standard";
+    public static final String SERVER_VARIANT_HEADLESS = "headless";
+    public static final String HEADLESS_SERVER_IMAGE = "quay.io/wanaku/wanaku-server-headless:latest";
+
+    /** True when {@code spec.server.variant} is {@code headless}: the Server has no embedded admin UI. */
+    public static boolean isHeadless(WanakuRouter resource) {
+        final WanakuRouterSpec.ServerSpec server = resource.getSpec().getServer();
+        return server != null && SERVER_VARIANT_HEADLESS.equals(server.getVariant());
+    }
+
     public static String exposureType(WanakuRouter resource) {
         final WanakuTypes.ExposureSpec exposure = resource.getSpec().getExposure();
         return exposure != null && StringHelper.isNotEmpty(exposure.getType()) ? exposure.getType() : EXPOSURE_AUTO;
@@ -539,6 +549,10 @@ public final class RouterResourceFactory {
 
         List<EnvVar> envVars = new java.util.ArrayList<>();
 
+        if (isHeadless(resource)) {
+            serverContainer.setImage(HEADLESS_SERVER_IMAGE);
+        }
+
         final WanakuRouterSpec.ServerSpec serverSpec = resource.getSpec().getServer();
         if (serverSpec != null) {
             if (serverSpec.getImage() != null && !serverSpec.getImage().isEmpty()) {
@@ -770,7 +784,8 @@ public final class RouterResourceFactory {
             List<EnvVar> defaults =
                     switch (listener) {
                         case MCP -> oauth2ProxyMcpEnv(authSpec, deploymentName, redirectUrl);
-                        case MANAGEMENT -> oauth2ProxyMgmtEnv(authSpec, deploymentName, redirectUrl);
+                        case MANAGEMENT ->
+                            oauth2ProxyMgmtEnv(authSpec, deploymentName, redirectUrl, isHeadless(resource));
                         case INFERENCE, A2A -> oauth2ProxyApiEnv(authSpec, deploymentName, redirectUrl, listener);
                     };
             for (EnvVar defaultVar : defaults) {
@@ -803,12 +818,13 @@ public final class RouterResourceFactory {
     }
 
     private static List<EnvVar> oauth2ProxyMgmtEnv(
-            WanakuRouterSpec.AuthSpec authSpec, String deploymentName, String redirectUrl) {
+            WanakuRouterSpec.AuthSpec authSpec, String deploymentName, String redirectUrl, boolean headless) {
         List<EnvVar> env = oauth2ProxySharedEnv(authSpec, redirectUrl);
         env.add(envVar("OAUTH2_PROXY_HTTP_ADDRESS", "0.0.0.0:4181"));
         env.add(envVar("OAUTH2_PROXY_UPSTREAMS", "http://server-%s:8080".formatted(deploymentName)));
         env.add(envVar("OAUTH2_PROXY_SKIP_AUTH_ROUTES", "^/healthz$,^/health$"));
-        env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/api/.*"));
+        // Without the admin UI no browser login is needed, so every path answers 401 instead of redirecting
+        env.add(envVar("OAUTH2_PROXY_API_ROUTES", headless ? "^/.*" : "^/api/.*"));
         return env;
     }
 
