@@ -10,7 +10,7 @@ import static picocli.CommandLine.usage;
 @Command(
         name = "run",
         description = "Run a route file in the cloud target",
-        subcommands = {CloudRunIntegration.class})
+        subcommands = {CloudRunIntegration.class, CloudRunSemantic.class})
 public class CloudRun extends BaseCommand {
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {

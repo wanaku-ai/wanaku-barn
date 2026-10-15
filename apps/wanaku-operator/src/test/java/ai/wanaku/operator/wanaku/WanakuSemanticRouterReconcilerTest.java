@@ -159,6 +159,41 @@ class WanakuSemanticRouterReconcilerTest {
     }
 
     @Test
+    void configMapItemsRestoreTheRouteFileTree() {
+        createRouter(false);
+        WanakuSemanticRouterSpec.Source source = configMapSource();
+        source.getConfigMapRef().setMain("support/support.camel.yaml");
+        WanakuTypes.KeyToPath main = new WanakuTypes.KeyToPath();
+        main.setKey("support--support.camel.yaml");
+        main.setPath("support/support.camel.yaml");
+        WanakuTypes.KeyToPath kamelet = new WanakuTypes.KeyToPath();
+        kamelet.setKey("support--kamelets--echo.kamelet.yaml");
+        kamelet.setPath("support/kamelets/echo.kamelet.yaml");
+        source.getConfigMapRef().setItems(List.of(main, kamelet));
+        WanakuSemanticRouter wsr = createSemanticRouter(source);
+
+        reconciler.reconcile(wsr, null);
+
+        var volume = deployment().getSpec().getTemplate().getSpec().getVolumes().stream()
+                .filter(v -> "routes".equals(v.getName()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(volume.getConfigMap().getItems())
+                .extracting(i -> i.getKey() + "=" + i.getPath())
+                .containsExactly(
+                        "support--support.camel.yaml=support/support.camel.yaml",
+                        "support--kamelets--echo.kamelet.yaml=support/kamelets/echo.kamelet.yaml");
+        assertThat(env(deployment()
+                        .getSpec()
+                        .getTemplate()
+                        .getSpec()
+                        .getContainers()
+                        .getFirst()
+                        .getEnv()))
+                .containsEntry("WSR_ROUTES_REF", "file:/opt/wsr/routes/support/support.camel.yaml");
+    }
+
+    @Test
     void aRegisteredRuntimeIsReady() {
         createRouter(true);
         AtomicReference<String> requested = new AtomicReference<>();

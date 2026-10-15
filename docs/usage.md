@@ -1426,7 +1426,7 @@ These configurations are handled when adding a new tool to Wanaku MCP Router.
 
 ## Running Integrations in the Cloud
 
-To run a Camel route file with MCP tools in a cluster that runs the Wanaku operator, use `wanaku cloud run integration`. The integration registers with the router automatically. See [Running Integrations in the Cloud](cloud-run.md).
+To run a Camel route file with MCP tools in a cluster that runs the Wanaku operator, use `wanaku cloud run integration`. To run a semantic route, use `wanaku cloud run semantic`. Both register with the router automatically. See [Running Integrations in the Cloud](cloud-run.md).
 
 ## Accessing Other MCP servers (MCP Forwards)
 

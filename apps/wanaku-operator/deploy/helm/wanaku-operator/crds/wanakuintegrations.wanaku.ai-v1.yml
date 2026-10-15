@@ -77,6 +77,15 @@ spec:
                 properties:
                   configMapRef:
                     properties:
+                      items:
+                        items:
+                          properties:
+                            key:
+                              type: "string"
+                            path:
+                              type: "string"
+                          type: "object"
+                        type: "array"
                       main:
                         type: "string"
                       name:

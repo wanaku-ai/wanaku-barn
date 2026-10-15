@@ -86,12 +86,7 @@ public final class IntegrationResourceFactory {
                     .withMountPath(ROUTES_PATH)
                     .withReadOnly(true)
                     .build());
-            volumes.add(new VolumeBuilder()
-                    .withName("routes")
-                    .withNewConfigMap()
-                    .withName(spec.getRoutes().getConfigMapRef().getName())
-                    .endConfigMap()
-                    .build());
+            volumes.add(RuntimeWorkloads.routesVolume(spec.getRoutes().getConfigMapRef()));
         }
 
         final String image = StringHelper.isNotEmpty(spec.getImage()) ? spec.getImage() : DEFAULT_IMAGE;

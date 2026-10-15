@@ -4,7 +4,8 @@ import io.fabric8.kubernetes.client.dsl.base.ResourceDefinitionContext;
 
 /** The runtimes that the cloud commands run, with the custom resource the operator reconciles for each. */
 public enum RuntimeKind {
-    INTEGRATION("integration", "WanakuIntegration", "wanakuintegrations");
+    INTEGRATION("integration", "WanakuIntegration", "wanakuintegrations"),
+    SEMANTIC("semantic", "WanakuSemanticRouter", "wanakusemanticrouters");
 
     private final String id;
     private final String kind;
