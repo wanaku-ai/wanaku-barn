@@ -87,6 +87,47 @@ class WanakuRouterReconcilerTest {
         assertTrue(result.errorMessage.contains("secretName"));
     }
 
+    // ── exposure validation (the mocked cluster has no Route API) ─────────────
+
+    @Test
+    void unknownExposureTypeFailsValidation() {
+        WanakuRouter resource = createRouterWithHost("wanaku.example.com");
+        resource.getSpec().getExposure().setType("LoadBalancer");
+        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
+        assertFalse(result.valid);
+        assertTrue(result.errorMessage.contains("spec.exposure.type"));
+    }
+
+    @Test
+    void routeExposureWithoutRouteApiFailsValidation() {
+        WanakuRouter resource = createRouterWithHost("wanaku.example.com");
+        resource.getSpec().getExposure().setType("Route");
+        assertFalse(reconciler.validateSpec(resource).valid);
+    }
+
+    @Test
+    void noneExposureNeedsNoHost() {
+        WanakuRouter resource = createRouterWithHost(null);
+        resource.getSpec().getExposure().setType("None");
+        assertTrue(reconciler.validateSpec(resource).valid);
+    }
+
+    @Test
+    void ingressListenerWithoutHostFailsValidation() {
+        WanakuRouter resource = createRouter(new WanakuTypes.ExposureSpec());
+        WanakuTypes.ListenersSpec listeners = new WanakuTypes.ListenersSpec();
+        WanakuTypes.ListenerSpec a2a = new WanakuTypes.ListenerSpec();
+        a2a.setEnabled(true);
+        listeners.setA2a(a2a);
+        resource.getSpec().getExposure().setListeners(listeners);
+
+        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
+
+        assertFalse(result.valid);
+        // management is enabled by default and reported first
+        assertTrue(result.errorMessage.contains("listeners.management.host"));
+    }
+
     // ── cookie secret validation ─────────────────────────────────────────────
 
     @Test

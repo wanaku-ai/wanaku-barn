@@ -6,7 +6,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -18,6 +22,7 @@ import io.fabric8.kubernetes.api.model.ContainerStateWaiting;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Event;
 import io.fabric8.kubernetes.api.model.EventBuilder;
+import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -32,6 +37,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.Replaceable;
 import io.fabric8.openshift.api.model.Route;
+import io.fabric8.openshift.api.model.RouteIngressCondition;
 import io.fabric8.openshift.client.OpenShiftClient;
 import io.javaoperatorsdk.operator.api.config.informer.Informer;
 import io.javaoperatorsdk.operator.api.config.informer.InformerEventSourceConfiguration;
@@ -51,6 +57,7 @@ import io.quarkiverse.operatorsdk.annotations.RBACVerbs;
 import ai.wanaku.core.util.StringHelper;
 import ai.wanaku.operator.util.OperatorUtil;
 import ai.wanaku.operator.util.RouterResourceFactory;
+import ai.wanaku.operator.util.ServerListener;
 
 import static ai.wanaku.operator.util.Matchers.match;
 
@@ -132,9 +139,15 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     private static final Logger LOG = Logger.getLogger(WanakuRouterReconciler.class);
     static final String RECONCILED_CONDITION = "Reconciled";
     static final String AUTH_CONFIGURED_CONDITION = "AuthConfigured";
+    static final String EXPOSURE_READY_CONDITION = "ExposureReady";
     private static final Pattern BASE64_TEXT = Pattern.compile("^[A-Za-z0-9+/_-]+$");
 
     private static final Duration NOT_READY_RECHECK = Duration.ofSeconds(30);
+    private static final List<String> EXPOSURE_TYPES = List.of(
+            RouterResourceFactory.EXPOSURE_AUTO,
+            RouterResourceFactory.EXPOSURE_ROUTE,
+            RouterResourceFactory.EXPOSURE_INGRESS,
+            RouterResourceFactory.EXPOSURE_NONE);
     private static final Set<String> FAILURE_REASONS = Set.of(
             "ImagePullBackOff",
             "ErrImagePull",
@@ -182,7 +195,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         final String namespace = resource.getMetadata().getNamespace();
         final WanakuRouterStatus wanakuStatus = new WanakuRouterStatus();
         final AuthCheck authCheck = checkAuth(resource, namespace);
-        deployRouter(resource, context, namespace, wanakuStatus, authCheck);
+        final Exposure exposure = deployRouter(resource, context, namespace, wanakuStatus, authCheck);
 
         final List<Condition> previous = previousConditions(resource);
         final Long generation = resource.getMetadata().getGeneration();
@@ -211,6 +224,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         for (ComponentWorkload component : requiredComponents(resource)) {
             conditions.add(deploymentCondition(component, namespace, generation, previous));
         }
+        conditions.add(exposureCondition(exposure, generation, previous));
         conditions.add(aggregateReady(conditions, generation, previous));
 
         wanakuStatus.setObservedGeneration(generation);
@@ -563,40 +577,59 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         }
     }
 
-    private void deployRouter(
+    private Exposure deployRouter(
             WanakuRouter resource,
             Context<WanakuRouter> context,
             String namespace,
             WanakuRouterStatus wanakuStatus,
             AuthCheck authCheck) {
 
-        deployServer(resource, context, namespace);
+        deployServerStorageAndService(resource, namespace);
 
         final boolean authEnabled = RouterResourceFactory.isAuthEnabled(resource);
+        final List<ServerListener> extraProxied = RouterResourceFactory.exposedListeners(resource).keySet().stream()
+                .filter(l -> l == ServerListener.INFERENCE || l == ServerListener.A2A)
+                .toList();
         if (authEnabled) {
             // The service must exist before the Route/Ingress that targets it
-            deployOauth2ProxyService(resource, namespace);
+            deployOauth2ProxyService(resource, namespace, extraProxied);
         }
 
-        ExternalHosts hosts = reconcileExternalAccess(resource, namespace);
+        final Exposure exposure = reconcileExternalAccess(resource, namespace);
+
+        // The A2A public URL is only known once its Route or Ingress exists
+        final String a2aHost = exposure.hosts.get(ServerListener.A2A);
+        deployServerDeployment(resource, context, namespace, a2aHost != null ? "https://%s/".formatted(a2aHost) : null);
 
         // A proxy without a valid Secret cannot start, so wait until AuthConfigured is True
         if (authEnabled && authCheck.configured) {
-            deployOauth2ProxyDeployment(resource, namespace, hosts.management, authCheck.secretVersion);
+            final Map<ServerListener, String> proxyHosts = new EnumMap<>(ServerListener.class);
+            proxyHosts.put(ServerListener.MANAGEMENT, exposure.host);
+            proxyHosts.put(ServerListener.MCP, exposure.host);
+            proxyHosts.putAll(exposure.hosts);
+            deployOauth2ProxyDeployment(resource, namespace, proxyHosts, authCheck.secretVersion);
         }
 
-        wanakuStatus.setHost("https://" + hosts.management);
-        wanakuStatus.setSseEndpoint("https://%s/mcp/sse".formatted(hosts.mcp));
-        wanakuStatus.setStreamableEndpoint("https://%s/mcp/".formatted(hosts.mcp));
+        final Map<String, String> endpoints = new LinkedHashMap<>();
+        exposure.hosts.forEach((listener, host) -> endpoints.put(
+                listener.id(),
+                listener == ServerListener.MCP ? "https://%s/mcp".formatted(host) : "https://%s/".formatted(host)));
+        wanakuStatus.setEndpoints(endpoints.isEmpty() ? null : endpoints);
+        final String mcpHost = exposure.hosts.getOrDefault(ServerListener.MCP, exposure.host);
+        wanakuStatus.setHost("https://" + exposure.hosts.getOrDefault(ServerListener.MANAGEMENT, exposure.host));
+        wanakuStatus.setSseEndpoint("https://%s/mcp/sse".formatted(mcpHost));
+        wanakuStatus.setStreamableEndpoint("https://%s/mcp/".formatted(mcpHost));
 
         WanakuRouterSpec.RouterSpec routerSpec = resource.getSpec().getRouter();
         if (routerSpec != null && routerSpec.isEnabled()) {
             deployBarnBackend(resource, context, namespace);
         }
+        return exposure;
     }
 
-    private void deployOauth2ProxyService(WanakuRouter resource, String namespace) {
-        final Service desiredService = RouterResourceFactory.makeOauth2ProxyService(resource);
+    private void deployOauth2ProxyService(
+            WanakuRouter resource, String namespace, List<ServerListener> extraListeners) {
+        final Service desiredService = RouterResourceFactory.makeOauth2ProxyService(resource, extraListeners);
         Service existingService = kubernetesClient
                 .services()
                 .inNamespace(namespace)
@@ -615,9 +648,9 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     }
 
     private void deployOauth2ProxyDeployment(
-            WanakuRouter resource, String namespace, String host, String secretVersion) {
+            WanakuRouter resource, String namespace, Map<ServerListener, String> hosts, String secretVersion) {
         final Deployment desiredDeployment =
-                RouterResourceFactory.makeOauth2ProxyDeployment(resource, host, secretVersion);
+                RouterResourceFactory.makeOauth2ProxyDeployment(resource, hosts, secretVersion);
         Deployment existingDeployment = kubernetesClient
                 .apps()
                 .deployments()
@@ -690,7 +723,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         }
     }
 
-    private void deployServer(WanakuRouter resource, Context<WanakuRouter> context, String namespace) {
+    private void deployServerStorageAndService(WanakuRouter resource, String namespace) {
         final PersistentVolumeClaim serverPVC = RouterResourceFactory.makeServerVolumePVC(resource);
         PersistentVolumeClaim existingServerPVC = kubernetesClient
                 .persistentVolumeClaims()
@@ -722,8 +755,12 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     .resource(desiredService)
                     .createOr(Replaceable::update);
         }
+    }
 
-        final Deployment desiredDeployment = RouterResourceFactory.makeDesiredServerDeployment(resource, context);
+    private void deployServerDeployment(
+            WanakuRouter resource, Context<WanakuRouter> context, String namespace, String a2aPublicUrl) {
+        final Deployment desiredDeployment =
+                RouterResourceFactory.makeDesiredServerDeployment(resource, context, a2aPublicUrl);
         Deployment existingDeployment = kubernetesClient
                 .apps()
                 .deployments()
@@ -743,32 +780,110 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         }
     }
 
-    /** Externally reachable hostnames of the management API and the MCP endpoint. */
-    static final class ExternalHosts {
-        final String management;
-        final String mcp;
+    /** The public hosts the operator exposed, and the Routes whose admission decides ExposureReady. */
+    static final class Exposure {
+        /** Public host of each exposed listener. */
+        final Map<ServerListener, String> hosts = new EnumMap<>(ServerListener.class);
 
-        ExternalHosts(String management, String mcp) {
-            this.management = management;
-            this.mcp = mcp;
+        final List<Route> routes = new ArrayList<>();
+        /** The management host, or the internal Service name when nothing is exposed. */
+        String host;
+    }
+
+    Exposure reconcileExternalAccess(WanakuRouter resource, String namespace) {
+        final String name = resource.getMetadata().getName();
+        final String type = RouterResourceFactory.exposureType(resource);
+        final boolean routeApi = kubernetesClient.supports(Route.class);
+        final boolean useRoutes = RouterResourceFactory.EXPOSURE_ROUTE.equals(type)
+                || (RouterResourceFactory.EXPOSURE_AUTO.equals(type) && routeApi);
+        final Exposure exposure = new Exposure();
+        final Set<String> desired = new HashSet<>();
+
+        if (RouterResourceFactory.EXPOSURE_NONE.equals(type)) {
+            exposure.host = internalHost(resource);
+        } else if (RouterResourceFactory.isPerListenerExposure(resource)) {
+            for (Map.Entry<ServerListener, String> entry :
+                    RouterResourceFactory.exposedListeners(resource).entrySet()) {
+                final ServerListener listener = entry.getKey();
+                desired.add(name + "-" + listener.id());
+                if (useRoutes) {
+                    final Route route = reconcileRoute(
+                            kubernetesClient.adapt(OpenShiftClient.class),
+                            RouterResourceFactory.makeListenerRoute(resource, listener, entry.getValue()));
+                    exposure.routes.add(route);
+                    exposure.hosts.put(listener, route.getSpec().getHost());
+                } else {
+                    reconcileIngress(RouterResourceFactory.makeListenerIngress(resource, listener, entry.getValue()));
+                    exposure.hosts.put(listener, entry.getValue());
+                }
+            }
+            exposure.host = exposure.hosts.getOrDefault(ServerListener.MANAGEMENT, internalHost(resource));
+        } else if (useRoutes) {
+            desired.add(name);
+            desired.add(name + "-mcp");
+            createRoutesAndGetHost(resource, exposure);
+        } else if (resource.getSpec().getExposure() == null) {
+            exposure.host = internalHost(resource);
+        } else {
+            desired.add(name);
+            exposure.host = createIngressAndGetHost(resource);
+            exposure.hosts.put(ServerListener.MANAGEMENT, exposure.host);
+            exposure.hosts.put(ServerListener.MCP, exposure.host);
+        }
+
+        pruneExposure(resource, namespace, desired, routeApi);
+        return exposure;
+    }
+
+    private static String internalHost(WanakuRouter resource) {
+        final String name = resource.getMetadata().getName();
+        return RouterResourceFactory.isAuthEnabled(resource)
+                ? RouterResourceFactory.oauth2ProxyServiceName(name)
+                : "server-" + name;
+    }
+
+    /** Deletes the Routes and Ingresses of this router that are no longer selected by the spec. */
+    private void pruneExposure(WanakuRouter resource, String namespace, Set<String> desired, boolean routeApi) {
+        final Map<String, String> selector =
+                Map.of("app", resource.getMetadata().getName() + "-server", "component", "wanaku-server");
+        final List<HasMetadata> existing = new ArrayList<>();
+        if (routeApi) {
+            existing.addAll(kubernetesClient
+                    .adapt(OpenShiftClient.class)
+                    .routes()
+                    .inNamespace(namespace)
+                    .withLabels(selector)
+                    .list()
+                    .getItems());
+        }
+        existing.addAll(kubernetesClient
+                .network()
+                .v1()
+                .ingresses()
+                .inNamespace(namespace)
+                .withLabels(selector)
+                .list()
+                .getItems());
+        for (HasMetadata object : existing) {
+            final boolean owned = nullSafe(object.getMetadata().getOwnerReferences()).stream()
+                    .anyMatch(ref ->
+                            Objects.equals(ref.getUid(), resource.getMetadata().getUid()));
+            final boolean keep = desired.contains(object.getMetadata().getName())
+                    && object.getKind().equals(desiredKind(resource, routeApi));
+            if (owned && !keep) {
+                LOG.infof(
+                        "Deleting %s %s in %s: the listener is no longer exposed",
+                        object.getKind(), object.getMetadata().getName(), namespace);
+                kubernetesClient.resource(object).delete();
+            }
         }
     }
 
-    ExternalHosts reconcileExternalAccess(WanakuRouter resource, String namespace) {
-        WanakuTypes.ExposureSpec exposureSpec = resource.getSpec().getExposure();
-        if (kubernetesClient.supports(Route.class)) {
-            return createRoutesAndGetHosts(resource);
-        }
-        String host;
-        if (exposureSpec != null) {
-            host = createIngressAndGetHost(resource, namespace);
-        } else if (RouterResourceFactory.isAuthEnabled(resource)) {
-            host = RouterResourceFactory.oauth2ProxyServiceName(
-                    resource.getMetadata().getName());
-        } else {
-            host = "server-" + resource.getMetadata().getName();
-        }
-        return new ExternalHosts(host, host);
+    private static String desiredKind(WanakuRouter resource, boolean routeApi) {
+        final String type = RouterResourceFactory.exposureType(resource);
+        final boolean useRoutes = RouterResourceFactory.EXPOSURE_ROUTE.equals(type)
+                || (RouterResourceFactory.EXPOSURE_AUTO.equals(type) && routeApi);
+        return useRoutes ? "Route" : "Ingress";
     }
 
     /**
@@ -776,15 +891,17 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
      * separate hostname for each Route: setting {@code spec.host} needs the {@code routes/custom-host}
      * permission, so the operator sets it only when the user asks for a shared hostname.
      */
-    private ExternalHosts createRoutesAndGetHosts(WanakuRouter resource) {
+    private void createRoutesAndGetHost(WanakuRouter resource, Exposure exposure) {
         OpenShiftClient client = kubernetesClient.adapt(OpenShiftClient.class);
-        var exposure = resource.getSpec().getExposure();
-        String host = exposure != null ? exposure.getHost() : null;
-        String management = assignedHost(
-                reconcileRoute(client, RouterResourceFactory.makeServerRoute(resource, host, false)), "management");
-        String mcp = assignedHost(
-                reconcileRoute(client, RouterResourceFactory.makeServerRoute(resource, host, true)), "MCP");
-        return new ExternalHosts(management, mcp);
+        var exposureSpec = resource.getSpec().getExposure();
+        String host = exposureSpec != null ? exposureSpec.getHost() : null;
+        Route management = reconcileRoute(client, RouterResourceFactory.makeServerRoute(resource, host, false));
+        Route mcp = reconcileRoute(client, RouterResourceFactory.makeServerRoute(resource, host, true));
+        exposure.routes.add(management);
+        exposure.routes.add(mcp);
+        exposure.host = assignedHost(management, "management");
+        exposure.hosts.put(ServerListener.MANAGEMENT, exposure.host);
+        exposure.hosts.put(ServerListener.MCP, assignedHost(mcp, "MCP"));
     }
 
     private static String assignedHost(Route route, String kind) {
@@ -794,6 +911,57 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     "OpenShift did not assign a hostname to the Wanaku %s Route".formatted(kind));
         }
         return host;
+    }
+
+    Condition exposureCondition(Exposure exposure, Long generation, List<Condition> previous) {
+        final Condition previousCondition = OperatorUtil.findCondition(previous, EXPOSURE_READY_CONDITION);
+        for (Route route : exposure.routes) {
+            final List<RouteIngressCondition> admission = route.getStatus() == null
+                    ? List.of()
+                    : nullSafe(route.getStatus().getIngress()).stream()
+                            .flatMap(ingress -> nullSafe(ingress.getConditions()).stream())
+                            .filter(c -> "Admitted".equals(c.getType()))
+                            .toList();
+            final Optional<RouteIngressCondition> rejected = admission.stream()
+                    .filter(c -> "False".equals(c.getStatus()))
+                    .findFirst();
+            if (rejected.isPresent()) {
+                return OperatorUtil.condition(
+                        EXPOSURE_READY_CONDITION,
+                        false,
+                        "RouteNotAdmitted",
+                        "Route %s: %s: %s"
+                                .formatted(
+                                        route.getMetadata().getName(),
+                                        rejected.get().getReason(),
+                                        rejected.get().getMessage()),
+                        generation,
+                        previousCondition);
+            }
+            if (admission.stream().noneMatch(c -> "True".equals(c.getStatus()))) {
+                return OperatorUtil.condition(
+                        EXPOSURE_READY_CONDITION,
+                        false,
+                        "Progressing",
+                        "Route %s is waiting for router admission"
+                                .formatted(route.getMetadata().getName()),
+                        generation,
+                        previousCondition);
+            }
+        }
+        final boolean exposed = !exposure.hosts.isEmpty();
+        return OperatorUtil.condition(
+                EXPOSURE_READY_CONDITION,
+                true,
+                exposed ? "Exposed" : "NotExposed",
+                exposed
+                        ? "Exposed listeners: "
+                                + exposure.hosts.keySet().stream()
+                                        .map(ServerListener::id)
+                                        .toList()
+                        : "No listener is exposed outside the cluster",
+                generation,
+                previousCondition);
     }
 
     private Route reconcileRoute(OpenShiftClient client, Route desired) {
@@ -811,9 +979,14 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         return routes.resource(desired).createOr(Replaceable::update);
     }
 
-    private String createIngressAndGetHost(WanakuRouter resource, String namespace) {
+    private String createIngressAndGetHost(WanakuRouter resource) {
         String host = resource.getSpec().getExposure().getHost();
-        final Ingress desiredIngress = RouterResourceFactory.makeServerIngress(resource, host);
+        reconcileIngress(RouterResourceFactory.makeServerIngress(resource, host));
+        return host;
+    }
+
+    private void reconcileIngress(Ingress desiredIngress) {
+        final String namespace = desiredIngress.getMetadata().getNamespace();
         Ingress existingIngress = kubernetesClient
                 .network()
                 .v1()
@@ -833,7 +1006,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     .resource(desiredIngress)
                     .createOr(Replaceable::update);
         }
-        return host;
     }
 
     private UpdateControl<WanakuRouter> setErrorStatus(WanakuRouter resource, String reason, String message) {
@@ -882,10 +1054,30 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         WanakuTypes.ExposureSpec exposureSpec =
                 resource.getSpec() != null ? resource.getSpec().getExposure() : null;
 
-        if (exposureSpec != null
-                && StringHelper.isBlank(exposureSpec.getHost())
-                && !kubernetesClient.supports(Route.class)) {
-            return ValidateSpecResult.invalid("spec.exposure.host is required when spec.exposure.type is Ingress");
+        if (exposureSpec != null) {
+            final String type = RouterResourceFactory.exposureType(resource);
+            if (!EXPOSURE_TYPES.contains(type)) {
+                return ValidateSpecResult.invalid("spec.exposure.type must be one of %s".formatted(EXPOSURE_TYPES));
+            }
+            final boolean routeApi = kubernetesClient.supports(Route.class);
+            if (RouterResourceFactory.EXPOSURE_ROUTE.equals(type) && !routeApi) {
+                return ValidateSpecResult.invalid(
+                        "spec.exposure.type is Route, but the cluster does not serve the OpenShift Route API");
+            }
+            final boolean ingress = RouterResourceFactory.EXPOSURE_INGRESS.equals(type)
+                    || (RouterResourceFactory.EXPOSURE_AUTO.equals(type) && !routeApi);
+            if (ingress && RouterResourceFactory.isPerListenerExposure(resource)) {
+                for (Map.Entry<ServerListener, String> entry :
+                        RouterResourceFactory.exposedListeners(resource).entrySet()) {
+                    if (StringHelper.isBlank(entry.getValue())) {
+                        return ValidateSpecResult.invalid(
+                                "spec.exposure.listeners.%s.host is required when the listener is exposed through an Ingress"
+                                        .formatted(entry.getKey().id()));
+                    }
+                }
+            } else if (ingress && StringHelper.isBlank(exposureSpec.getHost())) {
+                return ValidateSpecResult.invalid("spec.exposure.host is required when spec.exposure.type is Ingress");
+            }
         }
 
         WanakuRouterSpec.AuthSpec authSpec =

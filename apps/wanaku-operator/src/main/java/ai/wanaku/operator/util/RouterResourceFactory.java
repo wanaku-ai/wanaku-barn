@@ -6,16 +6,21 @@ import java.util.Map;
 import java.util.Optional;
 import org.jboss.logging.Logger;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServicePortBuilder;
 import io.fabric8.kubernetes.api.model.ServiceSpec;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentSpec;
 import io.fabric8.kubernetes.api.model.networking.v1.HTTPIngressPath;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressTLS;
 import io.fabric8.openshift.api.model.Route;
 import io.fabric8.openshift.api.model.RouteBuilder;
@@ -135,6 +140,121 @@ public final class RouterResourceFactory {
         }
         route.addOwnerReference(resource);
         return route;
+    }
+
+    public static final String EXPOSURE_AUTO = "Auto";
+    public static final String EXPOSURE_ROUTE = "Route";
+    public static final String EXPOSURE_INGRESS = "Ingress";
+    public static final String EXPOSURE_NONE = "None";
+    public static final String LISTENER_LABEL = "wanaku.ai/listener";
+
+    public static String exposureType(WanakuRouter resource) {
+        final WanakuTypes.ExposureSpec exposure = resource.getSpec().getExposure();
+        return exposure != null && StringHelper.isNotEmpty(exposure.getType()) ? exposure.getType() : EXPOSURE_AUTO;
+    }
+
+    /** True when spec.exposure.listeners is set: each exposed listener gets its own host. */
+    public static boolean isPerListenerExposure(WanakuRouter resource) {
+        final WanakuTypes.ExposureSpec exposure = resource.getSpec().getExposure();
+        return exposure != null && exposure.getListeners() != null;
+    }
+
+    /** The listeners exposed in per-listener mode, with their configured host (empty when generated). */
+    public static Map<ServerListener, String> exposedListeners(WanakuRouter resource) {
+        final Map<ServerListener, String> exposed = new java.util.EnumMap<>(ServerListener.class);
+        if (!isPerListenerExposure(resource) || EXPOSURE_NONE.equals(exposureType(resource))) {
+            return exposed;
+        }
+        final WanakuTypes.ListenersSpec listeners =
+                resource.getSpec().getExposure().getListeners();
+        addListener(exposed, ServerListener.MANAGEMENT, listeners.getManagement(), true);
+        addListener(exposed, ServerListener.MCP, listeners.getMcp(), true);
+        addListener(exposed, ServerListener.INFERENCE, listeners.getInference(), false);
+        addListener(exposed, ServerListener.A2A, listeners.getA2a(), false);
+        return exposed;
+    }
+
+    private static void addListener(
+            Map<ServerListener, String> exposed,
+            ServerListener listener,
+            WanakuTypes.ListenerSpec spec,
+            boolean enabledByDefault) {
+        final boolean enabled = spec != null && spec.getEnabled() != null ? spec.getEnabled() : enabledByDefault;
+        if (enabled) {
+            exposed.put(listener, spec != null && spec.getHost() != null ? spec.getHost() : "");
+        }
+    }
+
+    /** Builds the per-listener Route {@code <router>-<listener>} for the root path of its own host. */
+    public static Route makeListenerRoute(WanakuRouter resource, ServerListener listener, String host) {
+        final String name = resource.getMetadata().getName();
+        final boolean authEnabled = isAuthEnabled(resource);
+        Route route = new RouteBuilder()
+                .withNewMetadata()
+                .withName(name + "-" + listener.id())
+                .withNamespace(resource.getMetadata().getNamespace())
+                .addToLabels("app", serverName(name))
+                .addToLabels("component", "wanaku-server")
+                .addToLabels(LISTENER_LABEL, listener.id())
+                .endMetadata()
+                .withNewSpec()
+                .withHost(StringHelper.isNotEmpty(host) ? host : null)
+                .withPath("/")
+                .withNewTo()
+                .withKind("Service")
+                .withName(authEnabled ? oauth2ProxyServiceName(name) : "server-" + name)
+                .withWeight(100)
+                .endTo()
+                .withNewPort()
+                .withNewTargetPort(authEnabled ? listener.proxyPort() : listener.serverPort())
+                .endPort()
+                .withNewTls()
+                .withTermination("edge")
+                .withInsecureEdgeTerminationPolicy("Redirect")
+                .endTls()
+                .withWildcardPolicy("None")
+                .endSpec()
+                .build();
+        route.getMetadata().setAnnotations(resource.getSpec().getExposure().getAnnotations());
+        route.addOwnerReference(resource);
+        return route;
+    }
+
+    /** Builds the per-listener Ingress {@code <router>-<listener>} for the root path of its own host. */
+    public static Ingress makeListenerIngress(WanakuRouter resource, ServerListener listener, String host) {
+        final String name = resource.getMetadata().getName();
+        final boolean authEnabled = isAuthEnabled(resource);
+        Ingress ingress = new IngressBuilder()
+                .withNewMetadata()
+                .withName(name + "-" + listener.id())
+                .withNamespace(resource.getMetadata().getNamespace())
+                .addToLabels("app", serverName(name))
+                .addToLabels("component", "wanaku-server")
+                .addToLabels(LISTENER_LABEL, listener.id())
+                .endMetadata()
+                .withNewSpec()
+                .addNewRule()
+                .withHost(host)
+                .withNewHttp()
+                .addNewPath()
+                .withPath("/")
+                .withPathType("Prefix")
+                .withNewBackend()
+                .withNewService()
+                .withName(authEnabled ? oauth2ProxyServiceName(name) : "server-" + name)
+                .withNewPort()
+                .withNumber(authEnabled ? listener.proxyPort() : listener.serverPort())
+                .endPort()
+                .endService()
+                .endBackend()
+                .endPath()
+                .endHttp()
+                .endRule()
+                .endSpec()
+                .build();
+        applyIngressExtras(ingress, resource.getSpec().getExposure());
+        ingress.addOwnerReference(resource);
+        return ingress;
     }
 
     public static Ingress makeServerIngress(WanakuRouter resource, String host) {
@@ -283,6 +403,16 @@ public final class RouterResourceFactory {
     }
 
     public static Deployment makeDesiredServerDeployment(WanakuRouter resource, Context<WanakuRouter> context) {
+        return makeDesiredServerDeployment(resource, context, null);
+    }
+
+    /**
+     * Builds the Wanaku Server Deployment.
+     *
+     * @param a2aPublicUrl the public URL of the A2A listener, advertised in agent proxy URLs (may be null)
+     */
+    public static Deployment makeDesiredServerDeployment(
+            WanakuRouter resource, Context<WanakuRouter> context, String a2aPublicUrl) {
         Deployment desiredDeployment = ReconcilerUtilsInternal.loadYaml(
                 Deployment.class, WanakuRouterReconciler.class, SERVER_DEPLOYMENT_FILE);
 
@@ -329,6 +459,10 @@ public final class RouterResourceFactory {
                             .build());
                 }
             }
+        }
+
+        if (a2aPublicUrl != null) {
+            addIfAbsent(envVars, envVar("WANAKU_A2A_PUBLIC_URL", a2aPublicUrl));
         }
 
         if (isAuthEnabled(resource)) {
@@ -383,6 +517,16 @@ public final class RouterResourceFactory {
     }
 
     public static Service makeOauth2ProxyService(WanakuRouter resource) {
+        return makeOauth2ProxyService(resource, List.of());
+    }
+
+    /**
+     * Builds the oauth2-proxy Service.
+     *
+     * @param resource the router
+     * @param extraListeners inference or A2A listeners whose proxy ports the Service also exposes
+     */
+    public static Service makeOauth2ProxyService(WanakuRouter resource, List<ServerListener> extraListeners) {
         Service service = ReconcilerUtilsInternal.loadYaml(
                 Service.class, WanakuRouterReconciler.class, OAUTH2_PROXY_SERVICE_FILE);
 
@@ -396,6 +540,17 @@ public final class RouterResourceFactory {
 
         ServiceSpec serviceSpec = service.getSpec();
         serviceSpec.setSelector(Map.of("app", oauth2ProxyName(deploymentName), "component", "wanaku-oauth2-proxy"));
+
+        for (ServerListener listener : extraListeners) {
+            serviceSpec
+                    .getPorts()
+                    .add(new ServicePortBuilder()
+                            .withName(listener.proxyPort() + "-tcp")
+                            .withPort(listener.proxyPort())
+                            .withProtocol("TCP")
+                            .withTargetPort(new IntOrString(listener.proxyPort()))
+                            .build());
+        }
 
         managed(service, service.getSpec());
         service.addOwnerReference(resource);
@@ -411,6 +566,20 @@ public final class RouterResourceFactory {
      *     environment variables read from a Secret are not refreshed in running pods
      */
     public static Deployment makeOauth2ProxyDeployment(WanakuRouter resource, String host, String secretVersion) {
+        return makeOauth2ProxyDeployment(
+                resource, Map.of(ServerListener.MANAGEMENT, host, ServerListener.MCP, host), secretVersion);
+    }
+
+    /**
+     * Builds the oauth2-proxy Deployment with one container per protected listener. The management and
+     * MCP proxies always exist; inference and A2A proxies exist when those listeners are exposed.
+     *
+     * @param resource the router
+     * @param hosts the public host of each exposed listener, used for the OAuth redirect URLs
+     * @param secretVersion the resourceVersion of the auth Secret (see the other overload)
+     */
+    public static Deployment makeOauth2ProxyDeployment(
+            WanakuRouter resource, Map<ServerListener, String> hosts, String secretVersion) {
         Deployment desiredDeployment = ReconcilerUtilsInternal.loadYaml(
                 Deployment.class, WanakuRouterReconciler.class, OAUTH2_PROXY_DEPLOYMENT_FILE);
 
@@ -436,9 +605,22 @@ public final class RouterResourceFactory {
         }
 
         final WanakuRouterSpec.AuthSpec authSpec = resource.getSpec().getAuth();
-        final String redirectUrl = "https://%s/oauth2/callback".formatted(host);
+        final List<Container> containers =
+                deploymentSpec.getTemplate().getSpec().getContainers();
+        final Container mgmtTemplate = containers.stream()
+                .filter(c -> "oauth2-proxy-mgmt".equals(c.getName()))
+                .findFirst()
+                .orElseThrow();
+        for (ServerListener listener : List.of(ServerListener.INFERENCE, ServerListener.A2A)) {
+            if (hosts.containsKey(listener)) {
+                containers.add(proxyContainerFor(mgmtTemplate, listener));
+            }
+        }
 
-        for (Container container : deploymentSpec.getTemplate().getSpec().getContainers()) {
+        for (Container container : containers) {
+            final ServerListener listener = proxiedListener(container);
+            final String redirectUrl = "https://%s/oauth2/callback"
+                    .formatted(hosts.getOrDefault(listener, hosts.get(ServerListener.MANAGEMENT)));
             if (authSpec.getImage() != null && !authSpec.getImage().isEmpty()) {
                 OperatorUtil.validateImageAllowed(authSpec.getImage());
                 container.setImage(authSpec.getImage());
@@ -455,9 +637,12 @@ public final class RouterResourceFactory {
                             .build());
                 }
             }
-            List<EnvVar> defaults = "oauth2-proxy-mcp".equals(container.getName())
-                    ? oauth2ProxyMcpEnv(authSpec, deploymentName, redirectUrl)
-                    : oauth2ProxyMgmtEnv(authSpec, deploymentName, redirectUrl);
+            List<EnvVar> defaults =
+                    switch (listener) {
+                        case MCP -> oauth2ProxyMcpEnv(authSpec, deploymentName, redirectUrl);
+                        case MANAGEMENT -> oauth2ProxyMgmtEnv(authSpec, deploymentName, redirectUrl);
+                        case INFERENCE, A2A -> oauth2ProxyApiEnv(authSpec, deploymentName, redirectUrl, listener);
+                    };
             for (EnvVar defaultVar : defaults) {
                 final Optional<EnvVar> override = envVars.stream()
                         .filter(envVar -> envVar.getName().equals(defaultVar.getName()))
@@ -495,6 +680,48 @@ public final class RouterResourceFactory {
         env.add(envVar("OAUTH2_PROXY_SKIP_AUTH_ROUTES", "^/healthz$,^/health$"));
         env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/api/.*"));
         return env;
+    }
+
+    /** Inference and A2A clients are programs, so every path is an API route that returns 401 without a token. */
+    private static List<EnvVar> oauth2ProxyApiEnv(
+            WanakuRouterSpec.AuthSpec authSpec, String deploymentName, String redirectUrl, ServerListener listener) {
+        List<EnvVar> env = oauth2ProxySharedEnv(authSpec, redirectUrl);
+        env.add(envVar("OAUTH2_PROXY_HTTP_ADDRESS", "0.0.0.0:" + listener.proxyPort()));
+        env.add(envVar(
+                "OAUTH2_PROXY_UPSTREAMS", "http://server-%s:%d".formatted(deploymentName, listener.serverPort())));
+        env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/.*"));
+        if (listener == ServerListener.A2A) {
+            // Agent cards are public discovery documents
+            env.add(envVar("OAUTH2_PROXY_SKIP_AUTH_ROUTES", "^/[^/]+/a2a/[^/]+/\\.well-known/.*,OPTIONS=^/.*"));
+        } else {
+            env.add(envVar("OAUTH2_PROXY_SKIP_AUTH_ROUTES", "OPTIONS=^/.*"));
+        }
+        env.add(envVar("OAUTH2_PROXY_UPSTREAM_TIMEOUT", "3600s"));
+        return env;
+    }
+
+    private static Container proxyContainerFor(Container template, ServerListener listener) {
+        final IntOrString port = new IntOrString(listener.proxyPort());
+        final Container container = new ContainerBuilder(template)
+                .withName("oauth2-proxy-" + listener.id())
+                .withPorts(new ContainerPortBuilder()
+                        .withContainerPort(listener.proxyPort())
+                        .withProtocol("TCP")
+                        .build())
+                .build();
+        container.getReadinessProbe().getHttpGet().setPort(port);
+        container.getLivenessProbe().getHttpGet().setPort(port);
+        return container;
+    }
+
+    private static ServerListener proxiedListener(Container container) {
+        for (ServerListener listener : ServerListener.values()) {
+            if (("oauth2-proxy-" + listener.id()).equals(container.getName())) {
+                return listener;
+            }
+        }
+        // The template names the management proxy container oauth2-proxy-mgmt
+        return ServerListener.MANAGEMENT;
     }
 
     private static List<EnvVar> oauth2ProxySharedEnv(WanakuRouterSpec.AuthSpec authSpec, String redirectUrl) {

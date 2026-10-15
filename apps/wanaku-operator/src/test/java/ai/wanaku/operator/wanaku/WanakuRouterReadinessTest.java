@@ -16,6 +16,9 @@ import io.fabric8.kubernetes.api.model.apps.DeploymentStatusBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
+import io.fabric8.openshift.api.model.Route;
+import io.fabric8.openshift.api.model.RouteStatusBuilder;
+import io.fabric8.openshift.client.OpenShiftClient;
 import io.javaoperatorsdk.operator.api.reconciler.ErrorStatusUpdateControl;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
 import ai.wanaku.operator.util.OperatorUtil;
@@ -335,6 +338,24 @@ class WanakuRouterReadinessTest {
                         .build())
                 .build());
         client.apps().deployments().inNamespace(NAMESPACE).resource(deployment).updateStatus();
+        admitRoutes(client);
+    }
+
+    /** Emulates the OpenShift router admitting every Route in the namespace. */
+    static void admitRoutes(KubernetesClient client) {
+        var routes = client.adapt(OpenShiftClient.class).routes().inNamespace(NAMESPACE);
+        for (Route route : routes.list().getItems()) {
+            route.setStatus(new RouteStatusBuilder()
+                    .addNewIngress()
+                    .withHost(route.getSpec().getHost())
+                    .addNewCondition()
+                    .withType("Admitted")
+                    .withStatus("True")
+                    .endCondition()
+                    .endIngress()
+                    .build());
+            routes.resource(route).updateStatus();
+        }
     }
 
     private static Pod failingPod() {

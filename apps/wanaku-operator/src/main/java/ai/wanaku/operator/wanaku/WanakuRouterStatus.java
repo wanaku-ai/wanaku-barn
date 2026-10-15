@@ -1,10 +1,12 @@
 package ai.wanaku.operator.wanaku;
 
 import java.util.List;
+import java.util.Map;
 import io.fabric8.kubernetes.api.model.Condition;
 
 public class WanakuRouterStatus {
     private Long observedGeneration;
+    private Map<String, String> endpoints;
     private String host;
     private String sseEndpoint;
     private String streamableEndpoint;
@@ -16,6 +18,15 @@ public class WanakuRouterStatus {
 
     public void setObservedGeneration(Long observedGeneration) {
         this.observedGeneration = observedGeneration;
+    }
+
+    /** Public URL of each exposed listener, keyed by listener name (management, mcp, inference, a2a). */
+    public Map<String, String> getEndpoints() {
+        return endpoints;
+    }
+
+    public void setEndpoints(Map<String, String> endpoints) {
+        this.endpoints = endpoints;
     }
 
     public String getHost() {

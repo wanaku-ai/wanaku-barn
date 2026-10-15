@@ -57,6 +57,39 @@ spec:
                     type: "string"
                   ingressClassName:
                     type: "string"
+                  listeners:
+                    properties:
+                      a2a:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                      inference:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                      management:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                      mcp:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                    type: "object"
+                  type:
+                    type: "string"
                 type: "object"
               imagePullPolicy:
                 type: "string"
@@ -114,6 +147,10 @@ spec:
                       type: "string"
                   type: "object"
                 type: "array"
+              endpoints:
+                additionalProperties:
+                  type: "string"
+                type: "object"
               host:
                 type: "string"
               observedGeneration:
