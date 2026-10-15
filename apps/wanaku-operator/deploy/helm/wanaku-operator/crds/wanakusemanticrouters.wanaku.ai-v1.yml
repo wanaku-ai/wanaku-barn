@@ -35,6 +35,16 @@ spec:
                       type: "string"
                     value:
                       type: "string"
+                    valueFrom:
+                      properties:
+                        secretKeyRef:
+                          properties:
+                            key:
+                              type: "string"
+                            name:
+                              type: "string"
+                          type: "object"
+                      type: "object"
                   type: "object"
                 type: "array"
               forward:
@@ -48,6 +58,10 @@ spec:
                 type: "string"
               imagePullPolicy:
                 type: "string"
+              properties:
+                additionalProperties:
+                  type: "string"
+                type: "object"
               routerRef:
                 type: "string"
               source:

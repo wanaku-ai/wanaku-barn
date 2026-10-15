@@ -156,7 +156,7 @@ host networking, so Wanaku Server reaches Barn at `http://localhost:8180`.
 | `spec.barn` | object | The Wanaku Barn deployment. See [Wanaku Barn](#wanaku-barn) |
 | `spec.barn.enabled` | bool | Whether Wanaku Barn is deployed (required for `WanakuServiceCatalog`) |
 | `spec.barn.image`, `spec.barn.imagePullPolicy` | string | Container image and pull policy for Wanaku Barn |
-| `spec.barn.env` | list | Extra environment variables (`name`/`value`) for Wanaku Barn |
+| `spec.barn.env` | list | Extra environment variables for Wanaku Barn. See [Environment variables](#environment-variables) |
 | `spec.barn.storage` | object | `size` (default `5Gi`), `storageClassName` and `existingClaim` for the Barn data |
 | `spec.router` | object | Deprecated name of `spec.barn` (without `storage`). The operator reads it only when `spec.barn` is not set |
 | `spec.server` | object | The Wanaku router engine: `variant`, `image`, `env`, `imagePullPolicy` |
@@ -343,9 +343,27 @@ The referenced ConfigMap must contain the packaged catalog (`catalog.zip`), crea
 | `spec.forward.namespace` | string | Wanaku namespace of the forward. The default is `default` |
 | `spec.dependencies` | list | Extra Maven dependencies (`group:artifact:version`) |
 | `spec.wanakuTokenSecretRef`, `spec.barnTokenSecretRef` | object | Secret `name` and `key` (default `token`) of a bearer token for the router management API or for Barn |
-| `spec.image`, `spec.imagePullPolicy`, `spec.env` | mixed | Runtime image (default `quay.io/wanaku/wanaku-semantic-router:latest`) and configuration |
+| `spec.image`, `spec.imagePullPolicy` | string | Runtime image (default `quay.io/wanaku/wanaku-semantic-router:latest`) and pull policy |
+| `spec.env` | list | Extra environment variables, for example the expert provider credentials. See [Environment variables](#environment-variables) |
+| `spec.properties` | map | Deployment and Camel component properties. The operator passes each entry to the runtime as `-p KEY=VALUE` |
 
 Set exactly one source. The `semanticRoute` and `catalog` sources need Wanaku Barn on the router (`spec.barn.enabled: true`).
+
+The runtime needs the credentials of the expert that the semantic route uses. For the default TypeSafe AI expert, set `TYPESAFE_API_KEY` from a Secret. Without it, the runtime stops at startup with `WSR command failed: IllegalArgumentException`:
+
+```yaml
+spec:
+  env:
+    - name: TYPESAFE_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: llm-credentials
+          key: api-key
+  properties:
+    camel.component.typesafe-ai.model: my-model
+```
+
+Do not put credential values in `spec.properties`. Use an environment reference such as `{{env:TYPESAFE_API_KEY}}` and set the variable through `spec.env`.
 
 The operator creates these resources:
 
@@ -366,6 +384,23 @@ The status contains these conditions and fields:
 `status.forwardName`, `status.mcpAddress` and `status.wanakuEndpoint` (the router MCP endpoint for the forward namespace, when the router exposes MCP) describe the registration.
 
 When you delete the resource, Kubernetes stops the runtime. The runtime removes the forward if it still owns it. If the router is already gone, the runtime cannot remove the forward.
+
+### Environment variables
+
+The `env` lists of `WanakuRouter` (`spec.server.env`, `spec.barn.env`, `spec.auth.env`) and of `WanakuSemanticRouter` (`spec.env`) use the same format. Each entry has a `name` and either a `value` or a `valueFrom.secretKeyRef` (`name` and `key`) that reads the value from a Secret in the same namespace:
+
+```yaml
+env:
+  - name: LOG_LEVEL
+    value: debug
+  - name: TYPESAFE_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: llm-credentials
+        key: api-key
+```
+
+Use `valueFrom` for credentials, so that their values are not stored in the custom resource.
 
 ## Deployment Examples
 

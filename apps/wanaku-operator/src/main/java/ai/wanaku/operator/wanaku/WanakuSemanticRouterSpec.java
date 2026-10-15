@@ -1,6 +1,7 @@
 package ai.wanaku.operator.wanaku;
 
 import java.util.List;
+import java.util.Map;
 
 public class WanakuSemanticRouterSpec {
     private String routerRef;
@@ -12,6 +13,7 @@ public class WanakuSemanticRouterSpec {
     private WanakuTypes.SecretKeyRef wanakuTokenSecretRef;
     private WanakuTypes.SecretKeyRef barnTokenSecretRef;
     private List<WanakuTypes.EnvVar> env;
+    private Map<String, String> properties;
 
     /** The WanakuRouter that the semantic router registers with. */
     public String getRouterRef() {
@@ -80,6 +82,18 @@ public class WanakuSemanticRouterSpec {
 
     public void setBarnTokenSecretRef(WanakuTypes.SecretKeyRef barnTokenSecretRef) {
         this.barnTokenSecretRef = barnTokenSecretRef;
+    }
+
+    /**
+     * Deployment and Camel component properties, passed to the runtime as {@code -p KEY=VALUE}. Use
+     * {@code {{env:NAME}}} references for credentials and set {@code NAME} through {@code env} from a Secret.
+     */
+    public Map<String, String> getProperties() {
+        return properties;
+    }
+
+    public void setProperties(Map<String, String> properties) {
+        this.properties = properties;
     }
 
     public List<WanakuTypes.EnvVar> getEnv() {

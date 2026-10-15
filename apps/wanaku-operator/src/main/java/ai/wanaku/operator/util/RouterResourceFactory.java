@@ -472,10 +472,7 @@ public final class RouterResourceFactory {
 
             if (routerSpec.getEnv() != null && !routerSpec.getEnv().isEmpty()) {
                 for (WanakuTypes.EnvVar env : routerSpec.getEnv()) {
-                    envVars.add(new EnvVarBuilder()
-                            .withName(env.getName())
-                            .withValue(env.getValue())
-                            .build());
+                    envVars.add(OperatorUtil.toEnvVar(env));
                 }
             }
         }
@@ -566,10 +563,7 @@ public final class RouterResourceFactory {
 
             if (serverSpec.getEnv() != null) {
                 for (WanakuTypes.EnvVar env : serverSpec.getEnv()) {
-                    envVars.add(new EnvVarBuilder()
-                            .withName(env.getName())
-                            .withValue(env.getValue())
-                            .build());
+                    envVars.add(OperatorUtil.toEnvVar(env));
                 }
             }
         }
@@ -775,10 +769,7 @@ public final class RouterResourceFactory {
             List<EnvVar> envVars = new java.util.ArrayList<>();
             if (authSpec.getEnv() != null) {
                 for (WanakuTypes.EnvVar env : authSpec.getEnv()) {
-                    envVars.add(new EnvVarBuilder()
-                            .withName(env.getName())
-                            .withValue(env.getValue())
-                            .build());
+                    envVars.add(OperatorUtil.toEnvVar(env));
                 }
             }
             List<EnvVar> defaults =

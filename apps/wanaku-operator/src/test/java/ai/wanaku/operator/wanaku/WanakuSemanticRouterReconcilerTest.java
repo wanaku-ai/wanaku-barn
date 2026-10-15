@@ -120,6 +120,45 @@ class WanakuSemanticRouterReconcilerTest {
     }
 
     @Test
+    void passesPropertiesAndSecretEnvironmentVariablesToTheRuntime() {
+        createRouter(true);
+        WanakuSemanticRouter wsr = createSemanticRouter(configMapSource());
+        wsr.getSpec()
+                .setProperties(Map.of(
+                        "camel.component.typesafe-ai.model", "my-model",
+                        "camel.component.typesafe-ai.api-key", "{{env:TYPESAFE_API_KEY}}"));
+        WanakuTypes.SecretKeyRef secret = new WanakuTypes.SecretKeyRef();
+        secret.setName("llm-credentials");
+        secret.setKey("api-key");
+        WanakuTypes.EnvVarSource source = new WanakuTypes.EnvVarSource();
+        source.setSecretKeyRef(secret);
+        WanakuTypes.EnvVar apiKey = new WanakuTypes.EnvVar();
+        apiKey.setName("TYPESAFE_API_KEY");
+        apiKey.setValueFrom(source);
+        wsr.getSpec().setEnv(List.of(apiKey));
+
+        reconciler.reconcile(wsr, null);
+
+        var container =
+                deployment().getSpec().getTemplate().getSpec().getContainers().getFirst();
+        // Sorted by key, so that the Deployment does not change between reconciliations
+        assertThat(container.getArgs())
+                .containsExactly(
+                        "runtime",
+                        "-p",
+                        "camel.component.typesafe-ai.api-key={{env:TYPESAFE_API_KEY}}",
+                        "-p",
+                        "camel.component.typesafe-ai.model=my-model");
+        EnvVar env = container.getEnv().stream()
+                .filter(e -> "TYPESAFE_API_KEY".equals(e.getName()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(env.getValue()).isNull();
+        assertThat(env.getValueFrom().getSecretKeyRef().getName()).isEqualTo("llm-credentials");
+        assertThat(env.getValueFrom().getSecretKeyRef().getKey()).isEqualTo("api-key");
+    }
+
+    @Test
     void aRegisteredRuntimeIsReady() {
         createRouter(true);
         AtomicReference<String> requested = new AtomicReference<>();

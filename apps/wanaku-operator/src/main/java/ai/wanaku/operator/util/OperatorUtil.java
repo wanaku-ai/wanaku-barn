@@ -15,8 +15,11 @@ import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.ConditionBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.client.utils.Serialization;
+import ai.wanaku.operator.wanaku.WanakuTypes;
 
 /**
  * Shared operator utilities for condition management, image pull policy resolution,
@@ -121,6 +124,33 @@ public final class OperatorUtil {
                 .withLastTransitionTime(lastTransitionTime)
                 .withReason(reason)
                 .withMessage(message)
+                .build();
+    }
+
+    /**
+     * Converts an environment variable of a custom resource into a container environment variable. A variable
+     * with {@code valueFrom.secretKeyRef} reads its value from that Secret key.
+     *
+     * @param env the environment variable from the custom resource
+     * @return the container environment variable
+     */
+    public static EnvVar toEnvVar(WanakuTypes.EnvVar env) {
+        final WanakuTypes.SecretKeyRef secret =
+                env.getValueFrom() != null ? env.getValueFrom().getSecretKeyRef() : null;
+        if (secret == null) {
+            return new EnvVarBuilder()
+                    .withName(env.getName())
+                    .withValue(env.getValue())
+                    .build();
+        }
+        return new EnvVarBuilder()
+                .withName(env.getName())
+                .withNewValueFrom()
+                .withNewSecretKeyRef()
+                .withName(secret.getName())
+                .withKey(secret.getKey())
+                .endSecretKeyRef()
+                .endValueFrom()
                 .build();
     }
 

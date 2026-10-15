@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -102,7 +103,7 @@ public final class SemanticRouterResourceFactory {
                 .withName("wsr")
                 .withImage(image)
                 .withImagePullPolicy(OperatorUtil.resolveImagePullPolicy(spec.getImagePullPolicy(), null))
-                .withArgs("runtime")
+                .withArgs(args(spec))
                 .withEnv(env(resource, barnEnabled))
                 .addNewPort()
                 .withName("mcp")
@@ -195,13 +196,26 @@ public final class SemanticRouterResourceFactory {
         return service;
     }
 
+    /** The runtime command, with each {@code spec.properties} entry as a {@code -p KEY=VALUE} option in key order. */
+    static List<String> args(WanakuSemanticRouterSpec spec) {
+        final List<String> args = new ArrayList<>();
+        args.add("runtime");
+        if (spec.getProperties() != null) {
+            new TreeMap<>(spec.getProperties()).forEach((key, value) -> {
+                args.add("-p");
+                args.add(key + "=" + value);
+            });
+        }
+        return args;
+    }
+
     private static List<EnvVar> env(WanakuSemanticRouter resource, boolean barnEnabled) {
         final WanakuSemanticRouterSpec spec = resource.getSpec();
         final String router = spec.getRouterRef();
         final List<EnvVar> env = new ArrayList<>();
         if (spec.getEnv() != null) {
             for (WanakuTypes.EnvVar var : spec.getEnv()) {
-                env.add(value(var.getName(), var.getValue()));
+                env.add(OperatorUtil.toEnvVar(var));
             }
         }
         final List<EnvVar> defaults = new ArrayList<>();

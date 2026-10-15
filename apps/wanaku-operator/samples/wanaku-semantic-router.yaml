@@ -18,3 +18,12 @@ spec:
 #  wanakuTokenSecretRef:
 #    name: wanaku-token
 #    key: token
+  # Credentials of the expert that the route uses, read from a Secret
+  env:
+    - name: TYPESAFE_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: llm-credentials
+          key: api-key
+#  properties:
+#    camel.component.typesafe-ai.model: my-model

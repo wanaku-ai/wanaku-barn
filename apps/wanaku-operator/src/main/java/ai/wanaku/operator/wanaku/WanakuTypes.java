@@ -9,6 +9,7 @@ public final class WanakuTypes {
     public static class EnvVar {
         private String name;
         private String value;
+        private EnvVarSource valueFrom;
 
         public String getName() {
             return name;
@@ -24,6 +25,27 @@ public final class WanakuTypes {
 
         public void setValue(String value) {
             this.value = value;
+        }
+
+        /** Reads the value from a Secret instead of {@code value}, so that credentials stay out of the resource. */
+        public EnvVarSource getValueFrom() {
+            return valueFrom;
+        }
+
+        public void setValueFrom(EnvVarSource valueFrom) {
+            this.valueFrom = valueFrom;
+        }
+    }
+
+    public static class EnvVarSource {
+        private SecretKeyRef secretKeyRef;
+
+        public SecretKeyRef getSecretKeyRef() {
+            return secretKeyRef;
+        }
+
+        public void setSecretKeyRef(SecretKeyRef secretKeyRef) {
+            this.secretKeyRef = secretKeyRef;
         }
     }
 
