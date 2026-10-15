@@ -86,6 +86,14 @@ class CloudRunSemanticTest {
     }
 
     @Test
+    void aMissingRouteFileIsReportedAsMissing() throws Exception {
+        Files.delete(route);
+
+        assertThat(command().doCall(null, printer)).isEqualTo(CloudRunSupport.EXIT_INVALID_INPUT);
+        verify(printer).printErrorMessage(contains("does not exist"));
+    }
+
+    @Test
     void aMissingManifestIsInvalidInput() throws Exception {
         Files.delete(route.resolveSibling("semantic-router.properties"));
 

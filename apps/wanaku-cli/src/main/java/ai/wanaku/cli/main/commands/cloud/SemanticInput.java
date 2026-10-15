@@ -40,7 +40,10 @@ final class SemanticInput {
 
     static SemanticInput read(Path route) throws CloudRunSupport.CloudException {
         final Path file = route.toAbsolutePath().normalize();
-        IntegrationInput.readFile(file);
+        // Report a wrong route path as such, not as a missing manifest next to it
+        if (!Files.isRegularFile(file)) {
+            throw IntegrationInput.invalid("%s does not exist".formatted(route));
+        }
         final Path manifestPath = file.resolveSibling(MANIFEST);
         if (!Files.isRegularFile(manifestPath)) {
             throw IntegrationInput.invalid("%s needs %s in the same directory".formatted(route, MANIFEST));
