@@ -59,9 +59,12 @@ public class WanakuRouterSpec {
         private String image;
         private String imagePullPolicy;
         private String issuerUrl;
+        private String internalIssuerUrl;
         private String clientId;
         private String secretName;
         private List<WanakuTypes.EnvVar> env;
+        private String authServer;
+        private String authProxy;
 
         public boolean isEnabled() {
             return enabled;
@@ -93,6 +96,36 @@ public class WanakuRouterSpec {
 
         public void setIssuerUrl(String issuerUrl) {
             this.issuerUrl = issuerUrl;
+        }
+
+        /**
+         * In-cluster URL of the same OIDC issuer, used for token and JWKS requests when the public
+         * issuer URL is not reachable from the cluster.
+         */
+        public String getInternalIssuerUrl() {
+            return internalIssuerUrl;
+        }
+
+        public void setInternalIssuerUrl(String internalIssuerUrl) {
+            this.internalIssuerUrl = internalIssuerUrl;
+        }
+
+        /** Deprecated legacy field. Kept in the schema so the operator can report it instead of pruning it. */
+        public String getAuthServer() {
+            return authServer;
+        }
+
+        public void setAuthServer(String authServer) {
+            this.authServer = authServer;
+        }
+
+        /** Deprecated legacy field. Kept in the schema so the operator can report it instead of pruning it. */
+        public String getAuthProxy() {
+            return authProxy;
+        }
+
+        public void setAuthProxy(String authProxy) {
+            this.authProxy = authProxy;
         }
 
         public String getClientId() {

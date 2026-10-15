@@ -45,6 +45,7 @@ public final class RouterResourceFactory {
     public static final String DEFAULT_OAUTH2_PROXY_CLIENT_ID = "wanaku-mcp-router";
     public static final String OAUTH2_PROXY_CLIENT_SECRET_KEY = "client-secret";
     public static final String OAUTH2_PROXY_COOKIE_SECRET_KEY = "cookie-secret";
+    public static final String AUTH_SECRET_VERSION_ANNOTATION = "wanaku.ai/auth-secret-version";
 
     private RouterResourceFactory() {}
 
@@ -324,6 +325,15 @@ public final class RouterResourceFactory {
             }
         }
 
+        if (isAuthEnabled(resource)) {
+            // Lets MCP clients discover the authorization server (RFC 9728 metadata on the MCP listener)
+            final WanakuRouterSpec.AuthSpec authSpec = resource.getSpec().getAuth();
+            addIfAbsent(envVars, envVar("WANAKU_AUTH_ISSUER", issuerUrl(authSpec)));
+            if (StringHelper.isNotEmpty(authSpec.getInternalIssuerUrl())) {
+                addIfAbsent(envVars, envVar("WANAKU_AUTH_UPSTREAM_ISSUER", internalIssuerUrl(authSpec)));
+            }
+        }
+
         final List<EnvVar> templateEnvs = serverContainer.getEnv();
         for (EnvVar templateVar : templateEnvs) {
             final Optional<EnvVar> override = envVars.stream()
@@ -386,7 +396,15 @@ public final class RouterResourceFactory {
         return service;
     }
 
-    public static Deployment makeOauth2ProxyDeployment(WanakuRouter resource, String host) {
+    /**
+     * Builds the oauth2-proxy Deployment.
+     *
+     * @param resource the router
+     * @param host the public host used for the OAuth redirect URL
+     * @param secretVersion the resourceVersion of the auth Secret; changing it rolls the proxy pods, because
+     *     environment variables read from a Secret are not refreshed in running pods
+     */
+    public static Deployment makeOauth2ProxyDeployment(WanakuRouter resource, String host, String secretVersion) {
         Deployment desiredDeployment = ReconcilerUtilsInternal.loadYaml(
                 Deployment.class, WanakuRouterReconciler.class, OAUTH2_PROXY_DEPLOYMENT_FILE);
 
@@ -401,6 +419,15 @@ public final class RouterResourceFactory {
         deploymentSpec.getSelector().getMatchLabels().put("component", "wanaku-oauth2-proxy");
         deploymentSpec.getTemplate().getMetadata().getLabels().put("app", oauth2ProxyName(deploymentName));
         deploymentSpec.getTemplate().getMetadata().getLabels().put("component", "wanaku-oauth2-proxy");
+
+        if (secretVersion != null) {
+            Map<String, String> podAnnotations = new HashMap<>();
+            if (deploymentSpec.getTemplate().getMetadata().getAnnotations() != null) {
+                podAnnotations.putAll(deploymentSpec.getTemplate().getMetadata().getAnnotations());
+            }
+            podAnnotations.put(AUTH_SECRET_VERSION_ANNOTATION, secretVersion);
+            deploymentSpec.getTemplate().getMetadata().setAnnotations(podAnnotations);
+        }
 
         final WanakuRouterSpec.AuthSpec authSpec = resource.getSpec().getAuth();
         final String redirectUrl = "https://%s/oauth2/callback".formatted(host);
@@ -449,7 +476,7 @@ public final class RouterResourceFactory {
         env.add(envVar(
                 "OAUTH2_PROXY_SKIP_AUTH_ROUTES",
                 "^/.well-known/.*,^/public/.*,^/authorize$,^/token$,^/register$,OPTIONS=^/.*"));
-        env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/mcp.*"));
+        env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/$,^/mcp/?$,^/[^/]+/mcp/?$"));
         env.add(envVar("OAUTH2_PROXY_UPSTREAM_TIMEOUT", "3600s"));
         return env;
     }
@@ -460,6 +487,7 @@ public final class RouterResourceFactory {
         env.add(envVar("OAUTH2_PROXY_HTTP_ADDRESS", "0.0.0.0:4181"));
         env.add(envVar("OAUTH2_PROXY_UPSTREAMS", "http://server-%s:8080".formatted(deploymentName)));
         env.add(envVar("OAUTH2_PROXY_SKIP_AUTH_ROUTES", "^/healthz$,^/health$"));
+        env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/api/.*"));
         return env;
     }
 
@@ -468,20 +496,19 @@ public final class RouterResourceFactory {
                 ? authSpec.getClientId()
                 : DEFAULT_OAUTH2_PROXY_CLIENT_ID;
 
-        String issuerUrl = authSpec.getIssuerUrl();
-        String issuerBase = issuerUrl != null && issuerUrl.endsWith("/")
-                ? issuerUrl.substring(0, issuerUrl.length() - 1)
-                : issuerUrl;
+        final String issuer = issuerUrl(authSpec);
+        final String internalIssuer = internalIssuerUrl(authSpec);
 
         List<EnvVar> env = new java.util.ArrayList<>();
         env.add(envVar("OAUTH2_PROXY_PROVIDER", "keycloak-oidc"));
-        env.add(envVar("OAUTH2_PROXY_OIDC_ISSUER_URL", issuerUrl + "/realms/wanaku"));
-        // The Keycloak public and in-cluster URLs may differ, so skip the OIDC discovery and derive the
-        // endpoints from the issuer; each one can be overridden through spec.auth.env
+        env.add(envVar("OAUTH2_PROXY_OIDC_ISSUER_URL", issuer));
+        // The public and in-cluster issuer URLs may differ, so skip the OIDC discovery: the browser uses the
+        // public login URL, and the proxy calls the token and JWKS endpoints through the internal URL.
+        // Each one can be overridden through spec.auth.env
         env.add(envVar("OAUTH2_PROXY_SKIP_OIDC_DISCOVERY", "true"));
-        env.add(envVar("OAUTH2_PROXY_LOGIN_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/auth"));
-        env.add(envVar("OAUTH2_PROXY_REDEEM_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/token"));
-        env.add(envVar("OAUTH2_PROXY_OIDC_JWKS_URL", issuerBase + "/realms/wanaku/protocol/openid-connect/certs"));
+        env.add(envVar("OAUTH2_PROXY_LOGIN_URL", issuer + "/protocol/openid-connect/auth"));
+        env.add(envVar("OAUTH2_PROXY_REDEEM_URL", internalIssuer + "/protocol/openid-connect/token"));
+        env.add(envVar("OAUTH2_PROXY_OIDC_JWKS_URL", internalIssuer + "/protocol/openid-connect/certs"));
         env.add(envVar("OAUTH2_PROXY_CLIENT_ID", clientId));
         env.add(secretEnvVar("OAUTH2_PROXY_CLIENT_SECRET", authSpec.getSecretName(), OAUTH2_PROXY_CLIENT_SECRET_KEY));
         env.add(secretEnvVar("OAUTH2_PROXY_COOKIE_SECRET", authSpec.getSecretName(), OAUTH2_PROXY_COOKIE_SECRET_KEY));
@@ -495,6 +522,39 @@ public final class RouterResourceFactory {
         env.add(envVar("OAUTH2_PROXY_OIDC_EXTRA_AUDIENCES", "mcp-client,wanaku-mcp-client"));
         env.add(envVar("OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL", "true"));
         return env;
+    }
+
+    /** Realm appended to issuer URLs that use the deprecated format without a realm path. */
+    public static final String LEGACY_REALM_PATH = "/realms/wanaku";
+
+    /**
+     * Returns the full OIDC issuer URL. Issuer URLs without a {@code /realms/} path use the deprecated
+     * format, which named only the Keycloak base URL; the operator appends the {@code wanaku} realm to them.
+     */
+    public static String issuerUrl(WanakuRouterSpec.AuthSpec authSpec) {
+        final String issuer = trimTrailingSlash(authSpec.getIssuerUrl());
+        return isLegacyIssuerUrl(authSpec) ? issuer + LEGACY_REALM_PATH : issuer;
+    }
+
+    public static boolean isLegacyIssuerUrl(WanakuRouterSpec.AuthSpec authSpec) {
+        return authSpec.getIssuerUrl() != null && !authSpec.getIssuerUrl().contains("/realms/");
+    }
+
+    /** Returns the in-cluster issuer URL, or the public issuer URL when no internal URL is set. */
+    public static String internalIssuerUrl(WanakuRouterSpec.AuthSpec authSpec) {
+        return StringHelper.isNotEmpty(authSpec.getInternalIssuerUrl())
+                ? trimTrailingSlash(authSpec.getInternalIssuerUrl())
+                : issuerUrl(authSpec);
+    }
+
+    private static String trimTrailingSlash(String url) {
+        return url != null && url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+
+    private static void addIfAbsent(List<EnvVar> envVars, EnvVar envVar) {
+        if (envVars.stream().noneMatch(existing -> existing.getName().equals(envVar.getName()))) {
+            envVars.add(envVar);
+        }
     }
 
     private static EnvVar envVar(String name, String value) {

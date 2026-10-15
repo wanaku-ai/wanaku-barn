@@ -87,6 +87,18 @@ class WanakuRouterReconcilerTest {
         assertTrue(result.errorMessage.contains("secretName"));
     }
 
+    // ── cookie secret validation ─────────────────────────────────────────────
+
+    @Test
+    void cookieSecretAcceptsRawAndBase64EncodedAesKeys() {
+        assertTrue(WanakuRouterReconciler.isValidCookieSecret("0123456789abcdef".getBytes()));
+        assertTrue(WanakuRouterReconciler.isValidCookieSecret("MDEyMzQ1Njc4OWFiY2RlZg==".getBytes()));
+        assertTrue(
+                WanakuRouterReconciler.isValidCookieSecret("q83vEjRWeJCrze8SNFZ4kKvN7xI0VniQq83vEjRWeJA".getBytes()));
+        assertFalse(WanakuRouterReconciler.isValidCookieSecret("too-short".getBytes()));
+        assertFalse(WanakuRouterReconciler.isValidCookieSecret("not base64 at all!!".getBytes()));
+    }
+
     // ── helpers ─────────────────────────────────────────────────────────────
 
     private static WanakuRouter createRouter(WanakuTypes.ExposureSpec ingressSpec) {

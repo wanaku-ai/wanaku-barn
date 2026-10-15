@@ -19,6 +19,10 @@ spec:
             properties:
               auth:
                 properties:
+                  authProxy:
+                    type: "string"
+                  authServer:
+                    type: "string"
                   clientId:
                     type: "string"
                   enabled:
@@ -35,6 +39,8 @@ spec:
                   image:
                     type: "string"
                   imagePullPolicy:
+                    type: "string"
+                  internalIssuerUrl:
                     type: "string"
                   issuerUrl:
                     type: "string"

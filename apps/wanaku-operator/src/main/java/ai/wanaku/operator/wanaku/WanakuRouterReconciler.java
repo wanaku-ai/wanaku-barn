@@ -2,12 +2,16 @@ package ai.wanaku.operator.wanaku;
 
 import jakarta.inject.Inject;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.ContainerStateWaiting;
@@ -18,6 +22,7 @@ import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodCondition;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentCondition;
@@ -37,6 +42,7 @@ import io.javaoperatorsdk.operator.api.reconciler.ErrorStatusUpdateControl;
 import io.javaoperatorsdk.operator.api.reconciler.EventSourceContext;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
 import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
+import io.javaoperatorsdk.operator.processing.event.ResourceID;
 import io.javaoperatorsdk.operator.processing.event.source.EventSource;
 import io.javaoperatorsdk.operator.processing.event.source.informer.InformerEventSource;
 import io.quarkiverse.operatorsdk.annotations.CSVMetadata;
@@ -125,6 +131,9 @@ import static ai.wanaku.operator.util.Matchers.match;
 public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     private static final Logger LOG = Logger.getLogger(WanakuRouterReconciler.class);
     static final String RECONCILED_CONDITION = "Reconciled";
+    static final String AUTH_CONFIGURED_CONDITION = "AuthConfigured";
+    private static final Pattern BASE64_TEXT = Pattern.compile("^[A-Za-z0-9+/_-]+$");
+
     private static final Duration NOT_READY_RECHECK = Duration.ofSeconds(30);
     private static final Set<String> FAILURE_REASONS = Set.of(
             "ImagePullBackOff",
@@ -144,7 +153,20 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         var deployments = InformerEventSourceConfiguration.from(Deployment.class, WanakuRouter.class)
                 .withLabelSelector(OperatorUtil.MANAGED_BY_LABEL + "=" + OperatorUtil.MANAGED_BY_VALUE)
                 .build();
-        return List.of(new InformerEventSource<>(deployments, context));
+        // Re-reconcile when the auth Secret changes, to validate it and roll the proxy
+        var secrets = InformerEventSourceConfiguration.from(Secret.class, WanakuRouter.class)
+                .withSecondaryToPrimaryMapper(secret -> context.getPrimaryCache()
+                        .list(router -> Objects.equals(
+                                        router.getMetadata().getNamespace(),
+                                        secret.getMetadata().getNamespace())
+                                && router.getSpec().getAuth() != null
+                                && Objects.equals(
+                                        router.getSpec().getAuth().getSecretName(),
+                                        secret.getMetadata().getName()))
+                        .map(ResourceID::fromResource)
+                        .collect(Collectors.toSet()))
+                .build();
+        return List.of(new InformerEventSource<>(deployments, context), new InformerEventSource<>(secrets, context));
     }
 
     @Override
@@ -159,7 +181,8 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
 
         final String namespace = resource.getMetadata().getNamespace();
         final WanakuRouterStatus wanakuStatus = new WanakuRouterStatus();
-        deployRouter(resource, context, namespace, wanakuStatus);
+        final AuthCheck authCheck = checkAuth(resource, namespace);
+        deployRouter(resource, context, namespace, wanakuStatus, authCheck);
 
         final List<Condition> previous = previousConditions(resource);
         final Long generation = resource.getMetadata().getGeneration();
@@ -171,6 +194,20 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 "All resources are reconciled",
                 generation,
                 OperatorUtil.findCondition(previous, RECONCILED_CONDITION)));
+        final Condition previousAuth = OperatorUtil.findCondition(previous, AUTH_CONFIGURED_CONDITION);
+        conditions.add(OperatorUtil.condition(
+                AUTH_CONFIGURED_CONDITION,
+                authCheck.configured,
+                authCheck.reason,
+                authCheck.message,
+                generation,
+                previousAuth));
+        // Unprotected or deprecated configurations are valid, but deserve one visible warning
+        if (authCheck.configured
+                && !"Configured".equals(authCheck.reason)
+                && (previousAuth == null || !authCheck.reason.equals(previousAuth.getReason()))) {
+            recordWarning(resource, authCheck.reason, authCheck.message);
+        }
         for (ComponentWorkload component : requiredComponents(resource)) {
             conditions.add(deploymentCondition(component, namespace, generation, previous));
         }
@@ -200,6 +237,108 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 resource.getMetadata().getName());
         setFailedStatus(resource, "ReconcileError", message);
         return ErrorStatusUpdateControl.patchStatus(resource);
+    }
+
+    /** The result of the authentication configuration check. */
+    static final class AuthCheck {
+        final boolean configured;
+        final String reason;
+        final String message;
+        final String secretVersion;
+
+        AuthCheck(boolean configured, String reason, String message, String secretVersion) {
+            this.configured = configured;
+            this.reason = reason;
+            this.message = message;
+            this.secretVersion = secretVersion;
+        }
+    }
+
+    AuthCheck checkAuth(WanakuRouter resource, String namespace) {
+        final WanakuRouterSpec.AuthSpec auth = resource.getSpec().getAuth();
+        if (auth != null && (auth.getAuthServer() != null || auth.getAuthProxy() != null)) {
+            return new AuthCheck(
+                    false,
+                    "DeprecatedFields",
+                    "spec.auth.authServer and spec.auth.authProxy are no longer supported. "
+                            + "Remove them and set spec.auth.enabled, issuerUrl, clientId and secretName",
+                    null);
+        }
+        if (!RouterResourceFactory.isAuthEnabled(resource)) {
+            return new AuthCheck(
+                    true,
+                    "AuthDisabled",
+                    "Authentication is disabled: the exposed management and MCP endpoints are not protected",
+                    null);
+        }
+        final Secret secret = kubernetesClient
+                .secrets()
+                .inNamespace(namespace)
+                .withName(auth.getSecretName())
+                .get();
+        if (secret == null) {
+            return new AuthCheck(
+                    false, "SecretNotFound", "Secret %s does not exist".formatted(auth.getSecretName()), null);
+        }
+        for (String key : List.of(
+                RouterResourceFactory.OAUTH2_PROXY_CLIENT_SECRET_KEY,
+                RouterResourceFactory.OAUTH2_PROXY_COOKIE_SECRET_KEY)) {
+            if (secretValue(secret, key) == null) {
+                return new AuthCheck(
+                        false,
+                        "SecretKeyMissing",
+                        "Secret %s has no %s key".formatted(auth.getSecretName(), key),
+                        null);
+            }
+        }
+        if (!isValidCookieSecret(secretValue(secret, RouterResourceFactory.OAUTH2_PROXY_COOKIE_SECRET_KEY))) {
+            return new AuthCheck(
+                    false,
+                    "InvalidCookieSecret",
+                    "The cookie-secret key of Secret %s must be 16, 24 or 32 bytes, or the base64 encoding of such a value"
+                            .formatted(auth.getSecretName()),
+                    null);
+        }
+        final String version = secret.getMetadata().getResourceVersion();
+        if (RouterResourceFactory.isLegacyIssuerUrl(auth)) {
+            return new AuthCheck(
+                    true,
+                    "DeprecatedIssuerFormat",
+                    "spec.auth.issuerUrl has no realm path, so the operator uses %s. Set the full issuer URL"
+                            .formatted(RouterResourceFactory.issuerUrl(auth)),
+                    version);
+        }
+        return new AuthCheck(
+                true, "Configured", "Authentication uses issuer %s".formatted(auth.getIssuerUrl()), version);
+    }
+
+    private static byte[] secretValue(Secret secret, String key) {
+        if (secret.getData() != null && secret.getData().get(key) != null) {
+            return Base64.getDecoder().decode(secret.getData().get(key));
+        }
+        if (secret.getStringData() != null && secret.getStringData().get(key) != null) {
+            return secret.getStringData().get(key).getBytes(StandardCharsets.UTF_8);
+        }
+        return null;
+    }
+
+    /** oauth2-proxy accepts a raw 16, 24 or 32 byte cookie secret, or the base64 encoding of one. */
+    static boolean isValidCookieSecret(byte[] value) {
+        if (isAesKeyLength(value.length)) {
+            return true;
+        }
+        // Standard or URL-safe alphabet, padded or not
+        final String text = new String(value, StandardCharsets.UTF_8).trim().replaceAll("=+$", "");
+        if (!BASE64_TEXT.matcher(text).matches() || text.length() % 4 == 1) {
+            return false;
+        }
+        final String standard = text.replace('-', '+').replace('_', '/');
+        return isAesKeyLength(
+                Base64.getDecoder().decode(standard + "==".substring(0, (4 - standard.length() % 4) % 4)).length);
+    }
+
+    private static boolean isAesKeyLength(int length) {
+        return length == 16 || length == 24 || length == 32;
     }
 
     /** A workload whose availability is required for the router to be ready. */
@@ -383,6 +522,10 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 && Objects.equals(before.getReason(), after.getReason())) {
             return;
         }
+        recordWarning(resource, after.getReason(), after.getMessage());
+    }
+
+    private void recordWarning(WanakuRouter resource, String reason, String message) {
         final String now = OperatorUtil.now();
         final ObjectMeta meta = resource.getMetadata();
         final Event event = new EventBuilder()
@@ -398,8 +541,8 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 .withUid(meta.getUid())
                 .endInvolvedObject()
                 .withType("Warning")
-                .withReason(after.getReason())
-                .withMessage(after.getMessage())
+                .withReason(reason)
+                .withMessage(message)
                 .withFirstTimestamp(now)
                 .withLastTimestamp(now)
                 .withCount(1)
@@ -421,7 +564,11 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     }
 
     private void deployRouter(
-            WanakuRouter resource, Context<WanakuRouter> context, String namespace, WanakuRouterStatus wanakuStatus) {
+            WanakuRouter resource,
+            Context<WanakuRouter> context,
+            String namespace,
+            WanakuRouterStatus wanakuStatus,
+            AuthCheck authCheck) {
 
         deployServer(resource, context, namespace);
 
@@ -433,8 +580,9 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
 
         ExternalHosts hosts = reconcileExternalAccess(resource, namespace);
 
-        if (authEnabled) {
-            deployOauth2ProxyDeployment(resource, namespace, hosts.management);
+        // A proxy without a valid Secret cannot start, so wait until AuthConfigured is True
+        if (authEnabled && authCheck.configured) {
+            deployOauth2ProxyDeployment(resource, namespace, hosts.management, authCheck.secretVersion);
         }
 
         wanakuStatus.setHost("https://" + hosts.management);
@@ -466,8 +614,10 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         }
     }
 
-    private void deployOauth2ProxyDeployment(WanakuRouter resource, String namespace, String host) {
-        final Deployment desiredDeployment = RouterResourceFactory.makeOauth2ProxyDeployment(resource, host);
+    private void deployOauth2ProxyDeployment(
+            WanakuRouter resource, String namespace, String host, String secretVersion) {
+        final Deployment desiredDeployment =
+                RouterResourceFactory.makeOauth2ProxyDeployment(resource, host, secretVersion);
         Deployment existingDeployment = kubernetesClient
                 .apps()
                 .deployments()

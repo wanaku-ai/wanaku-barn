@@ -152,14 +152,56 @@ host networking, so Wanaku Server reaches Barn at `http://localhost:8180`.
 | `spec.server` | object | The Wanaku router engine: `image`, `env`, `imagePullPolicy` |
 | `spec.auth` | object | Authentication via oauth2-proxy instances placed in front of Wanaku |
 | `spec.auth.enabled` | bool | Whether the oauth2-proxies are deployed |
-| `spec.auth.issuerUrl` | string | OIDC issuer URL (for example, the Keycloak realm URL) |
-| `spec.auth.clientId` | string | OIDC client ID used by the proxies |
+| `spec.auth.issuerUrl` | string | Full public OIDC issuer URL, including the realm (for example, `https://keycloak.example.com/realms/wanaku`) |
+| `spec.auth.internalIssuerUrl` | string | Optional in-cluster URL of the same issuer (for example, `http://keycloak.keycloak.svc:8080/realms/wanaku`) |
+| `spec.auth.clientId` | string | OIDC client ID used by the proxies (default `wanaku-mcp-router`) |
 | `spec.auth.secretName` | string | Secret holding the OIDC credentials and shared cookie secret |
 | `spec.auth.image`, `spec.auth.imagePullPolicy`, `spec.auth.env` | mixed | oauth2-proxy image and configuration |
 
 When authentication is enabled, the operator deploys two oauth2-proxy instances: one protecting
 the MCP port (4180) and one protecting the management port (4181), sharing the same cookie
 secret for single sign-on.
+
+#### Authentication
+
+The operator uses these rules for authentication:
+
+- The proxies validate tokens. The Wanaku Server does not validate tokens.
+- Browsers use `issuerUrl` for the login page.
+- The proxies use `internalIssuerUrl` for token and key requests. If you do not set `internalIssuerUrl`, the proxies use `issuerUrl`.
+- The operator sets `WANAKU_AUTH_ISSUER` (and `WANAKU_AUTH_UPSTREAM_ISSUER` when `internalIssuerUrl` is set) on the Wanaku Server. MCP clients then discover the authorization server through `/.well-known/oauth-protected-resource`.
+- Requests to the MCP endpoints and to `/api/` without a valid token get `401`. They are not redirected to the login page.
+- `/healthz` and `/health` do not require a token.
+
+The Secret named in `spec.auth.secretName` must contain two keys:
+
+| Key | Content |
+|-----|---------|
+| `client-secret` | The OIDC client secret of `clientId` |
+| `cookie-secret` | 16, 24 or 32 bytes, or the base64 encoding of such a value |
+
+To create the Secret, use these commands:
+
+```shell
+kubectl create secret generic wanaku-oidc-secret -n wanaku \
+  --from-literal=client-secret=<client secret from Keycloak> \
+  --from-literal=cookie-secret="$(openssl rand -hex 16)"
+```
+
+The operator reads the Secret before it deploys the proxies. If the Secret is missing or not valid, the operator does not deploy the proxies.
+When the Secret changes, the operator restarts the proxies.
+
+The `AuthConfigured` condition reports the authentication configuration:
+
+| Status | Reason | Meaning |
+|--------|--------|---------|
+| `True` | `Configured` | Authentication is configured. |
+| `True` | `AuthDisabled` | `spec.auth.enabled` is not `true`. The exposed endpoints are not protected. The operator records one `Warning` event. |
+| `True` | `DeprecatedIssuerFormat` | `issuerUrl` has no `/realms/` path. The operator appends `/realms/wanaku`. Set the full issuer URL. |
+| `False` | `SecretNotFound`, `SecretKeyMissing`, `InvalidCookieSecret` | The Secret is missing or not valid. |
+| `False` | `DeprecatedFields` | The resource uses `spec.auth.authServer` or `spec.auth.authProxy`. These fields have no effect. Replace them with `enabled`, `issuerUrl`, `clientId` and `secretName`. |
+
+Earlier operator versions appended `/realms/wanaku` to `issuerUrl`. Resources that set only the Keycloak base URL continue to work, with the `DeprecatedIssuerFormat` reason.
 
 ### WanakuServiceCatalog (`wanaku.ai/v1alpha1`)
 
@@ -208,7 +250,8 @@ spec:
     enabled: true
   auth:
     enabled: true
-    issuerUrl: http://keycloak:8080/realms/wanaku
+    issuerUrl: https://keycloak.example.com/realms/wanaku
+    internalIssuerUrl: http://keycloak:8080/realms/wanaku
     clientId: wanaku-mcp-router
     secretName: wanaku-oidc-secret
 ```
@@ -317,6 +360,7 @@ The operator records the observed generation in `status.observedGeneration` and 
 |-----------|---------------------------|----------------------|
 | `Reconciled` | Always | Spec validation failed (`ValidationError`) or a Kubernetes API call failed (`ReconcileError`). The message contains the error. |
 | `ServerAvailable` | Always | The `<router>-server` Deployment is not available. |
+| `AuthConfigured` | Always | The authentication configuration is not valid. See [Authentication](#authentication). |
 | `AuthProxyAvailable` | `spec.auth.enabled: true` | The `<router>-oauth2-proxy` Deployment is not available. |
 | `BarnAvailable` | `spec.router.enabled: true` | The `<router>-barn` Deployment is not available. |
 | `Ready` | Always | One of the conditions above is `False`. The reason and the message identify the first failed condition. |

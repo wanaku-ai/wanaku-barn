@@ -261,7 +261,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxyDeploymentHasMcpAndMgmtContainers() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         List<String> names = deployment.getSpec().getTemplate().getSpec().getContainers().stream()
                 .map(c -> c.getName())
@@ -272,7 +272,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxyMcpContainerTargetsServerMcpPort() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         assertEquals(
                 "http://server-test-router:8081",
@@ -283,7 +283,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxyMgmtContainerTargetsServerMgmtPort() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         assertEquals(
                 "http://server-test-router:8080",
@@ -295,7 +295,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxyUsesIssuerAndSecretsFromSpec() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         for (String containerName : List.of("oauth2-proxy-mcp", "oauth2-proxy-mgmt")) {
             assertEquals(
@@ -326,7 +326,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxySkipsOidcDiscoveryAndDerivesEndpoints() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         for (String containerName : List.of("oauth2-proxy-mcp", "oauth2-proxy-mgmt")) {
             assertEquals("true", getContainerEnvValue(deployment, containerName, "OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"));
@@ -350,8 +350,71 @@ class RouterResourceFactoryTest {
         override.setValue("example.com");
         router.getSpec().getAuth().setEnv(List.of(override));
 
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
         assertEquals("example.com", getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_EMAIL_DOMAINS"));
+    }
+
+    @Test
+    void oauth2ProxyKeepsFullIssuerUrlAndUsesInternalIssuerForBackChannel() {
+        WanakuRouter router = createRouterWithAuth();
+        router.getSpec().getAuth().setIssuerUrl("https://sso.example.com/realms/acme/");
+        router.getSpec().getAuth().setInternalIssuerUrl("http://keycloak.sso.svc:8080/realms/acme");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        assertEquals(
+                "https://sso.example.com/realms/acme",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_OIDC_ISSUER_URL"));
+        assertEquals(
+                "https://sso.example.com/realms/acme/protocol/openid-connect/auth",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_LOGIN_URL"));
+        assertEquals(
+                "http://keycloak.sso.svc:8080/realms/acme/protocol/openid-connect/token",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_REDEEM_URL"));
+        assertEquals(
+                "http://keycloak.sso.svc:8080/realms/acme/protocol/openid-connect/certs",
+                getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_OIDC_JWKS_URL"));
+    }
+
+    @Test
+    void oauth2ProxyTreatsMcpAndManagementApiPathsAsApiRoutes() {
+        WanakuRouter router = createRouterWithAuth();
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        assertEquals(
+                "^/$,^/mcp/?$,^/[^/]+/mcp/?$",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_API_ROUTES"));
+        assertEquals("^/api/.*", getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_API_ROUTES"));
+    }
+
+    @Test
+    void oauth2ProxySecretVersionIsAnnotatedOnPods() {
+        Deployment deployment =
+                RouterResourceFactory.makeOauth2ProxyDeployment(createRouterWithAuth(), "wanaku.example.com", "42");
+
+        assertEquals(
+                "42",
+                deployment
+                        .getSpec()
+                        .getTemplate()
+                        .getMetadata()
+                        .getAnnotations()
+                        .get(RouterResourceFactory.AUTH_SECRET_VERSION_ANNOTATION));
+    }
+
+    @Test
+    void serverAdvertisesIssuerOnlyWhenAuthIsEnabled() {
+        WanakuRouter router = createRouterWithAuth();
+        router.getSpec().getAuth().setInternalIssuerUrl("http://keycloak:8080/realms/wanaku");
+        Deployment withAuth = RouterResourceFactory.makeDesiredServerDeployment(router, null);
+        Deployment withoutAuth = RouterResourceFactory.makeDesiredServerDeployment(createRouter(null), null);
+
+        assertEquals(
+                "https://keycloak.example.com/realms/wanaku",
+                getContainerEnvValue(withAuth, "wanaku-server", "WANAKU_AUTH_ISSUER"));
+        assertEquals(
+                "http://keycloak:8080/realms/wanaku",
+                getContainerEnvValue(withAuth, "wanaku-server", "WANAKU_AUTH_UPSTREAM_ISSUER"));
+        assertNull(getContainerEnv(withoutAuth, "wanaku-server", "WANAKU_AUTH_ISSUER"));
     }
 
     @Test
@@ -412,7 +475,7 @@ class RouterResourceFactoryTest {
         WanakuRouter router = createRouter(null);
         WanakuRouterSpec.AuthSpec authSpec = new WanakuRouterSpec.AuthSpec();
         authSpec.setEnabled(true);
-        // Keycloak base URL: the operator appends the /realms/wanaku path
+        // Deprecated Keycloak base URL format: the operator appends the /realms/wanaku path
         authSpec.setIssuerUrl("https://keycloak.example.com");
         authSpec.setSecretName("wanaku-auth");
         router.getSpec().setAuth(authSpec);
