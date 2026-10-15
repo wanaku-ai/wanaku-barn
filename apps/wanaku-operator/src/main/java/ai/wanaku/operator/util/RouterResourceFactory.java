@@ -94,6 +94,12 @@ public final class RouterResourceFactory {
         return service;
     }
 
+    /**
+     * Creates the management or the MCP Route. Without a host, OpenShift generates a separate host for each Route,
+     * so the MCP Route takes every path: MCP clients also need the OAuth discovery endpoints ({@code /.well-known/*},
+     * {@code /authorize}, {@code /token}, {@code /register}) and the namespace endpoints ({@code /<namespace>/mcp}).
+     * With a shared host, the MCP Route takes only {@code /mcp}, because the management Route takes {@code /}.
+     */
     public static Route makeServerRoute(WanakuRouter resource, String host, boolean mcp) {
         String name = resource.getMetadata().getName();
         boolean authEnabled = isAuthEnabled(resource);
@@ -108,7 +114,7 @@ public final class RouterResourceFactory {
                 .endMetadata()
                 .withNewSpec()
                 .withHost(host)
-                .withPath(mcp ? "/mcp" : "/")
+                .withPath(mcp && StringHelper.isNotEmpty(host) ? "/mcp" : "/")
                 .withNewTo()
                 .withKind("Service")
                 .withName(service)

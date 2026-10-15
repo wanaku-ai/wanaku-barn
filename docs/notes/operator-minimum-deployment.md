@@ -86,6 +86,10 @@ validation result, and documentation follow-up.
   OpenShift generates a separate hostname for each Route. An optional
   `spec.exposure.host` sets one shared hostname for both Routes. Setting a Route host
   needs the `routes/custom-host` permission, so the operator sets it only on request.
+- Follow-up (found while validating #248): with its own hostname, the MCP Route still used the path `/mcp`.
+  The OpenShift router returned 503 for `/.well-known/oauth-protected-resource/mcp`, so MCP clients could not
+  discover the authorization server. Namespace endpoints (`/<namespace>/mcp`) were not reachable either.
+  The MCP Route now uses `/` when it has its own hostname, and `/mcp` only with a shared `spec.exposure.host`.
 - Use edge TLS with HTTP-to-HTTPS redirection, consistent with the HTTPS endpoints
   already reported in `WanakuRouter.status`. Both Routes are owned by the CR.
 - Target Server ports 8080/8081 without authentication, or oauth2-proxy ports

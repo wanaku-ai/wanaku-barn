@@ -57,7 +57,8 @@ class WanakuRouterRouteReconcilerTest {
         assertNull(routes.getAllValues().getFirst().getSpec().getHost());
         Route mcp = routes.getAllValues().getLast();
         assertNull(mcp.getSpec().getHost());
-        assertEquals("/mcp", mcp.getSpec().getPath());
+        // The MCP Route has its own host, so it also serves the OAuth discovery and namespace endpoints
+        assertEquals("/", mcp.getSpec().getPath());
     }
 
     @Test
@@ -84,6 +85,9 @@ class WanakuRouterRouteReconcilerTest {
         routes.getAllValues()
                 .forEach(route ->
                         assertEquals("wanaku.example.com", route.getSpec().getHost()));
+        // On a shared host, the management Route takes "/", so the MCP Route takes only "/mcp"
+        assertEquals("/", routes.getAllValues().getFirst().getSpec().getPath());
+        assertEquals("/mcp", routes.getAllValues().getLast().getSpec().getPath());
     }
 
     @Test
@@ -94,15 +98,45 @@ class WanakuRouterRouteReconcilerTest {
         Resource<Route> mcp = mock(Resource.class);
         when(operations.withName("test-router")).thenReturn(management);
         when(operations.withName("test-router-mcp")).thenReturn(mcp);
-        when(management.get())
-                .thenReturn(RouterResourceFactory.makeServerRoute(resource, "wanaku.apps.example.com", false));
-        when(mcp.get())
-                .thenReturn(RouterResourceFactory.makeServerRoute(resource, "wanaku-mcp.apps.example.com", true));
+        when(management.get()).thenReturn(assignedRoute(resource, "wanaku.apps.example.com", false));
+        when(mcp.get()).thenReturn(assignedRoute(resource, "wanaku-mcp.apps.example.com", true));
 
         var hosts = reconciler.reconcileExternalAccess(resource, "default");
         assertEquals("wanaku.apps.example.com", hosts.management);
         assertEquals("wanaku-mcp.apps.example.com", hosts.mcp);
         verify(operations, never()).resource(any(Route.class));
+    }
+
+    @Test
+    void openshiftWidensMcpRouteCreatedWithTheMcpPathOnly() {
+        WanakuRouter resource = createRouter();
+        var operations = mockOpenShiftRoutes();
+        Resource<Route> management = mock(Resource.class);
+        Resource<Route> mcp = mock(Resource.class);
+        Resource<Route> write = mock(Resource.class);
+        when(operations.withName("test-router")).thenReturn(management);
+        when(operations.withName("test-router-mcp")).thenReturn(mcp);
+        when(management.get()).thenReturn(assignedRoute(resource, "wanaku.apps.example.com", false));
+        // An earlier operator version created the MCP Route with the path "/mcp" only
+        Route legacy = assignedRoute(resource, "wanaku-mcp.apps.example.com", true);
+        legacy.getSpec().setPath("/mcp");
+        when(mcp.get()).thenReturn(legacy);
+        when(operations.resource(any(Route.class))).thenReturn(write);
+        when(write.createOr(any())).thenReturn(assignedRoute(resource, "wanaku-mcp.apps.example.com", true));
+
+        reconciler.reconcileExternalAccess(resource, "default");
+
+        ArgumentCaptor<Route> updated = ArgumentCaptor.forClass(Route.class);
+        verify(operations).resource(updated.capture());
+        assertEquals("/", updated.getValue().getSpec().getPath());
+        assertEquals("wanaku-mcp.apps.example.com", updated.getValue().getSpec().getHost());
+    }
+
+    /** A Route as the operator creates it without a host, after OpenShift assigned one. */
+    private static Route assignedRoute(WanakuRouter resource, String host, boolean mcp) {
+        Route route = RouterResourceFactory.makeServerRoute(resource, null, mcp);
+        route.getSpec().setHost(host);
+        return route;
     }
 
     @Test

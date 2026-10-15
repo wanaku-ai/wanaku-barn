@@ -33,9 +33,12 @@ router to have `spec.router.enabled: true`, so that Wanaku Barn is deployed for 
 to register against.
 
 On OpenShift, the operator creates two Routes: `wanaku-dev` for the management API and
-`wanaku-dev-mcp` for the MCP endpoint (`/mcp`). OpenShift generates a hostname for each Route.
+`wanaku-dev-mcp` for the MCP endpoint. OpenShift generates a hostname for each Route.
+The MCP Route sends all paths to the MCP listener. MCP clients use these paths:
+`/mcp`, `/<namespace>/mcp`, and the OAuth discovery paths `/.well-known/*`, `/authorize`, `/token` and `/register`.
 Set `spec.exposure.host` to use one hostname for both Routes. This needs the
-`routes/custom-host` permission. `status.host` contains the management URL.
+`routes/custom-host` permission. On a shared hostname, the MCP Route receives only `/mcp`.
+The namespace endpoints and the OAuth discovery paths are then not available to MCP clients. `status.host` contains the management URL.
 `status.sseEndpoint` and `status.streamableEndpoint` contain the MCP URLs.
 
 ## Upgrading from the PoC naming
