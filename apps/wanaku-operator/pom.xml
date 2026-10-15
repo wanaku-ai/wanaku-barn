@@ -144,6 +144,7 @@
                                 <!-- Prefix roleRef names to match namespace-prefixed ClusterRoles -->
                                 <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-router-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-router-cluster-role" />
                                 <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-service-catalog-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-service-catalog-cluster-role" />
+                                <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-semantic-router-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-semantic-router-cluster-role" />
                                 <replace dir="${helm.templates}" includes="validating-clusterrolebinding.yaml" token="name: josdk-crd-validating-cluster-role" value="name: {{ $.Release.Namespace }}-josdk-crd-validating-cluster-role" />
                                 <!-- Prefix the JOSDK validating ClusterRoleBinding resource name with Release.Namespace -->
                                 <replace file="${helm.templates}/validating-clusterrolebinding.yaml" token="name: {{ .Chart.Name }}-crd-validating-role-binding" value="name: {{ .Release.Namespace }}-crd-validating-role-binding" />
@@ -260,6 +261,7 @@ subjects:
                                             <excludes>
                                                 <exclude>templates/wanaku-router-crd-role-binding.yaml</exclude>
                                                 <exclude>templates/wanaku-service-catalog-crd-role-binding.yaml</exclude>
+                                                <exclude>templates/wanaku-semantic-router-crd-role-binding.yaml</exclude>
                                                 <exclude>templates/validating-clusterrolebinding.yaml</exclude>
                                             </excludes>
                                         </resource>

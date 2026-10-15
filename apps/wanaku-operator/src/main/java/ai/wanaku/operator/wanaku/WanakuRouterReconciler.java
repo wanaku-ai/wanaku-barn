@@ -19,23 +19,13 @@ import java.util.stream.Collectors;
 import org.jboss.logging.Logger;
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.ConfigMap;
-import io.fabric8.kubernetes.api.model.ContainerStateWaiting;
-import io.fabric8.kubernetes.api.model.ContainerStatus;
-import io.fabric8.kubernetes.api.model.Event;
-import io.fabric8.kubernetes.api.model.EventBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodCondition;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
-import io.fabric8.kubernetes.api.model.apps.DeploymentCondition;
-import io.fabric8.kubernetes.api.model.apps.DeploymentStatus;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.Replaceable;
 import io.fabric8.openshift.api.model.Route;
 import io.fabric8.openshift.api.model.RouteIngressCondition;
@@ -56,9 +46,11 @@ import io.quarkiverse.operatorsdk.annotations.CSVMetadata;
 import io.quarkiverse.operatorsdk.annotations.RBACRule;
 import io.quarkiverse.operatorsdk.annotations.RBACVerbs;
 import ai.wanaku.core.util.StringHelper;
+import ai.wanaku.operator.util.Events;
 import ai.wanaku.operator.util.OperatorUtil;
 import ai.wanaku.operator.util.RouterResourceFactory;
 import ai.wanaku.operator.util.ServerListener;
+import ai.wanaku.operator.util.Workloads;
 
 import static ai.wanaku.operator.util.Matchers.match;
 
@@ -151,14 +143,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
             RouterResourceFactory.EXPOSURE_ROUTE,
             RouterResourceFactory.EXPOSURE_INGRESS,
             RouterResourceFactory.EXPOSURE_NONE);
-    private static final Set<String> FAILURE_REASONS = Set.of(
-            "ImagePullBackOff",
-            "ErrImagePull",
-            "InvalidImageName",
-            "CrashLoopBackOff",
-            "CreateContainerConfigError",
-            "CreateContainerError",
-            "RunContainerError");
 
     @Inject
     KubernetesClient kubernetesClient;
@@ -222,13 +206,13 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         if (authCheck.configured
                 && !"Configured".equals(authCheck.reason)
                 && (previousAuth == null || !authCheck.reason.equals(previousAuth.getReason()))) {
-            recordWarning(resource, authCheck.reason, authCheck.message);
+            Events.warn(kubernetesClient, resource, authCheck.reason, authCheck.message);
         }
         for (ComponentWorkload component : requiredComponents(resource)) {
             conditions.add(deploymentCondition(component, namespace, generation, previous));
         }
         conditions.add(exposureCondition(exposure, generation, previous));
-        conditions.add(aggregateReady(conditions, generation, previous));
+        conditions.add(OperatorUtil.aggregateReady(conditions, generation, previous));
 
         wanakuStatus.setObservedGeneration(generation);
         wanakuStatus.setConditions(conditions);
@@ -236,7 +220,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         warnOnReadyChange(resource, previous, conditions);
 
         UpdateControl<WanakuRouter> control = UpdateControl.patchStatus(resource);
-        if (!isTrue(OperatorUtil.findCondition(conditions, OperatorUtil.READY_CONDITION))) {
+        if (!OperatorUtil.isTrue(OperatorUtil.findCondition(conditions, OperatorUtil.READY_CONDITION))) {
             // Pod-level failures (for example image pull errors) do not always change the Deployment
             control.rescheduleAfter(NOT_READY_RECHECK);
         }
@@ -391,7 +375,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 .inNamespace(namespace)
                 .withName(component.deploymentName)
                 .get();
-        final WorkloadState state = workloadState(deployment, namespace);
+        final Workloads.WorkloadState state = Workloads.state(kubernetesClient, deployment, namespace);
         return OperatorUtil.condition(
                 component.conditionType,
                 state.available,
@@ -399,122 +383,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 "Deployment %s: %s".formatted(component.deploymentName, state.message),
                 generation,
                 previousCondition);
-    }
-
-    static final class WorkloadState {
-        final boolean available;
-        final String reason;
-        final String message;
-
-        WorkloadState(boolean available, String reason, String message) {
-            this.available = available;
-            this.reason = reason;
-            this.message = message;
-        }
-    }
-
-    WorkloadState workloadState(Deployment deployment, String namespace) {
-        if (deployment == null) {
-            return new WorkloadState(false, "NotFound", "the Deployment does not exist");
-        }
-        final DeploymentStatus status =
-                deployment.getStatus() != null ? deployment.getStatus() : new DeploymentStatus();
-        final int desired =
-                Optional.ofNullable(deployment.getSpec().getReplicas()).orElse(1);
-        final int available = Optional.ofNullable(status.getAvailableReplicas()).orElse(0);
-        final long generation =
-                Optional.ofNullable(deployment.getMetadata().getGeneration()).orElse(0L);
-        final boolean observed = status.getObservedGeneration() != null && status.getObservedGeneration() >= generation;
-        final int updated = Optional.ofNullable(status.getUpdatedReplicas()).orElse(0);
-        if (observed
-                && updated >= desired
-                && available >= desired
-                && hasDeploymentCondition(status, "Available", "True")) {
-            return new WorkloadState(true, "Available", "%d/%d replicas available".formatted(available, desired));
-        }
-        final WorkloadState podFailure = podFailure(deployment, namespace);
-        if (podFailure != null) {
-            return podFailure;
-        }
-        for (DeploymentCondition condition : nullSafe(status.getConditions())) {
-            if ("Progressing".equals(condition.getType()) && "ProgressDeadlineExceeded".equals(condition.getReason())) {
-                return new WorkloadState(false, "ProgressDeadlineExceeded", condition.getMessage());
-            }
-        }
-        return new WorkloadState(false, "Progressing", "%d/%d replicas available".formatted(available, desired));
-    }
-
-    private WorkloadState podFailure(Deployment deployment, String namespace) {
-        final List<Pod> pods = kubernetesClient
-                .pods()
-                .inNamespace(namespace)
-                .withLabels(deployment.getSpec().getSelector().getMatchLabels())
-                .list()
-                .getItems();
-        for (Pod pod : nullSafe(pods)) {
-            if (pod.getStatus() == null) {
-                continue;
-            }
-            for (PodCondition condition : nullSafe(pod.getStatus().getConditions())) {
-                if ("PodScheduled".equals(condition.getType()) && "False".equals(condition.getStatus())) {
-                    return new WorkloadState(
-                            false,
-                            Optional.ofNullable(condition.getReason()).orElse("Unschedulable"),
-                            condition.getMessage());
-                }
-            }
-            final List<ContainerStatus> statuses =
-                    new ArrayList<>(nullSafe(pod.getStatus().getInitContainerStatuses()));
-            statuses.addAll(nullSafe(pod.getStatus().getContainerStatuses()));
-            for (ContainerStatus containerStatus : statuses) {
-                ContainerStateWaiting waiting = containerStatus.getState() != null
-                        ? containerStatus.getState().getWaiting()
-                        : null;
-                if (waiting != null && FAILURE_REASONS.contains(waiting.getReason())) {
-                    return new WorkloadState(false, waiting.getReason(), containerMessage(containerStatus, waiting));
-                }
-            }
-        }
-        return null;
-    }
-
-    private static String containerMessage(ContainerStatus containerStatus, ContainerStateWaiting waiting) {
-        String message = "container %s: %s"
-                .formatted(
-                        containerStatus.getName(),
-                        Optional.ofNullable(waiting.getMessage()).orElse(waiting.getReason()));
-        if (containerStatus.getLastState() != null
-                && containerStatus.getLastState().getTerminated() != null
-                && containerStatus.getLastState().getTerminated().getMessage() != null) {
-            message += "; last termination: "
-                    + containerStatus.getLastState().getTerminated().getMessage();
-        }
-        return message;
-    }
-
-    private static boolean hasDeploymentCondition(DeploymentStatus status, String type, String value) {
-        return nullSafe(status.getConditions()).stream()
-                .anyMatch(c -> type.equals(c.getType()) && value.equals(c.getStatus()));
-    }
-
-    private static Condition aggregateReady(List<Condition> conditions, Long generation, List<Condition> previous) {
-        final Condition previousReady = OperatorUtil.findCondition(previous, OperatorUtil.READY_CONDITION);
-        for (Condition condition : conditions) {
-            if (!isTrue(condition)) {
-                return OperatorUtil.condition(
-                        OperatorUtil.READY_CONDITION,
-                        false,
-                        condition.getReason(),
-                        condition.getType() + ": " + condition.getMessage(),
-                        generation,
-                        previousReady);
-            }
-        }
-        return OperatorUtil.readyCondition(generation, previousReady, "All required components are available");
-    }
-
-    private static boolean isTrue(Condition condition) {
-        return condition != null && OperatorUtil.CONDITION_STATUS_TRUE.equals(condition.getStatus());
     }
 
     private static List<Condition> previousConditions(WanakuRouter resource) {
@@ -530,7 +398,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         final Condition before = OperatorUtil.findCondition(previous, OperatorUtil.READY_CONDITION);
         final Condition after = OperatorUtil.findCondition(current, OperatorUtil.READY_CONDITION);
         // A rollout in progress is expected and not worth a Warning
-        if (isTrue(after) || "Progressing".equals(after.getReason())) {
+        if (OperatorUtil.isTrue(after) || "Progressing".equals(after.getReason())) {
             return;
         }
         if (before != null
@@ -538,45 +406,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 && Objects.equals(before.getReason(), after.getReason())) {
             return;
         }
-        recordWarning(resource, after.getReason(), after.getMessage());
-    }
-
-    private void recordWarning(WanakuRouter resource, String reason, String message) {
-        final String now = OperatorUtil.now();
-        final ObjectMeta meta = resource.getMetadata();
-        final Event event = new EventBuilder()
-                .withNewMetadata()
-                .withGenerateName(meta.getName() + "-")
-                .withNamespace(meta.getNamespace())
-                .endMetadata()
-                .withNewInvolvedObject()
-                .withApiVersion(resource.getApiVersion())
-                .withKind(resource.getKind())
-                .withName(meta.getName())
-                .withNamespace(meta.getNamespace())
-                .withUid(meta.getUid())
-                .endInvolvedObject()
-                .withType("Warning")
-                .withReason(reason)
-                .withMessage(message)
-                .withFirstTimestamp(now)
-                .withLastTimestamp(now)
-                .withCount(1)
-                .withNewSource()
-                .withComponent(OperatorUtil.MANAGED_BY_VALUE)
-                .endSource()
-                .build();
-        try {
-            kubernetesClient
-                    .v1()
-                    .events()
-                    .inNamespace(meta.getNamespace())
-                    .resource(event)
-                    .create();
-        } catch (KubernetesClientException e) {
-            // Events are best effort: the condition already carries the failure
-            LOG.warnf("Unable to record event for WanakuRouter '%s': %s", meta.getName(), e.getMessage());
-        }
+        Events.warn(kubernetesClient, resource, after.getReason(), after.getMessage());
     }
 
     private Exposure deployRouter(
@@ -1121,7 +951,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 message,
                 generation,
                 OperatorUtil.findCondition(previous, RECONCILED_CONDITION)));
-        conditions.add(aggregateReady(conditions, generation, previous));
+        conditions.add(OperatorUtil.aggregateReady(conditions, generation, previous));
         status.setObservedGeneration(generation);
         status.setConditions(conditions);
         resource.setStatus(status);

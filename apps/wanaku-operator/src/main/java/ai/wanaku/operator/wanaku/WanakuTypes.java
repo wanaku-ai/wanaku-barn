@@ -141,4 +141,72 @@ public final class WanakuTypes {
             this.host = host;
         }
     }
+
+    /** A key in a Secret. */
+    public static class SecretKeyRef {
+        private String name;
+        private String key;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+    }
+
+    /** Route files in a ConfigMap; {@code main} names the key of the main route file. */
+    public static class ConfigMapSource {
+        private String name;
+        private String main;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getMain() {
+            return main;
+        }
+
+        public void setMain(String main) {
+            this.main = main;
+        }
+    }
+
+    /** How a runtime registers with the router as an MCP forward. */
+    public static class ForwardSpec {
+        private String name;
+        private String namespace;
+
+        /** Forward name; defaults to the custom resource name. Forward names are unique per router. */
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        /** Wanaku namespace of the forward; defaults to {@code default}. */
+        public String getNamespace() {
+            return namespace;
+        }
+
+        public void setNamespace(String namespace) {
+            this.namespace = namespace;
+        }
+    }
 }

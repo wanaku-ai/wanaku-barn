@@ -135,6 +135,30 @@ public final class OperatorUtil {
     }
 
     /**
+     * Builds the Ready condition: True when every given condition is True, otherwise False with the reason
+     * and message of the first condition that is not True.
+     */
+    public static Condition aggregateReady(List<Condition> conditions, Long generation, List<Condition> previous) {
+        final Condition previousReady = findCondition(previous, READY_CONDITION);
+        for (Condition condition : conditions) {
+            if (!isTrue(condition)) {
+                return condition(
+                        READY_CONDITION,
+                        false,
+                        condition.getReason(),
+                        condition.getType() + ": " + condition.getMessage(),
+                        generation,
+                        previousReady);
+            }
+        }
+        return readyCondition(generation, previousReady, "All required components are available");
+    }
+
+    public static boolean isTrue(Condition condition) {
+        return condition != null && CONDITION_STATUS_TRUE.equals(condition.getStatus());
+    }
+
+    /**
      * Stores a hash of the desired resource spec in an annotation, so drift in any field can be detected
      * by comparing it with the annotation of the existing resource.
      *

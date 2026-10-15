@@ -1,0 +1,20 @@
+apiVersion: "wanaku.ai/v1alpha1"
+kind: WanakuSemanticRouter
+metadata:
+  name: support
+spec:
+  # The WanakuRouter that the runtime registers with
+  routerRef: wanaku-dev
+  # Set exactly one source. semanticRoute and catalog need spec.barn.enabled on the router.
+  source:
+    semanticRoute:
+      name: support
+#    configMapRef:
+#      # Contains the route, semantic-router.properties and the files it references
+#      name: support-files
+#      main: support.camel.yaml
+  forward:
+    namespace: default
+#  wanakuTokenSecretRef:
+#    name: wanaku-token
+#    key: token

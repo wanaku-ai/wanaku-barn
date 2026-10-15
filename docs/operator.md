@@ -8,6 +8,8 @@ The Wanaku Operator manages the following custom resource definitions (CRDs):
   optionally, Wanaku Barn
 - **WanakuServiceCatalog** — deploys packaged service catalogs (Camel routes + Wanaku rules) to
   a router
+- **WanakuSemanticRouter** — runs one Wanaku Semantic Router (WSR) runtime and registers it with a
+  router as an MCP forward
 
 > [!NOTE]
 > The `WanakuCapability`, `WanakuCamelRoute` and `WanakuCamelCodeExecutionEngine` CRDs were
@@ -327,6 +329,44 @@ The `ExposureReady` condition is `True` when the OpenShift router admits all Rou
 The referenced ConfigMap must contain the packaged catalog (`catalog.zip`), created with
 `wanaku service package` (see [Deploying catalogs](#deploying-service-catalogs)).
 
+### WanakuSemanticRouter (`wanaku.ai/v1alpha1`)
+
+`WanakuSemanticRouter` runs one Wanaku Semantic Router (WSR) runtime. One runtime serves one semantic route as one MCP tool. The runtime registers itself with the router as an MCP forward when it starts, and removes the forward when it stops.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `spec.routerRef` | string | Name of the `WanakuRouter` that the runtime registers with (required) |
+| `spec.source.semanticRoute.name` | string | A semantic route published in Wanaku Barn |
+| `spec.source.catalog` | object | A pinned service catalog in Wanaku Barn: `name`, `service`, `revision`, `sha256` and optional `main` |
+| `spec.source.configMapRef` | object | Route files in a ConfigMap: `name`, and `main` (the key of the main route file). The ConfigMap must also contain `semantic-router.properties` and the files that it references |
+| `spec.forward.name` | string | Forward name. The default is the resource name. Forward names are unique in a router |
+| `spec.forward.namespace` | string | Wanaku namespace of the forward. The default is `default` |
+| `spec.dependencies` | list | Extra Maven dependencies (`group:artifact:version`) |
+| `spec.wanakuTokenSecretRef`, `spec.barnTokenSecretRef` | object | Secret `name` and `key` (default `token`) of a bearer token for the router management API or for Barn |
+| `spec.image`, `spec.imagePullPolicy`, `spec.env` | mixed | Runtime image (default `quay.io/wanaku/wanaku-semantic-router:latest`) and configuration |
+
+Set exactly one source. The `semanticRoute` and `catalog` sources need Wanaku Barn on the router (`spec.barn.enabled: true`).
+
+The operator creates these resources:
+
+- The `<name>-wsr` Deployment with one replica. It uses a rolling update: the new pod registers the forward again with a new instance label, so the old pod does not remove it at shutdown.
+- The `<name>-wsr` Service on port 8090. It publishes addresses of pods that are not ready, because the router discovers the tool while the runtime registers, before the pod is ready.
+
+The probes use the WSR health endpoints on port 8091 (`/api/v1/health/started`, `/ready` and `/live`). The pod is ready only after the runtime registered the forward. The startup probe allows 10 minutes, because the runtime resolves Maven dependencies at startup.
+
+The status contains these conditions and fields:
+
+| Condition | Status `False` means |
+|-----------|----------------------|
+| `Reconciled` | Validation failed (`ValidationError`) or a Kubernetes API call failed (`ReconcileError`). |
+| `Available` | The runtime pod is not ready. The reason comes from the pod, for example `CrashLoopBackOff`. A failed startup shows the WSR status message as the last termination message. |
+| `Registered` | The router has no forward with this name (`NotRegistered`), the forward belongs to another registrant (`ForeignForward`), the forward is unavailable (`ForwardUnavailable`), or the operator cannot reach the router (`RouterUnreachable`). |
+| `Ready` | One of the conditions above is `False`. |
+
+`status.forwardName`, `status.mcpAddress` and `status.wanakuEndpoint` (the router MCP endpoint for the forward namespace, when the router exposes MCP) describe the registration.
+
+When you delete the resource, Kubernetes stops the runtime. The runtime removes the forward if it still owns it. If the router is already gone, the runtime cannot remove the forward.
+
 ## Deployment Examples
 
 ### Minimal Router
@@ -448,7 +488,7 @@ for the service itself.
 **List all Wanaku resources:**
 
 ```shell
-kubectl get wanakurouter,wanakuservicecatalog -n wanaku
+kubectl get wanakurouter,wanakuservicecatalog,wanakusemanticrouter -n wanaku
 ```
 
 **Get detailed status:**

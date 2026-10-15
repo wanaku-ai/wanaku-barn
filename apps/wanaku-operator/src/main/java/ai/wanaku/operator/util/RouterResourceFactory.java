@@ -952,7 +952,7 @@ public final class RouterResourceFactory {
                 .build();
     }
 
-    private static void managed(HasMetadata desired, Object spec) {
+    static void managed(HasMetadata desired, Object spec) {
         Map<String, String> labels = new HashMap<>();
         if (desired.getMetadata().getLabels() != null) {
             labels.putAll(desired.getMetadata().getLabels());
