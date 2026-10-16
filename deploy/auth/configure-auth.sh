@@ -13,22 +13,7 @@ WANAKU_KEYCLOAK_PASS=${WANAKU_KEYCLOAK_PASS:-admin}
 pushd deploy/auth > /dev/null
 
 if [ -z "${WANAKU_KEYCLOAK_HOST}" ]; then
-  # detect if connected to openshift
-  # if grep returns 0, grep command returns 1 (fails), toa void the script failing, set the the ||true
-  nr_openshift="$(kubectl api-resources|grep -c openshift || true)"
-  if [[ "${nr_openshift}" -eq 0 ]]; then
-      # not connected to openshift
-      WANAKU_KEYCLOAK_HOST=$(kubectl get ingress keycloak -o jsonpath='{.spec.rules[0].host}')
-  else
-      WANAKU_KEYCLOAK_HOST=$(kubectl get route keycloak -o jsonpath='{.spec.host}')
-  fi
-
-  # detect if using https
-  if curl -k -s -f -o /dev/null "https://${WANAKU_KEYCLOAK_HOST}"; then
-      WANAKU_KEYCLOAK_HOST=https://${WANAKU_KEYCLOAK_HOST}
-  else
-      WANAKU_KEYCLOAK_HOST=http://${WANAKU_KEYCLOAK_HOST}
-  fi
+  WANAKU_KEYCLOAK_HOST=https://$(kubectl get ingress keycloak -o jsonpath='{.spec.rules[0].host}')
 fi
 
 # Configurable realm name (defaults to wanaku)

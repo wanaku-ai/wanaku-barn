@@ -157,12 +157,6 @@ When Keycloak is accessed via an external route (e.g. `http://keycloak-wanaku-te
 Set `KC_HOSTNAME` on the Keycloak deployment to match the external route or ingress host. This forces Keycloak to stamp the same issuer in all tokens regardless of how it is accessed:
 
 ```shell
-# OpenShift
-KEYCLOAK_HOST=$(oc get route keycloak -n "${WANAKU_NAMESPACE}" -o jsonpath='{.spec.host}')
-oc set env deployment/keycloak \
-  KC_HOSTNAME="${KEYCLOAK_HOST}" \
-  -n "${WANAKU_NAMESPACE}"
-
 # Kubernetes (use the Ingress host instead)
 KEYCLOAK_HOST=$(kubectl get ingress keycloak -n "${WANAKU_NAMESPACE}" -o jsonpath='{.spec.rules[0].host}')
 kubectl set env deployment/keycloak \

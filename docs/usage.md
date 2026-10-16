@@ -115,27 +115,21 @@ This will create all the necessary resources for Keycloak to run.
 > [!IMPORTANT]
 > Before applying, review the files and be sure to change the default admin password for security.
 
+- Openshift
+
+The keycloak.yaml contains a ingress resource, in Openshift it automatically creates an Openshift route with TLS.
+
 ```shell
 NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
 DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
 KC_HOST="keycloak-$NS.$DOMAIN"
-cat deploy/auth/keycloak.yaml | sed "s/KEYCLOAK_HOST/https:\/\/$KC_HOST/"| kubectl create -f -
+cat deploy/auth/keycloak.yaml | sed -z "s/- hosts:\n *- KEYCLOAK_HOST/- {}/;s/KEYCLOAK_HOST/$KC_HOST/g"| kubectl create -f -
 ```
-
-Expose the Keycloak service outside the cluster.
-
-Note that the service is exposed with a self-signed certificate, for development purposes only.
 
 - Minikube
 
 ```shell
-cat deploy/auth/keycloak-ingress.yaml | sed "s/KEYCLOAK_HOST/keycloak.$(minikube ip).nip.io/"| kubectl create -f -
-```
-
-- OpenShift
-
-```shell
-kubectl apply -f deploy/auth/keycloak-router.yaml
+cat deploy/auth/keycloak.yaml | sed "s/KEYCLOAK_HOST/keycloak.$(minikube ip).nip.io/"| kubectl create -f -
 ```
 
 ### Importing the Wanaku Realm Configuration (via Wanaku Keycloak Admin CLI)
@@ -164,7 +158,7 @@ the realm configuration into keycloak.
 The script takes care to discover the Keycloak server address.
 You can optionally customize the keycloak URL, user and password with the following environment variables:
 
-- set the `WANAKU_KEYCLOAK_PASS` variable to the admin password of your Keycloak instance
+- set `WANAKU_KEYCLOAK_PASS` to the admin password of your Keycloak instance
 - set `WANAKU_KEYCLOAK_HOST` to the address of your Keycloak instance (i.e.; `localhost` if using Podman). If in OpenShift or minikube, it already takes care to discover it.
 
 ### Importing the Wanaku Realm Configuration (via Keycloak UI)
