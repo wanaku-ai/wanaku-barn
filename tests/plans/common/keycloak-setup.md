@@ -45,7 +45,10 @@ export WANAKU_KEYCLOAK_ADMIN_CLI="wanaku-keycloak-admin"
 ### 2. Deploy Keycloak
 
 ```bash
-cat <<'KEYCLOAK_EOF' | sed "s|__KEYCLOAK_IMAGE__|${KEYCLOAK_IMAGE}|g; s|__ADMIN_USER__|${KEYCLOAK_ADMIN_USER}|g; s|__ADMIN_PASS__|${KEYCLOAK_ADMIN_PASS}|g" | oc apply -n "${WANAKU_NAMESPACE}" -f -
+NS=$(kubectl config view --minify -o jsonpath='{..namespace}')
+DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
+KC_HOST="keycloak-$NS.$DOMAIN"
+cat <<'KEYCLOAK_EOF' | sed "s|__KEYCLOAK_IMAGE__|${KEYCLOAK_IMAGE}|g; s|__ADMIN_USER__|${KEYCLOAK_ADMIN_USER}|g; s|__ADMIN_PASS__|${KEYCLOAK_ADMIN_PASS}|g; s|__KEYCLOAK_HOST__|${KC_HOST}|g" | oc apply -n "${WANAKU_NAMESPACE}" -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -74,6 +77,10 @@ spec:
               value: "__ADMIN_USER__"
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               value: "__ADMIN_PASS__"
+            - name: KC_HOSTNAME
+              value: "https://__KEYCLOAK_HOST__"
+            - name: KC_HOSTNAME_STRICT
+              value: false
           args:
             - "start-dev"
           volumeMounts:
@@ -114,20 +121,24 @@ spec:
   sessionAffinity: None
   type: ClusterIP
 ---
-apiVersion: route.openshift.io/v1
-kind: Route
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
-  labels:
-    app: keycloak
   name: keycloak
 spec:
-  port:
-    targetPort: 8080-tcp
-  to:
-    kind: Service
-    name: keycloak
-    weight: 100
-  wildcardPolicy: None
+  tls:
+    - {}
+  rules:
+    - host: __KEYCLOAK_HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
 KEYCLOAK_EOF
 ```
 
@@ -144,8 +155,8 @@ oc wait --for=condition=ready pod -l app=keycloak \
 ### 4. Retrieve the Keycloak external host
 
 ```bash
-export KEYCLOAK_HOST=$(oc get route keycloak -n "${WANAKU_NAMESPACE}" -o jsonpath='{.spec.host}')
-export KEYCLOAK_URL="http://${KEYCLOAK_HOST}"
+export KEYCLOAK_HOST=$(oc get ingress keycloak -n "${WANAKU_NAMESPACE}" -o jsonpath='{.spec.rules[0].host}')
+export KEYCLOAK_URL="https://${KEYCLOAK_HOST}"
 echo "Keycloak URL: ${KEYCLOAK_URL}"
 ```
 
@@ -159,36 +170,7 @@ fi
 echo "PASS: Keycloak host is ${KEYCLOAK_HOST}"
 ```
 
-### 5. Set KC_HOSTNAME to match the external route
-
-Setting `KC_HOSTNAME` ensures Keycloak stamps the same issuer in tokens regardless of whether
-they are obtained via the external route or internally. Without this, tokens obtained externally
-(e.g. `http://keycloak-wanaku-test.<cluster>/realms/wanaku`) will have a different issuer than
-what the router expects (`http://keycloak:8080/realms/wanaku`), causing 401 errors.
-
-**Important:** In Keycloak 26+, `KC_HOSTNAME` must be a **full URL** (e.g., `http://hostname`),
-not a bare hostname. A bare hostname causes Keycloak to append the internal HTTP port (8080) to
-the issuer URL, which is unreachable from inside the cluster via the external route and causes
-the Quarkus OIDC tenants to timeout sequentially at startup.
-
-```bash
-oc set env deployment/keycloak \
-  KC_HOSTNAME="${KEYCLOAK_URL}" \
-  KC_HOSTNAME_STRICT=false \
-  -n "${WANAKU_NAMESPACE}"
-```
-
-Wait for the rollout to complete (the env change triggers a new pod):
-
-```bash
-oc rollout status deployment/keycloak \
-  --timeout=300s \
-  -n "${WANAKU_NAMESPACE}"
-```
-
-**Expected output:** `deployment "keycloak" successfully rolled out`
-
-### 6. Wait for Keycloak to respond
+### 5. Wait for Keycloak to respond
 
 ```bash
 MAX_RETRIES=30
@@ -208,7 +190,7 @@ for i in $(seq 1 ${MAX_RETRIES}); do
 done
 ```
 
-### 7. Import the Wanaku realm using the CLI
+### 6. Import the Wanaku realm using the CLI
 
 The Keycloak admin CLI (`wanaku-keycloak-admin`) imports a full realm configuration that includes:
 - The `wanaku` realm with all settings
@@ -222,6 +204,7 @@ ${WANAKU_KEYCLOAK_ADMIN_CLI} realm create \
   --keycloak-url "${KEYCLOAK_URL}" \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
+  --insecure \
   --config "${WANAKU_REPO_ROOT}/deploy/auth/wanaku-config.json"
 ```
 
@@ -230,7 +213,7 @@ ${WANAKU_KEYCLOAK_ADMIN_CLI} realm create \
 **Verification:**
 
 ```bash
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${KEYCLOAK_URL}/realms/wanaku" 2>/dev/null || echo "000")
+HTTP_CODE=$(curl -s -L -k -o /dev/null -w "%{http_code}" "${KEYCLOAK_URL}/realms/wanaku" 2>/dev/null || echo "000")
 if [ "${HTTP_CODE}" != "200" ]; then
   echo "FAIL: wanaku realm not accessible (HTTP ${HTTP_CODE})"
   exit 1
@@ -238,7 +221,7 @@ fi
 echo "PASS: wanaku realm is accessible"
 ```
 
-### 8. Retrieve the OIDC client secret for wanaku-service
+### 7. Retrieve the OIDC client secret for wanaku-service
 
 The realm configuration sets the `wanaku-service` client secret via the Keycloak variable `${WANAKU_SERVICE_SECRET:mypasswd}`. By default this resolves to `mypasswd` unless the `WANAKU_SERVICE_SECRET` environment variable was set on the Keycloak container.
 
@@ -250,6 +233,7 @@ CREDENTIALS_OUTPUT=$(${WANAKU_KEYCLOAK_ADMIN_CLI} credentials show \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
   --client-id wanaku-service \
+  --insecure \
   --show-secret \
   --plain 2>&1)
 
@@ -264,7 +248,7 @@ fi
 echo "PASS: OIDC secret retrieved (length: ${#WANAKU_OIDC_SECRET})"
 ```
 
-### 8b. Retrieve the wanaku-mcp-router client secret for CLI logins
+### 7b. Retrieve the wanaku-mcp-router client secret for CLI logins
 
 `wanaku auth login` uses the confidential `wanaku-mcp-router` client, because oauth2-proxy only accepts tokens carrying
 that client's audience. Export its secret so the CLI picks it up through `WANAKU_CLIENT_SECRET`:
@@ -275,6 +259,7 @@ export WANAKU_CLIENT_SECRET=$(${WANAKU_KEYCLOAK_ADMIN_CLI} credentials show \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
   --client-id wanaku-mcp-router \
+  --insecure \
   --show-secret \
   --plain 2>/dev/null)
 
@@ -285,7 +270,7 @@ fi
 echo "PASS: wanaku-mcp-router secret retrieved (length: ${#WANAKU_CLIENT_SECRET})"
 ```
 
-### 9. Create the Kubernetes Secret for the operator
+### 8. Create the Kubernetes Secret for the operator
 
 The operator Helm chart reads `WANAKU_OIDC_CLIENT_SECRET` from a Kubernetes Secret named `wanaku-oidc` (configurable via `app.oidc.secretName`). Create this Secret so the operator can authenticate with the OIDC-protected router when deploying service catalogs.
 
@@ -302,7 +287,7 @@ fi
 echo "PASS: wanaku-oidc Kubernetes Secret created"
 ```
 
-### 10. Create a test user
+### 9. Create a test user
 
 The realm import creates clients and roles but no regular users. Create a test user that
 subsequent steps will use to interact with the router.
@@ -314,6 +299,7 @@ export WANAKU_TEST_EMAIL="${WANAKU_TEST_EMAIL:-alice@example.com}"
 
 ${WANAKU_KEYCLOAK_ADMIN_CLI} users add \
   --keycloak-url "${KEYCLOAK_URL}" \
+  --insecure \
   --admin-username "${KEYCLOAK_ADMIN_USER}" \
   --admin-password "${KEYCLOAK_ADMIN_PASS}" \
   --username "${WANAKU_TEST_USER}" \
@@ -331,7 +317,7 @@ fi
 echo "PASS: test user '${WANAKU_TEST_USER}' created"
 ```
 
-### 11. Verify OIDC login
+### 10. Verify OIDC login
 
 The `wanaku auth login` command authenticates directly against Keycloak (`<auth-server>/realms/<realm>`, realm `wanaku`
 by default) using the `wanaku-mcp-router` client and the secret from `WANAKU_CLIENT_SECRET`. The router does not need
@@ -343,6 +329,7 @@ to be deployed for the login itself; the resulting token is what the oauth2-prox
   ```bash
   echo "${WANAKU_TEST_PASS}" | ${WANAKU_CLI:-wanaku} auth login \
     --auth-server "${KEYCLOAK_URL}" \
+    --insecure \
     --realm wanaku \
     --username "${WANAKU_TEST_USER}" \
     --password \
