@@ -60,6 +60,7 @@ class CloudRunSemanticTest {
     void submitsTheRouteFileTree() throws Exception {
         CloudRunSemantic command = command();
         command.wait = false;
+        command.imagePullPolicy = CloudRunSupport.PullPolicy.Always;
 
         assertThat(command.doCall(null, printer)).isZero();
 
@@ -81,6 +82,7 @@ class CloudRunSemanticTest {
                 .contains("main=support/support.camel.yaml")
                 .contains("path=support/kamelets/classify.kamelet.yaml");
         assertThat(spec.get("forward").toString()).contains("name=route_support");
+        assertThat(spec).containsEntry("imagePullPolicy", "Always");
         assertThat(files.getMetadata().getOwnerReferences().getFirst().getKind())
                 .isEqualTo("WanakuSemanticRouter");
     }

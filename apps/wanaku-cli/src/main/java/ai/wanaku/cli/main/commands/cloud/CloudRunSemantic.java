@@ -53,6 +53,12 @@ public class CloudRunSemantic extends CloudCommand {
     String image;
 
     @Option(
+            names = {"--image-pull-policy"},
+            description = "Image pull policy: ${COMPLETION-CANDIDATES} (default: chosen by the operator). "
+                    + "Use Always to get a new build of a moving tag such as latest")
+    CloudRunSupport.PullPolicy imagePullPolicy;
+
+    @Option(
             names = {"--wait"},
             negatable = true,
             defaultValue = "true",
@@ -139,6 +145,9 @@ public class CloudRunSemantic extends CloudCommand {
         }
         if (image != null) {
             spec.put("image", image);
+        }
+        if (imagePullPolicy != null) {
+            spec.put("imagePullPolicy", imagePullPolicy.name());
         }
         return new GenericKubernetesResourceBuilder()
                 .withApiVersion(CloudRunSupport.API_VERSION)
