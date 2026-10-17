@@ -9,11 +9,14 @@ import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.IntOrString;
+import io.fabric8.kubernetes.api.model.KeyToPath;
+import io.fabric8.kubernetes.api.model.KeyToPathBuilder;
 import io.fabric8.kubernetes.api.model.Probe;
 import io.fabric8.kubernetes.api.model.ProbeBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
 import io.fabric8.kubernetes.api.model.Volume;
+import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import ai.wanaku.core.util.StringHelper;
@@ -107,6 +110,26 @@ public final class RuntimeWorkloads {
         RouterResourceFactory.managed(service, service.getSpec());
         service.addOwnerReference(owner);
         return service;
+    }
+
+    /** A read-only volume with the route files of a ConfigMap, placed at their item paths when set. */
+    public static Volume routesVolume(WanakuTypes.ConfigMapSource configMap) {
+        final List<KeyToPath> items = new ArrayList<>();
+        if (configMap.getItems() != null) {
+            for (WanakuTypes.KeyToPath item : configMap.getItems()) {
+                items.add(new KeyToPathBuilder()
+                        .withKey(item.getKey())
+                        .withPath(item.getPath())
+                        .build());
+            }
+        }
+        return new VolumeBuilder()
+                .withName("routes")
+                .withNewConfigMap()
+                .withName(configMap.getName())
+                .withItems(items)
+                .endConfigMap()
+                .build();
     }
 
     public static Probe httpProbe(String path, String port, int periodSeconds, int failureThreshold) {

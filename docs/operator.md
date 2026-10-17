@@ -340,7 +340,7 @@ The referenced ConfigMap must contain the packaged catalog (`catalog.zip`), crea
 | `spec.routerRef` | string | Name of the `WanakuRouter` that the runtime registers with (required) |
 | `spec.source.semanticRoute.name` | string | A semantic route published in Wanaku Barn |
 | `spec.source.catalog` | object | A pinned service catalog in Wanaku Barn: `name`, `service`, `revision`, `sha256` and optional `main` |
-| `spec.source.configMapRef` | object | Route files in a ConfigMap: `name`, and `main` (the key of the main route file). The ConfigMap must also contain `semantic-router.properties` and the files that it references |
+| `spec.source.configMapRef` | object | Route files in a ConfigMap: `name`, `main` and optional `items`. The ConfigMap must also contain `semantic-router.properties` and the files that it references. Without `items`, every key is a file in one directory and `main` is the key of the main route file. With `items` (`key`, `path`), each key is placed at its relative path, and `main` is the path of the main route file |
 | `spec.forward.name` | string | Forward name. The default is the resource name. Forward names are unique in a router |
 | `spec.forward.namespace` | string | Wanaku namespace of the forward. The default is `default` |
 | `spec.dependencies` | list | Extra Maven dependencies (`group:artifact:version`) |
@@ -394,7 +394,7 @@ When you delete the resource, Kubernetes stops the runtime. The runtime removes 
 | Field | Type | Description |
 |-------|------|-------------|
 | `spec.routerRef` | string | Name of the `WanakuRouter` that the runtime registers with (required) |
-| `spec.routes.configMapRef` | object | Route files in a ConfigMap: `name`, and `main` (the key of the main route file) |
+| `spec.routes.configMapRef` | object | Route files in a ConfigMap: `name`, `main` (the key of the main route file) and optional `items` (`key`, `path`), as for `WanakuSemanticRouter` |
 | `spec.routes.routesRef` | string | A routes reference that the runtime downloads, for example `datastore://orders.camel.yaml` |
 | `spec.routes.serviceCatalog` | object | A service catalog in Wanaku Barn: `name` and `system` |
 | `spec.dependencies`, `spec.repositories` | list | Extra Maven dependencies (`group:artifact:version`) and repositories |

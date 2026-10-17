@@ -76,12 +76,7 @@ public final class SemanticRouterResourceFactory {
                     .withMountPath(ROUTES_PATH)
                     .withReadOnly(true)
                     .build());
-            volumes.add(new VolumeBuilder()
-                    .withName("routes")
-                    .withNewConfigMap()
-                    .withName(configMap.getName())
-                    .endConfigMap()
-                    .build());
+            volumes.add(RuntimeWorkloads.routesVolume(configMap));
         }
 
         final String image = StringHelper.isNotEmpty(spec.getImage()) ? spec.getImage() : DEFAULT_IMAGE;
