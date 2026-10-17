@@ -151,6 +151,33 @@
 
     <build>
         <plugins>
+            <!-- Render only the copied resources; repository Markdown stays browsable. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>render-bundled-skill-links</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <arguments>
+                                <argument>-cp</argument>
+                                <argument>${project.build.outputDirectory}</argument>
+                                <argument>ai.wanaku.cli.main.commands.skill.SkillResourceRenderer</argument>
+                                <argument>${project.version}</argument>
+                                <argument>${project.basedir}/src/main/resources/skills</argument>
+                                <argument>${project.build.outputDirectory}/skills</argument>
+                                <argument>${maven.multiModuleProjectDirectory}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>quarkus-maven-plugin</artifactId>
