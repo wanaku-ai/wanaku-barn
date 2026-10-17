@@ -2263,6 +2263,27 @@ This section provides solutions to common issues you may encounter while using W
    quarkus.http.cors.origins=http://localhost:3000
    ```
 
+#### `wanaku mcp` commands report a redirect
+
+**Symptoms:**
+
+- `wanaku mcp tool list` (or any other `wanaku mcp` command) fails with `The MCP server responded with a redirect (HTTP 302) to ...`
+
+The `wanaku mcp` commands do not follow redirects, because MCP requests are `POST` requests and following them can send the
+bearer token to a different host. When the server redirects, the CLI shows the redirect target and a hint:
+
+- `The server redirects to HTTPS. Use --uri https://...`: the endpoint forces HTTPS. This is the case for OpenShift Routes
+  created by the operator, and for most Ingress controllers and load balancers. Run the command again with the `https://` URI
+  that the message shows.
+- `The server asks for a browser login, which the CLI cannot do`: the redirect goes to a login page (for example, the
+  oauth2-proxy `/oauth2/start` page or the Keycloak login page). Check that you pass a token with `--token`, that the token is
+  not expired, and that the server accepts its audience.
+- `The CLI does not follow redirects for MCP requests. Try --uri ...`: the server redirects to another URL. Check that the URL
+  is the MCP endpoint you want and use it with `--uri`.
+
+When you pass `--token` with an `http://` URI, the `wanaku mcp` commands also show a warning that the token is sent over plain
+HTTP. The warning is not shown for `localhost` and other loopback addresses.
+
 ### Tool and Resource Issues
 
 #### Tools or resources not appearing in MCP clients

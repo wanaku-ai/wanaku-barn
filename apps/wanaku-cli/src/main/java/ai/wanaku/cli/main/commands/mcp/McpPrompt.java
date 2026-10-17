@@ -48,6 +48,7 @@ public class McpPrompt extends BaseCommand {
             printer.printErrorMessage("Missing required option: --name");
             return EXIT_ERROR;
         }
+        Mcp.warnIfTokenOverPlainHttp(printer, uri, getAuthTokenOverride());
         try (McpClient client = resolveClient()) {
             Map<String, Object> promptArgs = new LinkedHashMap<>(args);
             McpGetPromptResult result = client.getPrompt(name, promptArgs);
@@ -71,7 +72,7 @@ public class McpPrompt extends BaseCommand {
             printer.printErrorMessage(message);
             return EXIT_ERROR;
         } catch (Exception e) {
-            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri));
+            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri, getAuthTokenOverride()));
             return EXIT_ERROR;
         }
     }
