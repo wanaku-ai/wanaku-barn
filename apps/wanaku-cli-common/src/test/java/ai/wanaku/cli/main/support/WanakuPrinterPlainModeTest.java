@@ -2,6 +2,7 @@ package ai.wanaku.cli.main.support;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,6 +97,17 @@ class WanakuPrinterPlainModeTest {
         String err = errStream.toString();
         assertTrue(err.contains("refresh failed"), "warning must go to stderr, got: " + err);
         assertTrue(err.contains("boom"), "error must go to stderr, got: " + err);
+    }
+
+    @Test
+    void printTableSerializesInstantFields() {
+        List<TimestampedEntry> data = List.of(new TimestampedEntry("v1", Instant.parse("2026-10-18T10:15:30Z")));
+
+        assertDoesNotThrow(() -> printer.printTable(data, "version", "createdAt"));
+
+        String output = outputStream.toString();
+        assertTrue(output.contains("v1"), "Output must contain row value 'v1'");
+        assertTrue(output.contains("2026-10-18T10:15:30Z"), "Instant must be rendered as ISO-8601, got: " + output);
     }
 
     @Test
@@ -195,6 +207,24 @@ class WanakuPrinterPlainModeTest {
 
         for (int i = 1; i < lines.length; i++) {
             assertFalse(lines[i].isBlank(), "Data row " + i + " must not be blank");
+        }
+    }
+
+    public static class TimestampedEntry {
+        private final String version;
+        private final Instant createdAt;
+
+        TimestampedEntry(String version, Instant createdAt) {
+            this.version = version;
+            this.createdAt = createdAt;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+
+        public Instant getCreatedAt() {
+            return createdAt;
         }
     }
 }
