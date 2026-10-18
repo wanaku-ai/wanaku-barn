@@ -2,6 +2,7 @@ package ai.wanaku.cli.main.support;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -208,6 +209,23 @@ class WanakuPrinterPlainModeTest {
         for (int i = 1; i < lines.length; i++) {
             assertFalse(lines[i].isBlank(), "Data row " + i + " must not be blank");
         }
+    }
+
+    @Test
+    void plainTerminalUsesLfLineEndings() throws IOException {
+        PrintStream originalOut = System.out;
+        ByteArrayOutputStream captured = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(captured, true));
+        try (Terminal plainTerminal = WanakuPrinter.terminalInstance()) {
+            WanakuPrinter plainPrinter = new WanakuPrinter(null, plainTerminal);
+            plainPrinter.printTable(List.of(Map.of("name", "a"), Map.of("name", "b")), "name");
+        } finally {
+            System.setOut(originalOut);
+        }
+
+        String output = captured.toString();
+        assertEquals("name\na\nb\n", output);
+        assertFalse(output.contains("\r"), "Plain output must not contain CR characters");
     }
 
     public static class TimestampedEntry {

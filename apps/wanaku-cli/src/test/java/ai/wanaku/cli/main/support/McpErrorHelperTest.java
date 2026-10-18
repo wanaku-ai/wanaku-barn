@@ -3,6 +3,8 @@ package ai.wanaku.cli.main.support;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.ExecutionException;
 import dev.langchain4j.exception.ToolArgumentsException;
 import dev.langchain4j.exception.ToolExecutionException;
@@ -37,6 +39,46 @@ class McpErrorHelperTest {
         assertTrue(message.contains("http://localhost:59999/mcp"));
         assertTrue(message.contains("Possible causes"));
         assertFalse(message.contains("ExecutionException"));
+    }
+
+    @Test
+    @DisplayName("Should produce friendly message for ConnectException caused by a closed channel")
+    void shouldHandleConnectExceptionWithCause() {
+        // The JDK HttpClient reports a refused connection this way
+        ConnectException connect = new ConnectException();
+        connect.initCause(new ClosedChannelException());
+        Exception ex = new ExecutionException(connect);
+        String message = McpErrorHelper.friendlyMessage(ex, "http://localhost:59999/mcp");
+
+        assertTrue(message.contains("Connection refused"));
+        assertTrue(message.contains("http://localhost:59999/mcp"));
+        assertFalse(message.contains("ExecutionException"));
+    }
+
+    @Test
+    @DisplayName("Should produce friendly message for ConnectException caused by an unresolved address")
+    void shouldHandleConnectExceptionWithUnresolvedAddress() {
+        // The JDK HttpClient reports a host it cannot resolve this way
+        ConnectException connect = new ConnectException();
+        connect.initCause(new UnresolvedAddressException());
+        Exception ex = new ExecutionException(connect);
+        String message = McpErrorHelper.friendlyMessage(ex, "http://typo-host.invalid:8080/mcp");
+
+        assertTrue(message.contains("Unable to resolve host"));
+        assertTrue(message.contains("http://typo-host.invalid:8080/mcp"));
+        assertFalse(message.contains("Connection refused"));
+    }
+
+    @Test
+    @DisplayName("Should prefer UnknownHostException over a wrapping ConnectException")
+    void shouldHandleConnectExceptionWithUnknownHost() {
+        ConnectException connect = new ConnectException();
+        connect.initCause(new UnknownHostException("badhost.example"));
+        Exception ex = new ExecutionException(connect);
+        String message = McpErrorHelper.friendlyMessage(ex, "http://badhost.example:8080/mcp");
+
+        assertTrue(message.contains("Unable to resolve host: badhost.example"));
+        assertFalse(message.contains("Connection refused"));
     }
 
     @Test

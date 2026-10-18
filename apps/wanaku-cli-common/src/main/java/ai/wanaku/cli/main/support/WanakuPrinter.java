@@ -16,6 +16,7 @@ import org.jline.builtins.Less;
 import org.jline.builtins.Source;
 import org.jline.builtins.Styles;
 import org.jline.console.impl.DefaultPrinter;
+import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedString;
@@ -164,7 +165,12 @@ public class WanakuPrinter extends DefaultPrinter {
         if (plainMode) {
             // Plain mode: route I/O through System.in/System.out with no ANSI escapes
             // Disable JNI and colors to avoid loading issues
-            return newBuilder().jni(false).color(false).build();
+            Terminal terminal = newBuilder().jni(false).color(false).build();
+            // JLine emulates a tty and translates LF into CRLF by default; scripts expect plain LF
+            Attributes attributes = terminal.getAttributes();
+            attributes.setOutputFlag(Attributes.OutputFlag.OPOST, false);
+            terminal.setAttributes(attributes);
+            return terminal;
         }
 
         try {

@@ -1449,6 +1449,19 @@ wanaku forwards add --service="http://your-mcp-server.com:8080/mcp/sse" --name m
 
 Use `--namespace` for the common case (human-readable name), or `--namespace-id` when scripting with known UUIDs. These options are mutually exclusive.
 
+When the forward is added, the CLI prints what the router discovered on the external MCP server:
+
+```text
+Successfully added forward 'my-mcp-server': discovered 13 tools, 7 resources and 2 prompts
+```
+
+If the router cannot reach the external MCP server, it still stores the forward but marks it as unavailable. The CLI
+prints a warning with the reason and exits with a non-zero code, so scripts can detect it:
+
+```text
+Forward 'my-mcp-server' was added, but it is unavailable: connection refused
+```
+
 Once a forward is added, all tools and resources provided by the external MCP server will be mapped in the Wanaku instance.
 
 These tools and resources can then be accessed as if they were local to the server.

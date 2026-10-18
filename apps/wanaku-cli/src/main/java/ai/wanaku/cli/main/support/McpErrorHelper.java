@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.channels.UnresolvedAddressException;
 import java.time.Duration;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -110,15 +111,23 @@ public final class McpErrorHelper {
             return redirectMessage(uri, redirectStatus, probeLocation(uri, token));
         }
 
-        if (root instanceof ConnectException) {
+        // The JDK HttpClient wraps most failures in a ConnectException (caused by a
+        // ClosedChannelException or an UnresolvedAddressException), so the known types are
+        // looked up in the whole cause chain. Resolution failures are checked first.
+        Throwable unknownHost = findCause(ex, UnknownHostException.class);
+        if (unknownHost != null) {
+            return unknownHostMessage(unknownHost.getMessage());
+        }
+
+        if (findCause(ex, UnresolvedAddressException.class) != null) {
+            return unknownHostMessage(uri);
+        }
+
+        if (findCause(ex, ConnectException.class) != null) {
             return connectionRefusedMessage(uri);
         }
 
-        if (root instanceof UnknownHostException) {
-            return unknownHostMessage(root);
-        }
-
-        if (root instanceof SocketTimeoutException) {
+        if (findCause(ex, SocketTimeoutException.class) != null) {
             return timeoutMessage(uri);
         }
 
@@ -153,9 +162,9 @@ public final class McpErrorHelper {
         return sb.toString();
     }
 
-    private static String unknownHostMessage(Throwable root) {
+    private static String unknownHostMessage(String host) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Unable to resolve host: ").append(root.getMessage());
+        sb.append("Unable to resolve host: ").append(host);
         sb.append("\n\nPossible causes:\n");
         sb.append("  - Invalid hostname in --uri option\n");
         sb.append("  - DNS resolution failure\n");
@@ -280,6 +289,17 @@ public final class McpErrorHelper {
             return "";
         }
         return path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
+    }
+
+    private static Throwable findCause(Throwable ex, Class<? extends Throwable> type) {
+        Throwable current = ex;
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return current;
+            }
+            current = current.getCause() != current ? current.getCause() : null;
+        }
+        return null;
     }
 
     private static Throwable rootCause(Throwable ex) {
