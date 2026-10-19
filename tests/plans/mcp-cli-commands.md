@@ -39,10 +39,8 @@ Every step in Part 1 is automatable. In Part 2, only the OpenShift login is manu
 
 ### CLI invocation
 
-The plan calls the CLI as `wanaku`. To use the CLI jar from a local build, define a shell function. A function works
-in `sh`, `bash` and `zsh`:
-
-The CLI function is defined in Step S.1.
+The plan calls the CLI as `wanaku`. To use the CLI jar from a local build, Step S.1 defines a shell function. A
+function works in `sh`, `bash` and `zsh`.
 
 Do not put the full command in a variable (for example `WANAKU_CLI="java -jar ..."`). `zsh` does not split it into
 words.
@@ -69,6 +67,12 @@ words.
   [common/start-server.md](common/start-server.md) (step 2b).
 - The operator has no field to supply the governance configuration. Part 2 therefore verifies the fail-safe denial
   for calls. The success path of calls on OpenShift is blocked until the operator supports it (see Test 11.2).
+- The `wanaku mcp` commands accept `--insecure`, but they do not apply it. The MCP client always verifies the TLS
+  certificate. Against an endpoint with an untrusted certificate, add the CA to the Java trust store (for example
+  with `-Djavax.net.ssl.trustStore` in `JAVA_TOOL_OPTIONS`). The other CLI commands apply `--insecure`.
+- When the MCP server is not reachable, the CLI prints `java.util.concurrent.ExecutionException:
+  java.net.ConnectException` instead of the friendly `Connection refused` message. Test 8.3 reports this with a `WARN`
+  line.
 - Tool, resource and prompt names are unique in the whole Wanaku Server registry, not per namespace. Do not register
   the same upstream server twice in one server. The second discovery moves the entries to the namespace of the second
   forward.
@@ -675,6 +679,9 @@ fi
 
 ### Test 8.3: An unreachable server fails without a stack trace
 
+The current CLI prints `java.util.concurrent.ExecutionException: java.net.ConnectException`. The `WARN` line is
+therefore expected until the CLI shows the friendly message.
+
 ```bash
 OUTPUT=$(wanaku mcp tool list --uri "${MCP_UNREACHABLE_URI}" --no-auth --plain 2>&1)
 EXIT_CODE=$?
@@ -847,7 +854,8 @@ export WANAKU_OAUTH2_PROXY_IMAGE="${WANAKU_OAUTH2_PROXY_IMAGE:-}"   # empty: ope
 export TEST_MCP_NODE_IMAGE="${TEST_MCP_NODE_IMAGE:-registry.access.redhat.com/ubi9/nodejs-22:latest}"
 export TEST_MCP_PACKAGE="${TEST_MCP_PACKAGE:-@modelcontextprotocol/server-everything@1.0.0}"
 export MCP_E2E_NAMESPACE="${MCP_E2E_NAMESPACE:-mcp-e2e}"
-# Set to "--insecure" when the cluster Route certificates are not trusted
+# Set to "--insecure" when the cluster Route certificates are not trusted.
+# The wanaku mcp commands ignore this flag (see Known limitations): trust the Route CA in Java instead.
 export WANAKU_TLS_FLAG="${WANAKU_TLS_FLAG:-}"
 # Isolate CLI credentials per test run (see #1697)
 export WANAKU_CREDENTIALS="${WANAKU_CREDENTIALS:-/tmp/wanaku-creds-${WANAKU_NAMESPACE}}"
@@ -996,6 +1004,9 @@ REASON=$(oc get wanakurouter "${R}" -n "${WANAKU_NAMESPACE}" \
 - The output contains no line starting with `FAIL`.
 
 ### Step 11.7: Set the URL variables
+
+The operator publishes `status.endpoints.mcp` as `<MCP Route>/mcp`, without a namespace. Wanaku Server rejects this
+path (see Test 13.4), so the plan builds `MCP_URI` with the `default` namespace.
 
 ```bash
 export WANAKU_SERVER_URL="https://$(oc get route "${WANAKU_ROUTER_NAME}" -n "${WANAKU_NAMESPACE}" -o jsonpath='{.spec.host}')"
@@ -1285,8 +1296,10 @@ echo "${OUTPUT}" | grep -Eq "No governance policy permits this action.|evaluator
 ### Test 14.2: Calls succeed when governance allows them (BLOCKED)
 
 This test is blocked. The `WanakuRouter` resource has no field for the Wanaku Server governance configuration, and
-the operator owns the generated `wanaku.yaml`. Run the test only when the deployment allows calls in the `default`
-namespace. Set `WANAKU_E2E_GOVERNANCE_ALLOWS_DEFAULT=true` in that case.
+the operator owns the generated `wanaku.yaml`. Wanaku Server has no environment variable for the governance posture,
+so `spec.server.env` does not help. An allow rule from the action-policy API (`PUT /api/v1/action-policies`) does not
+help either: the evaluator baseline still denies the call with `evaluator: no_match`. Run the test only when the
+deployment allows calls in the `default` namespace. Set `WANAKU_E2E_GOVERNANCE_ALLOWS_DEFAULT=true` in that case.
 
 ```bash
 if [ "${WANAKU_E2E_GOVERNANCE_ALLOWS_DEFAULT:-false}" = "true" ]; then
@@ -1346,8 +1359,6 @@ Follow [common/cleanup.md](common/cleanup.md).
 | Phase | Test ID | Test Name | Priority | Part |
 |-------|---------|-----------|----------|------|
 | S | S.1-S.2 | CLI invocation and local environment | High | 1 |
-| T | S.3-S.4 | OpenShift environment and deletion helper | High | 2 |
-| 10 | 10.1 | OpenShift login (MANUAL) | Critical | 2 |
 | 0 | 0.1 | Prerequisites | High | 1 |
 | 1 | 1.1-1.4 | Server with test governance, reference forward, namespaces | Critical | 1 |
 | 2 | 2.1-2.2 | Help and usage output | Medium | 1 |
@@ -1358,7 +1369,8 @@ Follow [common/cleanup.md](common/cleanup.md).
 | 7 | 7.1-7.5 | Namespace isolation, governance, disable/enable | Critical | 1 |
 | 8 | 8.1-8.4 | Endpoint and connection errors | High | 1 |
 | 9 | 9.1 | Cleanup | Critical | 1 |
-| 10 | — | OpenShift login (MANUAL) | Critical | 2 |
+| 10 | 10.1 | OpenShift login (MANUAL) | Critical | 2 |
+| T | S.3-S.4 | OpenShift environment and deletion helper | High | 2 |
 | 11 | 11.1-11.10 | Operator, Keycloak, WanakuRouter with oauth2-proxy, Routes, 401 checks, login | Critical | 2 |
 | 12 | 12.1-12.4 | In-cluster MCP server registered as a forward | Critical | 2 |
 | 13 | 13.1-13.4 | MCP list through the Route, token required, isolation, bare `/mcp` | Critical | 2 |
