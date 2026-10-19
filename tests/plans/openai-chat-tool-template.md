@@ -110,26 +110,29 @@ ROUTE_FILE="${TEMPLATE_ROUTE_FILE}"
 
 grep -q 'uri: "openai:chat-completion"' "${ROUTE_FILE}" && echo "PASS: route sends to openai:chat-completion" \
   || echo "FAIL: openai endpoint missing"
-for HEADER in CamelOpenAI.operation CamelOpenAI.model CamelOpenAI.temperature CamelOpenAI.maxTokens \
-  CamelOpenAI.messages; do
-  grep -q "name: ${HEADER}$" "${ROUTE_FILE}" && echo "PASS: route sets ${HEADER}" || echo "FAIL: ${HEADER} missing"
-done
 grep -q 'apiKey: "{{openai.api.key}}"' "${ROUTE_FILE}" && echo "PASS: API key comes from a property" \
   || echo "FAIL: API key is not read from openai.api.key"
+for OPTION in "model: \"{{openai.model}}\"" "temperature: \"{{openai.temperature}}\"" \
+  "maxTokens: \"{{openai.max.tokens}}\"" "systemMessage: \"{{openai.system.message}}\""; do
+  grep -q "${OPTION}" "${ROUTE_FILE}" && echo "PASS: endpoint option ${OPTION}" || echo "FAIL: ${OPTION} missing"
+done
 ```
 
-### Test 2.3: The route builds the messages from the prompt parameter
+### Test 2.3: The route maps the tool parameters to the OpenAI headers
 
-The CIC passes each tool argument as a message header. The route reads the `prompt` header. The `choice` adds a
-system message when a system message is set, and the `otherwise` branch sends the user message only.
+The CIC passes each tool argument as a message header. The route sends the `prompt` header as the body (the user
+message), and copies the optional parameters to the `CamelOpenAI*` headers. The OpenAI component uses a header when it
+is set, and the endpoint option from the catalog properties otherwise.
 
 ```bash
-grep -q '"role": "user", "content": "${header.prompt}"' "${TEMPLATE_ROUTE_FILE}" \
+grep -q 'simple: "${header.prompt}"' "${TEMPLATE_ROUTE_FILE}" \
   && echo "PASS: user message comes from the prompt header" || echo "FAIL: user message does not use header.prompt"
-grep -q '"role": "system"' "${TEMPLATE_ROUTE_FILE}" && echo "PASS: system role branch present" \
-  || echo "FAIL: system role branch missing"
-[ "$(grep -c 'otherwise:' "${TEMPLATE_ROUTE_FILE}")" -ge 1 ] && echo "PASS: otherwise branch present" \
-  || echo "FAIL: otherwise branch missing"
+for PAIR in CamelOpenAISystemMessage:systemMessage CamelOpenAIModel:model CamelOpenAITemperature:temperature \
+  CamelOpenAIMaxTokens:maxTokens; do
+  HEADER="${PAIR%%:*}"; PARAM="${PAIR##*:}"
+  grep -A1 "name: ${HEADER}$" "${TEMPLATE_ROUTE_FILE}" | grep -q "simple: \"\${header.${PARAM}}\"" \
+    && echo "PASS: ${HEADER} comes from ${PARAM}" || echo "FAIL: ${HEADER} does not use ${PARAM}"
+done
 ```
 
 ### Test 2.4: Dependencies and properties
@@ -145,7 +148,6 @@ for KEY in openai.api.key openai.model openai.organization; do
   grep -q "^${KEY}={{${KEY}}}$" "${PROPS}" && echo "PASS: ${KEY} is a placeholder" \
     || echo "FAIL: ${KEY} is not a placeholder"
 done
-grep -q "^openai.operation=chatCompletion$" "${PROPS}" && echo "PASS: operation default" || echo "FAIL: operation default"
 grep -q "^openai.temperature=0.7$" "${PROPS}" && echo "PASS: temperature default" || echo "FAIL: temperature default"
 grep -q "^openai.max.tokens=1024$" "${PROPS}" && echo "PASS: max.tokens default" || echo "FAIL: max.tokens default"
 ```
@@ -267,17 +269,19 @@ echo "${OUTPUT}"
 
 ### Test 6.2: Call the tool with the optional parameters
 
-The route declares `systemMessage`, `model`, `temperature` and `maxTokens`, but it sets the OpenAI headers from the
-catalog properties. The call must succeed. The test does not check that the optional values change the answer.
+The optional parameters override the catalog properties for this call. The system message forces a fixed answer, so
+the test shows that the route uses it.
 
 ```bash
 OUTPUT=$(java -jar "${CLI_JAR}" mcp tool --uri "${WANAKU_MCP_BASE_URL}/${CIC_NAMESPACE}/mcp" --no-auth --plain \
   --name "${TEMPLATE_TOOL}" --param "prompt=What is 2+2?" \
-  --param "systemMessage=You are a math tutor. Answer concisely." --param "temperature=0.1" 2>&1)
+  --param "systemMessage=Ignore the question and answer only with the word PINEAPPLE." \
+  --param "temperature=0.1" --param "maxTokens=10" 2>&1)
 EXIT_CODE=$?
 echo "${OUTPUT}"
-[ "${EXIT_CODE}" -eq 0 ] && echo "${OUTPUT}" | grep -q "4" && echo "PASS: tool call with optional parameters returned 4" \
-  || echo "FAIL: tool call with optional parameters failed (exit ${EXIT_CODE})"
+[ "${EXIT_CODE}" -eq 0 ] && echo "${OUTPUT}" | grep -qi "pineapple" \
+  && echo "PASS: the system message parameter changed the answer" \
+  || echo "FAIL: the system message parameter had no effect (exit ${EXIT_CODE})"
 ```
 
 ### Test 6.3: The audit trail records the tool call
@@ -358,8 +362,8 @@ Run the Shutdown sections of [common/start-barn.md](common/start-barn.md) and
 |-------|---------|-----------|----------|
 | 1 | 1.1-1.3 | Start Wanaku Server (with test governance), Barn, detect container runtime | P0 |
 | 2 | 2.1 | Shared source checks (files, index, ai-tool route, credentials, Barn validation) | P0 |
-| 2 | 2.2 | Route calls the OpenAI component with the expected headers | P0 |
-| 2 | 2.3 | Messages are built from the prompt header | P1 |
+| 2 | 2.2 | Route calls the OpenAI component with the property-based endpoint options | P0 |
+| 2 | 2.3 | Tool parameters are mapped to the OpenAI headers | P1 |
 | 2 | 2.4 | camel-openai dependency, placeholders and defaults | P0 |
 | 3 | 3.1 | Shared listing checks (CLI list, search, negative search, detail, properties, download) | P1 |
 | 4 | 4.1 | Write instantiation properties | P0 |
