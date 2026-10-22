@@ -801,8 +801,7 @@ public final class RouterResourceFactory {
         env.add(envVar("OAUTH2_PROXY_HTTP_ADDRESS", "0.0.0.0:4180"));
         env.add(envVar("OAUTH2_PROXY_UPSTREAMS", "http://server-%s:8081".formatted(deploymentName)));
         env.add(envVar(
-                "OAUTH2_PROXY_SKIP_AUTH_ROUTES",
-                "^/.well-known/.*,^/public/.*,^/authorize$,^/token$,^/register$,OPTIONS=^/.*"));
+                "OAUTH2_PROXY_SKIP_AUTH_ROUTES", "^/.well-known/.*,^/authorize$,^/token$,^/register$,OPTIONS=^/.*"));
         env.add(envVar("OAUTH2_PROXY_API_ROUTES", "^/$,^/mcp/?$,^/[^/]+/mcp/?$"));
         env.add(envVar("OAUTH2_PROXY_UPSTREAM_TIMEOUT", "3600s"));
         return env;

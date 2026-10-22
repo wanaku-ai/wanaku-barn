@@ -362,6 +362,16 @@ class RouterResourceFactoryTest {
     }
 
     @Test
+    void oauth2ProxyMcpSkipAuthRoutesDoNotExemptPublicNamespace() {
+        Deployment deployment =
+                RouterResourceFactory.makeOauth2ProxyDeployment(createRouterWithAuth(), "wanaku.example.com", null);
+
+        assertEquals(
+                "^/.well-known/.*,^/authorize$,^/token$,^/register$,OPTIONS=^/.*",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_SKIP_AUTH_ROUTES"));
+    }
+
+    @Test
     void oauth2ProxyMgmtContainerTargetsServerMgmtPort() {
         WanakuRouter router = createRouterWithAuth();
         Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
