@@ -49,6 +49,7 @@ public class McpTool extends BaseCommand {
             printer.printErrorMessage("Missing required option: --name");
             return EXIT_ERROR;
         }
+        Mcp.warnIfTokenOverPlainHttp(printer, uri, getAuthTokenOverride());
         try (McpClient client = resolveClient()) {
             ToolExecutionRequest request = ToolExecutionRequest.builder()
                     .name(name)
@@ -70,7 +71,7 @@ public class McpTool extends BaseCommand {
             printer.printErrorMessage(McpErrorHelper.friendlyToolCallMessage(e, name));
             return EXIT_ERROR;
         } catch (Exception e) {
-            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri));
+            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri, getAuthTokenOverride()));
             return EXIT_ERROR;
         }
     }
