@@ -12,12 +12,15 @@ import java.util.jar.JarOutputStream;
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.CliMain;
 import ai.wanaku.cli.main.support.WanakuPrinter;
+import ai.wanaku.core.util.VersionHelper;
 import picocli.CommandLine;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -86,7 +89,9 @@ class SkillInstallTest {
         for (String resource : indexed) {
             try (InputStream input = originalLoader.getResourceAsStream("skills/" + resource)) {
                 assertNotNull(input, resource);
-                assertArrayEquals(Files.readAllBytes(resources.resolve(resource)), input.readAllBytes());
+                String expected = SkillResourceRenderer.render(
+                        Files.readString(resources.resolve(resource)), VersionHelper.VERSION, Path.of("../.."));
+                assertEquals(expected, new String(input.readAllBytes(), StandardCharsets.UTF_8));
             }
         }
     }
@@ -190,6 +195,54 @@ class SkillInstallTest {
         assertInstalled(tempDir.resolve(".codex/skills"));
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        "0.3.0-SNAPSHOT, codex", "0.3.0-SNAPSHOT, claude", "0.3.0-SNAPSHOT, custom",
+        "0.3.0-RC1, codex", "0.3.0-RC1, claude", "0.3.0-RC1, custom",
+        "0.2.0, codex", "0.2.0, claude", "0.2.0, custom"
+    })
+    void installsVersionedJarResourcesForEveryDestination(String version, String agent) throws Exception {
+        Path jar = tempDir.resolve("versioned-skills.jar");
+        Path source = Path.of("src/main/resources/skills");
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(jar))) {
+            addResource(output, "skills/index.txt");
+            for (String skill : SKILLS) {
+                String resource = skill + "/SKILL.md";
+                String rendered = SkillResourceRenderer.render(
+                        Files.readString(source.resolve(resource)), version, Path.of("../.."));
+                output.putNextEntry(new JarEntry("skills/" + resource));
+                output.write(rendered.getBytes(StandardCharsets.UTF_8));
+                output.closeEntry();
+            }
+        }
+        Path destination = agent.equals("custom")
+                ? tempDir.resolve("nested/custom/skills")
+                : tempDir.resolve("." + agent + "/skills");
+        try (URLClassLoader loader =
+                new URLClassLoader(new java.net.URL[] {jar.toUri().toURL()}, null)) {
+            Thread.currentThread().setContextClassLoader(loader);
+            assertEquals(0, agent.equals("custom") ? install("--to", destination.toString()) : install("--" + agent));
+            assertVersionedLinks(destination, version);
+            assertEquals(1, install("--to", destination.toString()));
+            assertVersionedLinks(destination, version);
+        }
+    }
+
+    @Test
+    void emptyIndexFailsWithoutCreatingDestination() throws Exception {
+        try (URLClassLoader loader = new URLClassLoader(new java.net.URL[0], null) {
+            @Override
+            public InputStream getResourceAsStream(String name) {
+                return name.equals("skills/index.txt") ? new java.io.ByteArrayInputStream(new byte[0]) : null;
+            }
+        }) {
+            Thread.currentThread().setContextClassLoader(loader);
+            assertEquals(1, install("--codex"));
+        }
+        assertFalse(Files.exists(tempDir.resolve(".codex")));
+        verify(printer).printErrorMessage(argThat(message -> message.contains("No bundled skills found")));
+    }
+
     @Test
     void missingBundledFileFailsBeforeCopying() throws Exception {
         try (URLClassLoader loader = new URLClassLoader(new java.net.URL[0], null) {
@@ -227,7 +280,45 @@ class SkillInstallTest {
                 assertArrayEquals(input.readAllBytes(), Files.readAllBytes(destination.resolve(skill + "/SKILL.md")));
             }
         }
+        assertVersionedLinks(destination);
         assertFalse(Files.exists(destination.resolve("index.txt")));
+    }
+
+    private void assertVersionedLinks(Path destination) throws IOException {
+        assertVersionedLinks(destination, VersionHelper.VERSION);
+    }
+
+    private void assertVersionedLinks(Path destination, String buildVersion) throws IOException {
+        String version = buildVersion.strip();
+        String ref = version.matches("[0-9]+\\.[0-9]+\\.[0-9]+") ? "wanaku-" + version : "main";
+        String docs = "https://github.com/wanaku-ai/wanaku-barn/blob/" + ref + "/docs/";
+        String basics = Files.readString(destination.resolve("wanaku-mcp-basics/SKILL.md"));
+        String operator = Files.readString(destination.resolve("wanaku-operator/SKILL.md"));
+        String catalogs = Files.readString(destination.resolve("wanaku-service-catalogs/SKILL.md"));
+        assertTrue(basics.contains("[Usage guide](" + docs + "usage.md)"));
+        assertTrue(operator.contains("[Operator guide](" + docs + "operator.md)"));
+        assertTrue(operator.contains("[Usage guide](" + docs + "usage.md)"));
+        assertTrue(catalogs.contains("[Service catalogs guide](" + docs + "service-catalogs.md)"));
+        assertTrue(catalogs.contains("[Usage guide](" + docs + "usage.md)"));
+        assertTrue(catalogs.contains("[Operator guide](" + docs + "operator.md)"));
+        assertTrue(operator.contains("[router CRD schema](https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/"
+                + ref + "/apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)"));
+        for (String skill : SKILLS) {
+            String text = Files.readString(destination.resolve(skill + "/SKILL.md"));
+            assertFalse(text.contains("wanaku:"));
+            assertFalse(text.contains("${"));
+            assertFalse(text.contains("../../docs/"));
+            assertFalse(text.contains("../../apps/"));
+            var links =
+                    java.util.regex.Pattern.compile("\\]\\((\\.\\./[^)]+)\\)").matcher(text);
+            while (links.find()) {
+                assertTrue(Files.isRegularFile(destination.resolve(skill).resolve(links.group(1))), links.group(1));
+            }
+        }
+        assertTrue(basics.contains("(../wanaku-service-catalogs/SKILL.md)"));
+        assertTrue(basics.contains("(../wanaku-operator/SKILL.md)"));
+        assertTrue(operator.contains("(../wanaku-service-catalogs/SKILL.md)"));
+        assertTrue(catalogs.contains("(../wanaku-operator/SKILL.md)"));
     }
 
     private void addResource(JarOutputStream output, String resource) throws IOException {

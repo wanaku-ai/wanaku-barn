@@ -76,7 +76,7 @@ kubectl wait wanakurouter/wanaku-dev -n wanaku --for=condition=Ready --timeout=1
 ```
 
 For authenticated deployments, configure `spec.auth.enabled`, `issuerUrl`, `clientId`,
-and `secretName` for oauth2-proxy. See the current [router CRD schema](../../apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)
+and `secretName` for oauth2-proxy. See the current [router CRD schema](../../apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)<!-- wanaku:versioned -->
 for supported fields.
 
 ## Router + service catalog
@@ -139,6 +139,6 @@ kubectl wait wanakuservicecatalog/my-catalogs -n wanaku --for=condition=Ready --
 
 ## References
 
-- [Operator guide](../../docs/operator.md) — operator deployment and lifecycle background; consult the current CRD schema for fields
-- [Usage guide](../../docs/usage.md) — installing and running Wanaku on OpenShift or Kubernetes
+- [Operator guide](../../docs/operator.md)<!-- wanaku:versioned --> — operator deployment and lifecycle background; consult the current CRD schema for fields
+- [Usage guide](../../docs/usage.md)<!-- wanaku:versioned --> — installing and running Wanaku on OpenShift or Kubernetes
 - [Service catalogs skill](../wanaku-service-catalogs/SKILL.md) — authoring and packaging catalogs
