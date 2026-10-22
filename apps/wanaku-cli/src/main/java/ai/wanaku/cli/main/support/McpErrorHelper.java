@@ -74,19 +74,22 @@ public final class McpErrorHelper {
      * @return a user-friendly error message
      */
     public static String friendlyMessage(Exception ex, String uri) {
-        Throwable root = rootCause(ex);
-
-        if (root instanceof ConnectException) {
+        // The JDK HttpClient throws a ConnectException caused by a ClosedChannelException,
+        // so the known types are looked up in the whole cause chain, not only at the root.
+        if (findCause(ex, ConnectException.class) != null) {
             return connectionRefusedMessage(uri);
         }
 
-        if (root instanceof UnknownHostException) {
-            return unknownHostMessage(root);
+        Throwable unknownHost = findCause(ex, UnknownHostException.class);
+        if (unknownHost != null) {
+            return unknownHostMessage(unknownHost);
         }
 
-        if (root instanceof SocketTimeoutException) {
+        if (findCause(ex, SocketTimeoutException.class) != null) {
             return timeoutMessage(uri);
         }
+
+        Throwable root = rootCause(ex);
 
         if (root instanceof IllegalArgumentException) {
             String msg = root.getMessage();
@@ -150,6 +153,17 @@ public final class McpErrorHelper {
         }
         sb.append("\n\nExpected format: http://<host>:<port>/path or https://<host>:<port>/path");
         return sb.toString();
+    }
+
+    private static Throwable findCause(Throwable ex, Class<? extends Throwable> type) {
+        Throwable current = ex;
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return current;
+            }
+            current = current.getCause() != current ? current.getCause() : null;
+        }
+        return null;
     }
 
     private static Throwable rootCause(Throwable ex) {

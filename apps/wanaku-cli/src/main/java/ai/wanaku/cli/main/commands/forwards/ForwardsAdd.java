@@ -3,8 +3,10 @@ package ai.wanaku.cli.main.commands.forwards;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 
+import java.util.Map;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.ForwardReference;
+import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
 import ai.wanaku.cli.main.support.NamespaceOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
@@ -52,12 +54,44 @@ public class ForwardsAdd extends BaseCommand {
         reference.setNamespace(namespaceOptions.getNamespaceValue());
 
         try {
-            forwardsService.addForward(reference);
+            WanakuResponse<Map<String, Object>> response = forwardsService.addForward(reference);
+            printSummary(printer, name, response != null ? response.data() : null);
         } catch (WebApplicationException ex) {
             Response response = ex.getResponse();
             commonResponseErrorHandler(response);
             return EXIT_ERROR;
         }
         return EXIT_OK;
+    }
+
+    /**
+     * Prints the outcome of the forward registration. The forward is stored even when the
+     * discovery fails, so an unavailable forward is reported as a warning with its status message.
+     */
+    static void printSummary(WanakuPrinter printer, String name, Map<String, Object> result) {
+        if (result == null) {
+            printer.printSuccessMessage(String.format("Successfully added forward '%s'", name));
+            return;
+        }
+
+        if (result.get("forward") instanceof Map<?, ?> forward && Boolean.FALSE.equals(forward.get("available"))) {
+            Object statusMessage = forward.get("statusMessage");
+            printer.printWarningMessage(String.format(
+                    "Forward '%s' was added, but it is unavailable%s",
+                    name, statusMessage != null ? ": " + statusMessage : ""));
+            return;
+        }
+
+        printer.printSuccessMessage(String.format(
+                "Successfully added forward '%s': discovered %s tools, %s resources and %s prompts",
+                name,
+                count(result, "tools_discovered"),
+                count(result, "resources_discovered"),
+                count(result, "prompts_discovered")));
+    }
+
+    private static Object count(Map<String, Object> result, String key) {
+        Object value = result.get(key);
+        return value != null ? value : 0;
     }
 }

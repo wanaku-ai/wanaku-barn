@@ -96,7 +96,7 @@ class AuthTokenTest {
                 || scenario.equals("insecure")
                 || scenario.equals("masked");
         assertEquals(success ? 0 : 1, exitCode);
-        String expectedOutput = scenario.equals("masked") ? "Current API token: test***oken\r\n" : "test-token\n";
+        String expectedOutput = scenario.equals("masked") ? "Current API token: test***oken\n" : "test-token\n";
         assertEquals(success ? expectedOutput : "", stdout.toString());
         String expectedError = success ? "" : "No valid API token is available. Run 'wanaku auth login' to log in.\n";
         if (scenario.equals("refresh-failure")) {

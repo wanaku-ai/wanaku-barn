@@ -3,6 +3,7 @@ package ai.wanaku.cli.main.support;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.ExecutionException;
 import dev.langchain4j.exception.ToolArgumentsException;
 import dev.langchain4j.exception.ToolExecutionException;
@@ -36,6 +37,20 @@ class McpErrorHelperTest {
         assertTrue(message.contains("Connection refused"));
         assertTrue(message.contains("http://localhost:59999/mcp"));
         assertTrue(message.contains("Possible causes"));
+        assertFalse(message.contains("ExecutionException"));
+    }
+
+    @Test
+    @DisplayName("Should produce friendly message for ConnectException caused by a closed channel")
+    void shouldHandleConnectExceptionWithCause() {
+        // The JDK HttpClient reports a refused connection this way
+        ConnectException connect = new ConnectException();
+        connect.initCause(new ClosedChannelException());
+        Exception ex = new ExecutionException(connect);
+        String message = McpErrorHelper.friendlyMessage(ex, "http://localhost:59999/mcp");
+
+        assertTrue(message.contains("Connection refused"));
+        assertTrue(message.contains("http://localhost:59999/mcp"));
         assertFalse(message.contains("ExecutionException"));
     }
 
