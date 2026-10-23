@@ -468,6 +468,17 @@ class RouterResourceFactoryTest {
     }
 
     @Test
+    void mcpProxySkipsAuthOnlyForOAuthDiscoveryAndPreflight() {
+        WanakuRouter router = createRouterWithAuth();
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        // No namespace is public: a namespace named "public" must still require a token
+        assertEquals(
+                "^/.well-known/.*,^/authorize$,^/token$,^/register$,OPTIONS=^/.*",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_SKIP_AUTH_ROUTES"));
+    }
+
+    @Test
     void oauth2ProxySecretVersionIsAnnotatedOnPods() {
         Deployment deployment =
                 RouterResourceFactory.makeOauth2ProxyDeployment(createRouterWithAuth(), "wanaku.example.com", "42");
