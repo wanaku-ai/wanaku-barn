@@ -1,5 +1,6 @@
 package ai.wanaku.operator.wanaku;
 
+import java.util.List;
 import java.util.Map;
 
 public final class WanakuTypes {
@@ -186,10 +187,24 @@ public final class WanakuTypes {
         }
     }
 
-    /** Route files in a ConfigMap; {@code main} names the key of the main route file. */
+    /**
+     * Route files in a ConfigMap. Without {@code items}, every key is a file in one directory and
+     * {@code main} names the key of the main route file. With {@code items}, each key is placed at its
+     * path, and {@code main} names the path of the main route file.
+     */
     public static class ConfigMapSource {
         private String name;
         private String main;
+        private List<KeyToPath> items;
+
+        /** Places keys at relative paths, for file trees such as a semantic route with Kamelet directories. */
+        public List<KeyToPath> getItems() {
+            return items;
+        }
+
+        public void setItems(List<KeyToPath> items) {
+            this.items = items;
+        }
 
         public String getName() {
             return name;
@@ -229,6 +244,28 @@ public final class WanakuTypes {
 
         public void setNamespace(String namespace) {
             this.namespace = namespace;
+        }
+    }
+
+    /** A ConfigMap key and the relative path where the runtime reads it. */
+    public static class KeyToPath {
+        private String key;
+        private String path;
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
         }
     }
 }
