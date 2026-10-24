@@ -1,3 +1,4 @@
+import { newId } from "../id.ts";
 export interface Tool {
   name: string;
   description?: string;
@@ -140,7 +141,7 @@ export async function converse(
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               jsonrpc: "2.0",
-              id: crypto.randomUUID(),
+              id: newId(),
               method: "tools/call",
               params: { name: call.function.name, arguments: args },
             }),

@@ -10,6 +10,7 @@ import {
 } from "@carbon/react";
 import { validateSchema, type RequestSpec } from "./client";
 import { JsonCode } from "./JsonCode";
+import { newId } from "./id";
 
 export type JsonObject = Record<string, unknown>;
 export interface PanelProps {
@@ -73,7 +74,7 @@ function rpc(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       jsonrpc: "2.0",
-      id: crypto.randomUUID(),
+      id: newId(),
       method,
       params,
     }),
@@ -540,7 +541,7 @@ export function A2aPanel({
         onClick={() =>
           void action("SendMessage", {
             message: {
-              messageId: crypto.randomUUID(),
+              messageId: newId(),
               role: "user",
               parts: [{ kind: "text", text: message }],
             },
