@@ -109,7 +109,7 @@ If you already have a Keycloak instance, you may skip the deployment section and
 
 #### Deploying Keycloak
 
-Apply the pre-defined Kubernetes configurations located in the [`deploy/auth`](https://github.com/wanaku-ai/wanaku/tree/main/deploy/auth) directory.
+Apply the pre-defined Kubernetes configurations located in the wanaku-barn [`deploy/auth`](https://github.com/wanaku-ai/wanaku-barn/tree/main/deploy/auth) directory.
 This will create all the necessary resources for Keycloak to run.
 
 > [!IMPORTANT]
@@ -152,7 +152,7 @@ To get the keycloak server:
 
 ### Importing the Wanaku Realm Configuration (via Shell Script)
 
-Alternatively, Wanaku comes with a [script that simplifies importing](https://github.com/wanaku-ai/wanaku/blob/main/deploy/auth/configure-auth.sh)
+Alternatively, Wanaku comes with a [script that simplifies importing](https://github.com/wanaku-ai/wanaku-barn/blob/main/deploy/auth/configure-auth.sh)
 the realm configuration into keycloak.
 
 The script takes care to discover the Keycloak server address.
@@ -277,6 +277,9 @@ source ~/.bashrc
 ```shell
 curl -fsSL https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/main/get-wanaku.sh | bash
 ```
+
+> [!NOTE]
+> This script installs the Wanaku CLI. The wanaku repository has a different `get-wanaku.sh` script that installs the Wanaku server. Read the [Wanaku getting started guide](https://github.com/wanaku-ai/wanaku/blob/main/docs/getting-started.md) to install the server.
 
 The script detects your OS and architecture, downloads the release archive, verifies its SHA-256 checksum, and installs the `wanaku` and `wanaku-cli` commands to `$HOME/bin`.
 
@@ -517,7 +520,7 @@ Currently, Wanaku supports:
 
 For these to work, Keycloak needs to be configured so that the authentication is properly supported.
 
-Wanaku comes with a [template configuration](https://github.com/wanaku-ai/wanaku/blob/main/deploy/auth/wanaku-config.json) that
+Wanaku comes with a [template configuration](https://github.com/wanaku-ai/wanaku-barn/blob/main/deploy/auth/wanaku-config.json) that
 can be imported into Keycloak to set up the realm, clients and everything else needed for Wanaku to work.
 
 > [!IMPORTANT]
