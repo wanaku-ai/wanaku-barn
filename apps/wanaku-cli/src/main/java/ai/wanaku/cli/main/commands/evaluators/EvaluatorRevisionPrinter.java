@@ -20,7 +20,8 @@ final class EvaluatorRevisionPrinter {
     private EvaluatorRevisionPrinter() {}
 
     static void print(WanakuPrinter printer, EvaluatorRevision revision) {
-        printer.printAsMap(revision.getRevision(), DETAIL_COLUMNS);
+        String[] columns = revision.getRevision().getFailureReason() != null ? DETAIL_COLUMNS : METADATA_COLUMNS;
+        printer.printAsMap(revision.getRevision(), columns);
 
         List<Map<String, Object>> evaluators = revision.getEvaluators();
         if (evaluators == null || evaluators.isEmpty()) {

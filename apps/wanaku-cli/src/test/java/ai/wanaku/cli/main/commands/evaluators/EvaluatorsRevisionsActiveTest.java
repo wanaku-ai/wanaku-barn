@@ -43,7 +43,7 @@ public class EvaluatorsRevisionsActiveTest {
         Integer result = command.doCall(null, printer);
 
         assertEquals(0, result);
-        verify(printer).printAsMap(revision.getRevision(), EvaluatorRevisionPrinter.DETAIL_COLUMNS);
+        verify(printer).printAsMap(revision.getRevision(), EvaluatorRevisionPrinter.METADATA_COLUMNS);
         Map<String, Object> row = Map.of(
                 "name", "safety-gate",
                 "method", "tools/call",

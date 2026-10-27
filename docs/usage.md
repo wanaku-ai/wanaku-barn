@@ -1649,8 +1649,8 @@ wanaku evaluators revisions get 3
 ```
 
 Each revision shows its ID, status (`active`, `superseded` or `rejected`), creation and activation times, origin
-(`startup` or `api`) and checksum. `revisions active`, `revisions get` and the other commands that show a single
-revision also show the failure reason, which explains why the router rejected a configuration.
+(`startup` or `api`) and checksum. For a `rejected` revision, `revisions get` also shows the failure reason, which
+explains why the router rejected the configuration.
 
 ### Rolling Back
 

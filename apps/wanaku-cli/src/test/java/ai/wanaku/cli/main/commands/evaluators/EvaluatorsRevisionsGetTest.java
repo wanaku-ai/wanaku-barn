@@ -43,6 +43,22 @@ public class EvaluatorsRevisionsGetTest {
         Integer result = command.doCall(null, printer);
 
         assertEquals(0, result);
+        verify(printer).printAsMap(revision.getRevision(), EvaluatorRevisionPrinter.METADATA_COLUMNS);
+    }
+
+    @Test
+    @DisplayName("Should print the failure reason of a rejected revision")
+    void shouldPrintFailureReasonOfRejectedRevision() throws Exception {
+        EvaluatorRevision revision = EvaluatorsTestSupport.revision(3);
+        revision.getRevision().setStatus("rejected");
+        revision.getRevision().setFailureReason("failed to load processor");
+        when(evaluatorsService.getRevision(3)).thenReturn(new WanakuResponse<>(revision));
+
+        command.id = 3;
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+        Integer result = command.doCall(null, printer);
+
+        assertEquals(0, result);
         verify(printer).printAsMap(revision.getRevision(), EvaluatorRevisionPrinter.DETAIL_COLUMNS);
     }
 

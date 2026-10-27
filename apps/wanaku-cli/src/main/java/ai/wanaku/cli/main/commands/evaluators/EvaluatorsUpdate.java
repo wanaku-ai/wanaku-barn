@@ -85,8 +85,7 @@ public class EvaluatorsUpdate extends BaseCommand {
     }
 
     static List<Map<String, Object>> readEvaluators(Path file) throws IOException {
-        ObjectMapper mapper =
-                file.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".json") ? JSON_MAPPER : YAML_MAPPER;
+        ObjectMapper mapper = file.toString().toLowerCase(Locale.ROOT).endsWith(".json") ? JSON_MAPPER : YAML_MAPPER;
         JsonNode root = mapper.readTree(file.toFile());
         JsonNode evaluators = root != null && root.isObject() ? root.get("evaluators") : root;
         if (evaluators == null || !evaluators.isArray()) {
