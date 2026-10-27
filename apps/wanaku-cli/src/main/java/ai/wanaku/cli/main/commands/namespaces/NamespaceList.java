@@ -27,6 +27,13 @@ public class NamespaceList extends BaseCommand {
     protected String host;
 
     @CommandLine.Option(
+            names = {"--mcp-url"},
+            description = "The base URL of the Wanaku Server MCP listener, used to build the namespace addresses",
+            defaultValue = "http://localhost:8081",
+            arity = "0..1")
+    protected String mcpUrl;
+
+    @CommandLine.Option(
             names = {"-e", "--label-expression"},
             description = {
                 """
@@ -66,8 +73,8 @@ Note: If omitted, all namespaces are listed. Label matching is case-sensitive.
     }
 
     private NamespaceRow toRow(Namespace n) {
-        String normalizedHost = host.endsWith("/") ? host.substring(0, host.length() - 1) : host;
-        String address = String.format("%s/%s/mcp/sse", normalizedHost, n.getName());
+        String baseUrl = mcpUrl.endsWith("/") ? mcpUrl.substring(0, mcpUrl.length() - 1) : mcpUrl;
+        String address = String.format("%s/%s/mcp", baseUrl, n.getName());
         return new NamespaceRow(n.getName(), address, n.getLabels());
     }
 

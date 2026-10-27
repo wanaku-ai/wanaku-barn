@@ -1546,30 +1546,24 @@ All commands that accept `--namespace` (`-N`) also support `--namespace-id` for 
 
 You can verify which namespace a tool or resource has been assigned to by using the `wanaku namespaces list` command.
 
-This command will display a list of all active namespaces, their unique IDs, and their corresponding paths.
+This command displays each namespace with its MCP endpoint address (`<mcp-url>/<namespace>/mcp`) and labels.
 
 The output will look similar to this:
 
 ```shell
-id                                   name   path
-28560e66-d94c-44a2-b032-779b5542132a        http://localhost:8080/ns-4/mcp/sse
-43b5d7a7-4e7d-4109-960b-ac7695b6f2d3 public http://localhost:8080/public/mcp/sse
-93c5bfdf-0e09-4da5-82fa-4eec3bf6b1b4        http://localhost:8080/ns-3/mcp/sse
-bfd112d2-32cb-475a-9f55-63301519152b        http://localhost:8080/ns-7/mcp/sse
-f5915650-4daa-4616-95c6-5aafceffb026        http://localhost:8080/ns-1/mcp/sse
-db89fedd-ffe6-4dee-b051-bcd5285bb9c9        http://localhost:8080/ns-2/mcp/sse
-d4249e11-9368-4c5b-bb66-981d2d2e69c7        http://localhost:8080/ns-0/mcp/sse
-8898fab6-3774-427f-8400-8c6f6fd9a97e        http://localhost:8080/ns-6/mcp/sse
-fe8cc1f2-2355-4009-ba68-4faeefe937f7        http://localhost:8080/ns-5/mcp/sse
-a3dfaaf6-3655-4bcc-8c48-3d183b6d675b        http://localhost:8080/ns-8/mcp/sse
-8832e2c7-3bd9-4f9b-88ba-982cc20a43de        http://localhost:8080/ns-9/mcp/sse
-<default>                                   http://localhost:8080//mcp/sse
+name    address                              labels
+default http://localhost:8081/default/mcp
+ns-1    http://localhost:8081/ns-1/mcp
+public  http://localhost:8081/public/mcp
 ```
 
-In this output, you can see the mapping of internal namespace IDs to their corresponding ns-X paths.
+The address uses the Wanaku Server MCP listener, which is `http://localhost:8081` by default. The management API
+(`--host`) runs on a different port, so if the MCP listener is exposed elsewhere (for example, behind an ingress), pass
+its base URL with `--mcp-url`:
 
-> [!IMPORTANT]
-> For Streamable HTTP, remove the `/sse` from the path (i.e.: `http://localhost:8080/ns-1/mcp/`).
+```shell
+wanaku namespaces list --mcp-url https://mcp.example.com
+```
 
 ### The Default Namespace
 
@@ -1577,7 +1571,7 @@ If you do not specify a namespace when adding a tool or resource, it will automa
 
 The default namespace acts as a general container for tools that don't require specific isolation.
 
-You can identify the default namespace in the wanaku namespaces list output by its `<default>` name.
+You can identify the default namespace in the wanaku namespaces list output by its `default` name.
 
 ### Filtering Namespaces by Labels
 
