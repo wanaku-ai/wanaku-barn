@@ -78,6 +78,7 @@ class McpErrorHelperRedirectTest {
         assertTrue(message.contains("/oauth2/start"));
         assertTrue(message.contains("browser login"));
         assertTrue(message.contains("The token is expired"));
+        assertFalse(message.contains("The token is missing"));
         assertEquals("Bearer my-token", probeAuthorization.get());
     }
 
@@ -91,6 +92,7 @@ class McpErrorHelperRedirectTest {
         assertTrue(message.contains("keycloak.example.com"));
         assertTrue(message.contains("browser login"));
         assertTrue(message.contains("The token is missing"));
+        assertFalse(message.contains("The token is expired"));
     }
 
     @Test

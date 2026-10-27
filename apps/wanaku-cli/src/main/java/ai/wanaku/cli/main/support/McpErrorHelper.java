@@ -107,7 +107,7 @@ public final class McpErrorHelper {
 
         Integer redirectStatus = redirectStatus(root);
         if (redirectStatus != null) {
-            return redirectMessage(uri, redirectStatus, probeLocation(uri, token));
+            return redirectMessage(uri, redirectStatus, probeLocation(uri, token), token != null && !token.isBlank());
         }
 
         if (root instanceof ConnectException) {
@@ -231,7 +231,7 @@ public final class McpErrorHelper {
         }
     }
 
-    private static String redirectMessage(String uri, int status, URI location) {
+    private static String redirectMessage(String uri, int status, URI location, boolean hasToken) {
         StringBuilder sb = new StringBuilder();
         sb.append("The MCP server responded with a redirect (HTTP ")
                 .append(status)
@@ -249,9 +249,12 @@ public final class McpErrorHelper {
             sb.append("\n\nThe server redirects to HTTPS. Use --uri ").append(location);
         } else if (isLoginRedirect(original, location)) {
             sb.append("\n\nThe server asks for a browser login, which the CLI cannot do. Possible causes:\n");
-            sb.append("  - The token is missing (pass it with --token)\n");
-            sb.append("  - The token is expired\n");
-            sb.append("  - The token audience is not accepted by the server");
+            if (hasToken) {
+                sb.append("  - The token is expired\n");
+                sb.append("  - The token audience is not accepted by the server");
+            } else {
+                sb.append("  - The token is missing (pass it with --token)");
+            }
         } else {
             sb.append("\n\nThe CLI does not follow redirects for MCP requests. Try --uri ")
                     .append(location);

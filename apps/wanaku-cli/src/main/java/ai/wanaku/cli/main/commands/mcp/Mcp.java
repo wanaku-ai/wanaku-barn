@@ -42,6 +42,6 @@ public class Mcp extends BaseCommand {
     }
 
     private static boolean isLoopback(String host) {
-        return host.equalsIgnoreCase("localhost") || host.startsWith("127.") || host.equals("[::1]");
+        return host.equalsIgnoreCase("localhost") || host.matches("127(\\.\\d{1,3}){3}") || host.equals("[::1]");
     }
 }

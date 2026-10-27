@@ -33,6 +33,18 @@ class McpPlainHttpTokenWarningTest {
                         "The token is sent over plain HTTP to wanaku.example.com. Use an https:// URI to protect it");
     }
 
+    @Test
+    @DisplayName("Should warn for a hostname that starts with 127.")
+    void shouldWarnForHostnameStartingWithLoopbackPrefix() {
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+
+        Mcp.warnIfTokenOverPlainHttp(printer, "http://127.example.com/mcp/", "my-token");
+
+        verify(printer)
+                .printWarningMessage(
+                        "The token is sent over plain HTTP to 127.example.com. Use an https:// URI to protect it");
+    }
+
     @ParameterizedTest
     @ValueSource(
             strings = {
