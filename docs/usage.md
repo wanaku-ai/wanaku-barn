@@ -1050,6 +1050,18 @@ For `wanaku mcp` commands, pass the complete MCP endpoint with `--uri`. The CLI 
 
 These commands use MCP protocol version `2025-11-25`. They start with the `initialize` request and skip protocol discovery.
 
+To call a tool, pass its arguments with `--param key=value` (repeatable) or as a JSON object with `--arguments`:
+
+```shell
+wanaku mcp tool --uri http://localhost:4180/team/mcp --name get-sum --param a=1 --param b=2
+wanaku mcp tool --uri http://localhost:4180/team/mcp --name get-sum --arguments '{"a": 1, "b": 2}'
+```
+
+The CLI converts `--param` values to the type declared in the tool input schema. Values for `number`, `integer`,
+`boolean`, `array` and `object` properties are parsed as JSON (for example, `--param tags='["a","b"]'`). All other
+values are sent as strings. Values are not split at commas. When you use both options, `--param` values override
+the ones in `--arguments`.
+
 An MCP (Model Context Protocol) tool enables Large Language Models (LLMs) to execute tasks beyond their inherent capabilities by
 using external functions.
 Each tool is uniquely identified by a name and defined with an input schema that outlines the expected parameters.
