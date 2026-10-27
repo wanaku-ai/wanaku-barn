@@ -1,5 +1,8 @@
 package ai.wanaku.cli.main.commands.evaluators;
 
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
@@ -94,6 +97,46 @@ public class EvaluatorsUpdateTest {
         verify(evaluatorsService).update(captor.capture());
         assertNull(captor.getValue().getExpectedRevision());
         assertEquals(2, captor.getValue().getEvaluators().size());
+    }
+
+    @Test
+    @DisplayName("Should read a tab-indented JSON file")
+    void shouldUpdateFromTabIndentedJson() throws Exception {
+        Path file = Files.writeString(
+                tempDir.resolve("evaluators.json"),
+                """
+                {
+                \t"evaluators": [
+                \t\t{
+                \t\t\t"name": "safety-gate",
+                \t\t\t"engine": {"type": "passthrough"}
+                \t\t}
+                \t]
+                }
+                """);
+        when(evaluatorsService.update(any())).thenReturn(new WanakuResponse<>(EvaluatorsTestSupport.revision(1)));
+
+        command.file = file;
+        Integer result = command.doCall(null, mock(WanakuPrinter.class));
+
+        assertEquals(0, result);
+        ArgumentCaptor<EvaluatorsUpdateRequest> captor = ArgumentCaptor.forClass(EvaluatorsUpdateRequest.class);
+        verify(evaluatorsService).update(captor.capture());
+        assertEquals("safety-gate", captor.getValue().getEvaluators().get(0).get("name"));
+    }
+
+    @Test
+    @DisplayName("Should return error when the expected revision is stale")
+    void shouldReturnErrorOnConflict() throws Exception {
+        Path file = Files.writeString(tempDir.resolve("evaluators.yaml"), "- name: safety-gate\n");
+        Response conflict = Response.status(Response.Status.CONFLICT).build();
+        when(evaluatorsService.update(any())).thenThrow(new WebApplicationException(conflict));
+
+        command.file = file;
+        command.expectedRevision = 3L;
+        Integer result = command.doCall(null, mock(WanakuPrinter.class));
+
+        assertEquals(1, result);
     }
 
     @Test

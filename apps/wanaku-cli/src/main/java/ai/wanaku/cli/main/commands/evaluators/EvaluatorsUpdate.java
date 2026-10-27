@@ -5,6 +5,7 @@ import jakarta.ws.rs.WebApplicationException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
@@ -15,6 +16,7 @@ import ai.wanaku.core.services.api.EvaluatorsService;
 import ai.wanaku.core.services.api.EvaluatorsUpdateRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import picocli.CommandLine;
 
@@ -30,7 +32,10 @@ import static ai.wanaku.cli.main.support.ResponseHelper.commonResponseErrorHandl
 @CommandLine.Command(name = "update", description = "Replace the active evaluator configuration from a file")
 public class EvaluatorsUpdate extends BaseCommand {
 
-    private static final YAMLMapper MAPPER = new YAMLMapper();
+    private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
+
+    // SnakeYAML rejects tab indentation, so JSON files are read with a plain JSON mapper
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
     @CommandLine.Option(
             names = {"--host"},
@@ -80,11 +85,13 @@ public class EvaluatorsUpdate extends BaseCommand {
     }
 
     static List<Map<String, Object>> readEvaluators(Path file) throws IOException {
-        JsonNode root = MAPPER.readTree(file.toFile());
+        ObjectMapper mapper =
+                file.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".json") ? JSON_MAPPER : YAML_MAPPER;
+        JsonNode root = mapper.readTree(file.toFile());
         JsonNode evaluators = root != null && root.isObject() ? root.get("evaluators") : root;
         if (evaluators == null || !evaluators.isArray()) {
             throw new IllegalArgumentException("expected a list of evaluators or an object with an 'evaluators' list");
         }
-        return MAPPER.convertValue(evaluators, new TypeReference<>() {});
+        return mapper.convertValue(evaluators, new TypeReference<>() {});
     }
 }

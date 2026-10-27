@@ -13,10 +13,14 @@ final class EvaluatorRevisionPrinter {
 
     static final String[] METADATA_COLUMNS = {"id", "status", "created_at", "activated_at", "origin", "checksum"};
 
+    static final String[] DETAIL_COLUMNS = {
+        "id", "status", "created_at", "activated_at", "origin", "checksum", "failure_reason"
+    };
+
     private EvaluatorRevisionPrinter() {}
 
     static void print(WanakuPrinter printer, EvaluatorRevision revision) {
-        printer.printAsMap(revision.getRevision(), METADATA_COLUMNS);
+        printer.printAsMap(revision.getRevision(), DETAIL_COLUMNS);
 
         List<Map<String, Object>> evaluators = revision.getEvaluators();
         if (evaluators == null || evaluators.isEmpty()) {
