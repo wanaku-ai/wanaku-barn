@@ -431,6 +431,10 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         }
 
         final Exposure exposure = reconcileExternalAccess(resource, namespace);
+        if (!authEnabled) {
+            // Removed after the Routes/Ingresses are retargeted to the server, so traffic is not dropped
+            removeOauth2Proxy(resource, namespace);
+        }
 
         // The A2A public URL is only known once its Route or Ingress exists
         final String a2aHost = exposure.hosts.get(ServerListener.A2A);
@@ -635,11 +639,35 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                         .withName(RouterResourceFactory.serverConfigMapName(name))
                         .get())
                 .ifPresent(barnObjects::add);
-        for (HasMetadata object : barnObjects) {
+        deleteOwned(resource, namespace, barnObjects, "Barn is disabled");
+    }
+
+    /** Removes the oauth2-proxy Deployment and Service left over from when authentication was enabled. */
+    private void removeOauth2Proxy(WanakuRouter resource, String namespace) {
+        final String name = resource.getMetadata().getName();
+        final List<HasMetadata> proxyObjects = new ArrayList<>();
+        Optional.ofNullable(kubernetesClient
+                        .apps()
+                        .deployments()
+                        .inNamespace(namespace)
+                        .withName(name + "-oauth2-proxy")
+                        .get())
+                .ifPresent(proxyObjects::add);
+        Optional.ofNullable(kubernetesClient
+                        .services()
+                        .inNamespace(namespace)
+                        .withName(RouterResourceFactory.oauth2ProxyServiceName(name))
+                        .get())
+                .ifPresent(proxyObjects::add);
+        deleteOwned(resource, namespace, proxyObjects, "authentication is disabled");
+    }
+
+    private void deleteOwned(WanakuRouter resource, String namespace, List<HasMetadata> objects, String reason) {
+        for (HasMetadata object : objects) {
             if (isOwnedBy(object, resource)) {
                 LOG.infof(
-                        "Deleting %s %s in %s: Barn is disabled",
-                        object.getKind(), object.getMetadata().getName(), namespace);
+                        "Deleting %s %s in %s: %s",
+                        object.getKind(), object.getMetadata().getName(), namespace, reason);
                 kubernetesClient.resource(object).delete();
             }
         }

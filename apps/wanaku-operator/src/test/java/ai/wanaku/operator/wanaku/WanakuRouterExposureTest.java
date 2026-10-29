@@ -221,6 +221,44 @@ class WanakuRouterExposureTest {
     }
 
     @Test
+    void disablingAuthRemovesTheProxyAndRoutesToTheServer() {
+        client.secrets()
+                .inNamespace(NAMESPACE)
+                .resource(new SecretBuilder()
+                        .withNewMetadata()
+                        .withName("wanaku-auth")
+                        .endMetadata()
+                        .withStringData(
+                                Map.of("client-secret", "s3cret", "cookie-secret", "0123456789abcdef0123456789abcdef"))
+                        .build())
+                .create();
+        WanakuRouter router = createRouter(listenerExposure("mgmt.example.com", "mcp.example.com", null, null));
+        WanakuRouterSpec.AuthSpec auth = new WanakuRouterSpec.AuthSpec();
+        auth.setEnabled(true);
+        auth.setIssuerUrl("https://keycloak.example.com/realms/wanaku");
+        auth.setSecretName("wanaku-auth");
+        router.getSpec().setAuth(auth);
+        reconciler.reconcile(router, null);
+        assertThat(deployment("wanaku-dev-oauth2-proxy")).isNotNull();
+        assertThat(condition(router, "AuthProxyAvailable")).isNotNull();
+
+        auth.setEnabled(false);
+        reconciler.reconcile(router, null);
+
+        assertThat(deployment("wanaku-dev-oauth2-proxy")).isNull();
+        assertThat(client.services()
+                        .inNamespace(NAMESPACE)
+                        .withName("oauth2-proxy-wanaku-dev")
+                        .get())
+                .isNull();
+        Route mcp = route("wanaku-dev-mcp");
+        assertThat(mcp.getSpec().getTo().getName()).isEqualTo("server-wanaku-dev");
+        assertThat(mcp.getSpec().getPort().getTargetPort().getIntVal()).isEqualTo(ServerListener.MCP.serverPort());
+        assertThat(condition(router, "AuthConfigured").getReason()).isEqualTo("AuthDisabled");
+        assertThat(condition(router, "AuthProxyAvailable")).isNull();
+    }
+
+    @Test
     void routesWaitForAdmissionAndReportRejections() {
         WanakuRouter router = createRouter(sharedExposure("wanaku.apps.example.com"));
         reconciler.reconcile(router, null);
