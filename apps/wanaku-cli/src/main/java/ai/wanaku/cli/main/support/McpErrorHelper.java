@@ -120,7 +120,7 @@ public final class McpErrorHelper {
         }
 
         if (findCause(ex, UnresolvedAddressException.class) != null) {
-            return unknownHostMessage(uri);
+            return unknownHostMessage(hostOf(uri));
         }
 
         if (findCause(ex, ConnectException.class) != null) {
@@ -285,6 +285,21 @@ public final class McpErrorHelper {
 
     private static boolean sameHost(URI a, URI b) {
         return a.getHost() != null && a.getHost().equalsIgnoreCase(b.getHost());
+    }
+
+    /**
+     * Returns the host of the given URI, or the URI itself when it has no parsable host.
+     */
+    private static String hostOf(String uri) {
+        if (uri == null) {
+            return null;
+        }
+        try {
+            String host = URI.create(uri).getHost();
+            return host != null ? host : uri;
+        } catch (IllegalArgumentException e) {
+            return uri;
+        }
     }
 
     private static String stripTrailingSlash(String path) {

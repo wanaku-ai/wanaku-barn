@@ -64,8 +64,8 @@ class McpErrorHelperTest {
         Exception ex = new ExecutionException(connect);
         String message = McpErrorHelper.friendlyMessage(ex, "http://typo-host.invalid:8080/mcp");
 
-        assertTrue(message.contains("Unable to resolve host"));
-        assertTrue(message.contains("http://typo-host.invalid:8080/mcp"));
+        assertTrue(message.contains("Unable to resolve host: typo-host.invalid\n"));
+        assertFalse(message.contains("http://typo-host.invalid:8080/mcp"));
         assertFalse(message.contains("Connection refused"));
     }
 

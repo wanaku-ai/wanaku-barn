@@ -1468,11 +1468,19 @@ Successfully added forward 'my-mcp-server': discovered 13 tools, 7 resources and
 ```
 
 If the router cannot reach the external MCP server, it still stores the forward but marks it as unavailable. The CLI
-prints a warning with the reason and exits with a non-zero code, so scripts can detect it:
+prints a warning with the reason and exits with code 3:
 
 ```text
 Forward 'my-mcp-server' was added, but it is unavailable: connection refused
 ```
+
+Scripts can use the exit code to tell the two failure cases apart:
+
+| Exit code | Meaning                                                              |
+|-----------|----------------------------------------------------------------------|
+| 0         | The forward was added and the router reached the MCP server          |
+| 1         | The forward was not added (for example, the router rejected it)      |
+| 3         | The forward was added, but the router could not reach the MCP server |
 
 Once a forward is added, all tools and resources provided by the external MCP server will be mapped in the Wanaku instance.
 

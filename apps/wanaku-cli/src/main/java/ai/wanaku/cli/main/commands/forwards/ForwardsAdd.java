@@ -20,6 +20,12 @@ import static picocli.CommandLine.Option;
 @Command(name = "add", description = "Add forward targets")
 public class ForwardsAdd extends BaseCommand {
 
+    /**
+     * Exit code for a forward that was stored but could not be reached by the router.
+     * It differs from {@link #EXIT_ERROR}, which means the forward was not added.
+     */
+    public static final int EXIT_FORWARD_UNAVAILABLE = 3;
+
     @Option(
             names = {"--host"},
             description = "The API host",
@@ -56,7 +62,7 @@ public class ForwardsAdd extends BaseCommand {
         try {
             WanakuResponse<Map<String, Object>> response = forwardsService.addForward(reference);
             if (!printSummary(printer, name, response != null ? response.data() : null)) {
-                return EXIT_ERROR;
+                return EXIT_FORWARD_UNAVAILABLE;
             }
         } catch (WebApplicationException ex) {
             Response response = ex.getResponse();
