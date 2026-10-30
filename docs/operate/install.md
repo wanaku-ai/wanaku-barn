@@ -47,7 +47,7 @@ The Wanaku Operator simplifies the deployment and management of Wanaku instances
 It automates the creation and configuration of all necessary resources, making it the recommended approach for production deployments.
 
 > [!NOTE]
-> For comprehensive operator documentation including CRD field reference, deployment patterns, lifecycle management, Helm configuration, and troubleshooting, see the **[Kubernetes Operator Guide](operator.md)**.
+> For the full operator procedures, see [Deploy with the Wanaku Operator](operator.md). For the resource fields, see [Wanaku Operator custom resources](../reference/operator-crds.md).
 
 ### Quick Start
 
