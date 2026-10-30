@@ -31,7 +31,7 @@ The easiest way to learn Wanaku is by following the **[guided tutorial](https://
 
 ### Basic Usage
 
-The reference documentation, including the complete installation and configuration instructions, is available on the [usage guide](https://wanaku.ai/docs/version/).
+The reference documentation, including the complete installation and configuration instructions, is available on the [usage guide](https://wanaku.ai/docs/barn/wanaku-barn-current/docs/usage.html).
 
 ## Documentation
 
