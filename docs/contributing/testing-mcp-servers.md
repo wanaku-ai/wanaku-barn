@@ -28,7 +28,7 @@ docker compose -f deploy/docker-compose/docker-compose-noauth.yml up
 ```
 
 This starts the router without Keycloak. The router is available at `http://localhost:8080`.
-See [Running Without Authentication](../cli/usage.md#running-without-authentication) for other ways to start the router
+See [Run the backend without authentication](../operate/install.md#run-the-backend-without-authentication) for other ways to start the router
 without Keycloak.
 
 ### Testing with the MCP Inspector

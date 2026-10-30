@@ -67,7 +67,7 @@ Keycloak is required only if you want to run Wanaku with authentication enabled.
 - Use an existing Keycloak instance
 
 The Barn backend itself does not require Keycloak: authentication is handled by the Governed Execution Proxy (GEP),
-so you can skip the Keycloak setup for local development or testing. See [Running Without Authentication](../cli/usage.md#running-without-authentication).
+so you can skip the Keycloak setup for local development or testing. See [Run the backend without authentication](install.md#run-the-backend-without-authentication).
 
 ### Can I run Wanaku without Kubernetes?
 
@@ -81,7 +81,7 @@ Kubernetes/OpenShift deployment is recommended for production but not required.
 
 ### How do I install the Wanaku CLI?
 
-See the [Installing the CLI](../cli/usage.md#installing-the-command-line-interface-cli) section in the usage guide for all installation methods and PATH configuration.
+See [Install the Wanaku CLI](../cli/install.md) for all installation methods and PATH configuration.
 
 ## Usage and Configuration
 
@@ -89,7 +89,7 @@ See the [Installing the CLI](../cli/usage.md#installing-the-command-line-interfa
 
 Tools and resources are managed through MCP servers added to the router. Register an MCP server with the router and its tools and resources become available automatically.
 
-See the [Usage Guide](../cli/usage.md#managing-mcp-tools) for detailed instructions.
+See [Inspect tools, resources, and prompts](../cli/capabilities.md) for detailed instructions.
 
 ### What are namespaces and when should I use them?
 
@@ -125,11 +125,9 @@ http://localhost:8080/ns-1/mcp/sse
 > The `wanaku mcp` CLI commands only support Streamable HTTP, so pass the `/mcp/` endpoint to `--uri`
 > (for example, `http://localhost:8080/ns-1/mcp/`).
 
-See [Supported/Tested Clients](../cli/usage.md#supportedtested-clients) for client-specific configuration.
-
 ### Can I use Wanaku with Claude Desktop?
 
-Yes, Wanaku works with Claude Desktop and other MCP-compatible clients. See the [Usage Guide](../cli/usage.md#claude) for configuration examples.
+Yes, Wanaku works with Claude Desktop and other MCP-compatible clients.
 
 ## Security
 
@@ -188,7 +186,7 @@ When using the Wanaku CLI, set the `--verbose` parameter to show additional logg
 
 ### Where can I get help?
 
-- Check the [Troubleshooting Guide](../cli/usage.md#troubleshooting)
+- Check the [common problems](#common-problems)
 - Search [GitHub Issues](https://github.com/wanaku-ai/wanaku/issues)
 - Ask in [GitHub Discussions](https://github.com/wanaku-ai/wanaku/discussions)
 - Review the full [documentation](https://github.com/wanaku-ai/wanaku/tree/main/docs)
@@ -278,3 +276,377 @@ See the [Contributing Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/
 - [Wanaku Examples Repository](https://github.com/wanaku-ai/wanaku-examples)
 - [Wanaku Demos](https://github.com/wanaku-ai/wanaku-demos)
 - Project documentation in the `docs/` directory
+
+## Common problems
+
+> [!TIP]
+> If you are setting up Wanaku for the first time, see the [First-Run Troubleshooting Guide](../operate/first-run.md) for the most common setup issues (authentication, MCP connections, Docker Compose, SDK, and deployment).
+
+This section provides solutions to common issues you may encounter while using Wanaku.
+
+### Authentication Issues
+
+#### Cannot authenticate with the router
+
+**Symptoms:**
+
+- CLI commands fail with authentication errors
+- Web UI redirects to Keycloak but login fails
+
+**Solutions:**
+
+1. Verify Keycloak is running and accessible:
+
+   ```shell
+   curl http://localhost:8543/health
+   ```
+
+2. Check that the Keycloak realm is properly configured:
+   - Ensure the `wanaku` realm exists
+   - Verify the `wanaku-mcp-router` client is configured
+   - Confirm user accounts have been created
+
+3. Clear stored credentials and re-authenticate against Keycloak with the `wanaku-mcp-router` client:
+
+   ```shell
+   wanaku auth logout
+   WANAKU_CLIENT_SECRET=<secret> wanaku auth login \
+     --auth-server http://localhost:8543 \
+     --username alice \
+     --password
+   ```
+
+4. Verify oauth2-proxy can reach Keycloak:
+   - Check the `OAUTH2_PROXY_OIDC_ISSUER_URL` (and, when discovery is skipped, the redeem and JWKS URLs)
+   - Ensure network connectivity between components
+
+#### Token expired errors
+
+**Symptoms:**
+
+- Commands work initially but fail after some time
+- Error messages about expired tokens
+
+**Solutions:**
+
+1. The CLI refreshes access tokens automatically. When the refresh token has also expired, log in again:
+
+   ```shell
+   WANAKU_CLIENT_SECRET=<secret> wanaku auth login \
+     --username alice \
+     --password
+   ```
+
+2. Check token lifetime settings in Keycloak if tokens expire too quickly
+
+### Connection Issues
+
+#### Cannot connect to the router from MCP clients
+
+**Symptoms:**
+
+- MCP clients fail to connect
+- Timeout errors when connecting
+
+**Solutions:**
+
+1. Verify the router is running and accessible:
+
+   ```shell
+   curl http://localhost:8080/q/health
+   ```
+
+2. Check the correct MCP endpoint is being used:
+   - SSE transport: `http://localhost:8080/mcp/sse`
+   - Streamable HTTP: `http://localhost:8080/mcp/`
+   - The `wanaku mcp` CLI commands require the Streamable HTTP endpoint (`/mcp/`, not `/mcp/sse`)
+
+3. For namespace-specific connections, ensure the correct path:
+
+   ```shell
+   # For namespace ns-1
+   http://localhost:8080/ns-1/mcp/sse
+   ```
+
+4. Verify firewall rules allow traffic on port 8080
+
+5. Check CORS settings if connecting from a web application:
+
+   ```shell
+   quarkus.http.cors.enabled=true
+   quarkus.http.cors.origins=http://localhost:3000
+   ```
+
+#### `wanaku mcp` commands report a redirect
+
+**Symptoms:**
+
+- `wanaku mcp tool list` (or any other `wanaku mcp` command) fails with `The MCP server responded with a redirect (HTTP 302) to ...`
+
+The `wanaku mcp` commands do not follow redirects, because MCP requests are `POST` requests and following them can send the
+bearer token to a different host. When the server redirects, the CLI shows the redirect target, when it can read it, and a hint:
+
+- `The server redirects to HTTPS. Use --uri https://...`: the endpoint forces HTTPS. This is the case for OpenShift Routes
+  created by the operator, and for most Ingress controllers and load balancers. Run the command again with the `https://` URI
+  that the message shows.
+- `The server asks for a browser login, which the CLI cannot do`: the redirect goes to a login page (for example, the
+  oauth2-proxy `/oauth2/start` page or the Keycloak login page). Check that you pass a token with `--token`, that the token is
+  not expired, and that the server accepts its audience.
+- `The CLI does not follow redirects for MCP requests. Try --uri ...`: the server redirects to another URL. Check that the URL
+  is the MCP endpoint you want and use it with `--uri`.
+- `The CLI does not follow redirects for MCP requests. Possible causes:`: the CLI could not read the redirect target. Try the
+  `https://` URI, then check the token.
+
+When you pass `--token` with an `http://` URI, the `wanaku mcp` commands also show a warning that the token is sent over plain
+HTTP. The warning is not shown for `localhost` and other loopback addresses.
+
+### Tool and Resource Issues
+
+#### Tools or resources not appearing in MCP clients
+
+**Symptoms:**
+
+- `wanaku tools list` shows tools, but they don't appear in the MCP client
+- Resources are registered but not accessible
+
+**Solutions:**
+
+1. Verify the tool/resource is in the correct namespace:
+
+   ```shell
+   wanaku tools list
+   wanaku namespaces list
+   ```
+
+2. Check if the client is connected to the correct namespace endpoint
+
+3. Refresh the MCP client connection
+
+4. Verify the downstream MCP server providing the tool is online by checking the admin UI
+
+#### Tool invocation fails
+
+**Symptoms:**
+
+- Tool appears in client but execution fails
+- Error messages when calling a tool
+
+**Solutions:**
+
+1. Check the tool URI is correct:
+
+   ```shell
+   wanaku tools list
+   ```
+
+2. Verify the downstream MCP server is running and healthy
+
+3. Review service logs for errors during tool execution
+
+4. Ensure required configuration or secrets are properly set:
+
+   ```shell
+   wanaku tools list
+   ```
+
+5. For HTTP tools, verify the target endpoint is accessible from the service
+
+#### Resource read fails
+
+**Symptoms:**
+
+- Resource appears but cannot be read
+- Empty or error responses when accessing resources
+
+**Solutions:**
+
+1. Verify the resource URI and that the target exists:
+
+   ```shell
+   wanaku resources list
+   ```
+
+2. Check file permissions if using file-based resources
+
+3. Verify network access if using remote resources (S3, FTP, etc.)
+
+4. Review provider service logs for errors
+
+### Build and Deployment Issues
+
+#### Build fails with missing dependencies
+
+**Symptoms:**
+
+- Maven build errors
+- Missing artifact errors
+
+**Solutions:**
+
+1. Ensure you're using the correct Maven version:
+
+   ```shell
+   mvn --version  # Should be 3.x
+   ```
+
+2. Clear Maven cache and rebuild:
+
+   ```shell
+   rm -rf ~/.m2/repository/ai/wanaku
+   mvn clean install
+   ```
+
+3. Verify internet connectivity for downloading dependencies
+
+#### Native build fails
+
+**Symptoms:**
+
+- Native compilation errors
+- GraalVM-related failures
+
+**Solutions:**
+
+1. Verify GraalVM is properly installed:
+
+   ```shell
+   java -version  # Should show GraalVM
+   native-image --version
+   ```
+
+2. Check the [Quarkus native build guide](https://quarkus.io/guides/building-native-image) for system requirements
+
+3. Try building without native mode first to isolate the issue:
+
+   ```shell
+   mvn clean package
+   ```
+
+#### Container deployment fails
+
+**Symptoms:**
+
+- Pods in CrashLoopBackOff state
+- ImagePullBackOff errors
+
+**Solutions:**
+
+1. Verify the container image exists and is accessible:
+
+   ```shell
+   podman pull quay.io/wanaku/wanaku-barn-backend:latest
+   ```
+
+2. Check pod logs for startup errors:
+
+   ```shell
+   kubectl logs <pod-name>
+   ```
+
+3. Verify ConfigMaps and Secrets are properly mounted:
+
+   ```shell
+   kubectl describe pod <pod-name>
+   ```
+
+4. Check resource limits and ensure sufficient memory/CPU
+
+5. Verify Keycloak is accessible from the pods:
+
+   ```shell
+   kubectl exec <pod-name> -- curl http://keycloak:8080/health
+   ```
+
+### Performance Issues
+
+#### Slow response times
+
+**Symptoms:**
+
+- Tools take a long time to execute
+- Resource reads are slow
+- MCP clients experience timeouts
+
+**Solutions:**
+
+1. Check router and service resource usage:
+
+   ```shell
+   top
+   htop
+   ```
+
+2. Review logs for errors or warnings
+
+3. Verify network latency between components:
+
+   ```shell
+   ping <service-host>
+   ```
+
+4. For Kubernetes deployments, ensure adequate resource limits:
+
+   ```yaml
+   resources:
+     requests:
+       memory: "512Mi"
+       cpu: "500m"
+     limits:
+       memory: "1Gi"
+       cpu: "1000m"
+   ```
+
+### Logging and Debugging
+
+#### Enable debug logging
+
+To get more detailed logs for troubleshooting:
+
+**Router backend:**
+
+```properties
+quarkus.log.level=DEBUG
+quarkus.log.category."ai.wanaku".level=DEBUG
+quarkus.mcp.server.traffic-logging.enabled=true
+```
+
+**Downstream MCP servers:**
+
+```properties
+quarkus.log.level=DEBUG
+quarkus.log.category."ai.wanaku".level=DEBUG
+```
+
+**CLI:**
+
+```shell
+wanaku --verbose tools list
+```
+
+To produce clean, parsable output without ANSI colors or escape sequences (useful for scripting and piping):
+
+```shell
+wanaku tools list --plain
+```
+
+#### Access logs
+
+Check logs in these locations:
+
+- **Router backend:** Look for `wanaku-barn-backend.log` or check container logs
+- **Downstream MCP servers:** Check individual service log files
+- **Kubernetes:** `kubectl logs <pod-name>`
+
+### Getting Help
+
+If you continue to experience issues:
+
+1. Check the [GitHub Issues](https://github.com/wanaku-ai/wanaku/issues) for similar problems
+2. Review the [documentation](https://github.com/wanaku-ai/wanaku/tree/main/docs)
+3. Join the [community discussions](https://github.com/wanaku-ai/wanaku/discussions)
+4. Open a new issue with:
+   - Wanaku version
+   - Deployment environment (local, OpenShift, etc.)
+   - Steps to reproduce
+   - Relevant log excerpts
+   - Configuration (with secrets redacted)

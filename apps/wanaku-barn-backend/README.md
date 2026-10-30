@@ -71,7 +71,7 @@ wanaku.persistence.infinispan.base-folder=${wanaku.home}/barn/
 
 ## Related Documentation
 
-- [Usage Guide](../../docs/cli/usage.md)
+- [Install the Barn backend](../../docs/operate/install.md)
 - [Architecture](../../docs/get-started/architecture.md)
 - [Router Internals](../../docs/contributing/internals.md)
 - [Configuration Reference](../../docs/reference/configuration.md)

@@ -728,5 +728,5 @@ The Service Catalog page provides:
 ## See Also
 
 - [Service Templates Guide](service-templates.md) — Parameterized service catalog blueprints
-- [Usage Guide](../cli/usage.md) — General Wanaku CLI and operator usage
+- [Use the Wanaku CLI](../cli/index.md) — General Wanaku CLI usage
 - [Configurations Guide](../reference/configuration.md) — Tool and MCP server configurations

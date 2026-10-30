@@ -47,7 +47,7 @@ the [Java SDK](https://github.com/wanaku-ai/wanaku-capabilities-java-sdk/), etc.
 
 Contributors working on the project may want to refer to the [development version of the documentation](/docs) including
 
-- [Pre-release Usage Guide](docs/cli/usage.md) - Pre-release usage guide
+- [CLI guide](docs/cli/index.md) - Install the CLI and manage Wanaku from the command line
 - [Architecture](docs/get-started/architecture.md) - System architecture and components
 - [Building](docs/contributing/building.md) - Build and package the project
 - [Deployment Debugger](docs/manage/deployment-debugger.md) - Inspect deployed MCP servers from Wanaku

@@ -11,7 +11,13 @@
       "text": "Use the CLI",
       "link": "cli/",
       "items": [
-        { "text": "Usage guide", "link": "cli/usage" },
+        { "text": "Install the CLI", "link": "cli/install" },
+        { "text": "Authenticate", "link": "cli/authenticate" },
+        { "text": "Tools, resources, and prompts", "link": "cli/capabilities" },
+        { "text": "Forwards", "link": "cli/forwards" },
+        { "text": "Namespaces", "link": "cli/namespaces" },
+        { "text": "Evaluators", "link": "cli/evaluators" },
+        { "text": "Shell completion", "link": "cli/shell-completion" },
         { "text": "Agent skills", "link": "cli/agent-skills" }
       ]
     },
@@ -19,6 +25,8 @@
       "text": "Deploy and operate",
       "link": "operate/",
       "items": [
+        { "text": "Install the Barn backend", "link": "operate/install" },
+        { "text": "Keycloak", "link": "operate/keycloak" },
         { "text": "Kubernetes Operator", "link": "operate/operator" },
         { "text": "Operator on OperatorHub", "link": "operate/operator-olm" },
         { "text": "Backup, restore and upgrade", "link": "operate/backup-and-upgrade" },
@@ -47,7 +55,8 @@
       "text": "Reference",
       "link": "reference/",
       "items": [
-        { "text": "Configuration", "link": "reference/configuration" }
+        { "text": "Configuration", "link": "reference/configuration" },
+        { "text": "Tool URIs", "link": "reference/uris" }
       ]
     },
     {

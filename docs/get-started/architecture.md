@@ -405,4 +405,4 @@ Typical request latency breakdown:
 - **[Configuration Guide](../reference/configuration.md)** - Complete configuration reference
 - **[Contributing Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/CONTRIBUTING.md)** - How to extend Wanaku with new MCP servers
 - **[Security Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/SECURITY.md)** - Security best practices and policies
-- **[Usage Guide](../cli/usage.md)** - Operational guide for using Wanaku
+- **[Use the Wanaku CLI](../cli/index.md)** - Manage Wanaku from the command line

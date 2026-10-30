@@ -41,7 +41,7 @@ Download the latest release from [GitHub releases](https://github.com/wanaku-ai/
 
 ### PATH Configuration
 
-If you installed via `get-wanaku.sh`, the CLI is placed in `$HOME/bin` which may not be on your default `PATH`. See [PATH Configuration](../../docs/cli/usage.md#path-configuration) in the usage guide for setup instructions.
+If you installed via `get-wanaku.sh`, the CLI is placed in `$HOME/bin` which may not be on your default `PATH`. See [PATH Configuration](../../docs/cli/install.md#path-configuration) in the CLI installation guide for setup instructions.
 
 >
 >
@@ -91,6 +91,6 @@ The CLI stores configuration in `~/.wanaku/`:
 
 ## Related Documentation
 
-- [Usage Guide](../../docs/cli/usage.md) - Complete CLI reference
+- [CLI guide](../../docs/cli/index.md) - Complete CLI reference
 - [Label Expressions Guide](src/main/resources/docs/LABEL_EXPRESSIONS.md) - Advanced filtering
 - [Architecture](../../docs/get-started/architecture.md)

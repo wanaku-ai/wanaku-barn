@@ -479,6 +479,6 @@ If deployment fails with a ZIP parsing error:
 
 ## Related Documentation
 
-- [Usage Guide](../cli/usage.md) — General Wanaku usage and concepts
+- [Use the Wanaku CLI](../cli/index.md) — General Wanaku CLI usage
 - [Configurations](../reference/configuration.md) — Quarkus and Wanaku configuration options
 - [Contributing](../contributing/index.md) — How to contribute to Wanaku

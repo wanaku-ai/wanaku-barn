@@ -140,5 +140,5 @@ kubectl wait wanakuservicecatalog/my-catalogs -n wanaku --for=condition=Ready --
 ## References
 
 - [Operator guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/operate/operator.md) — operator deployment and lifecycle background; consult the current CRD schema for fields
-- [Usage guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/cli/usage.md) — installing and running Wanaku on OpenShift or Kubernetes
+- [Install the Barn backend](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/operate/install.md) — installing and running Wanaku on OpenShift or Kubernetes
 - [Service catalogs skill](../wanaku-service-catalogs/SKILL.md) — authoring and packaging catalogs

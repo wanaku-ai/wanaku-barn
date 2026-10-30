@@ -1,5 +1,6 @@
 architecture get-started/architecture
-usage cli/usage
+usage cli/
+cli/usage cli/
 agent-skills cli/agent-skills
 operator operate/operator
 operator-olm operate/operator-olm
