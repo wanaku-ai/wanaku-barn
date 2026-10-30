@@ -3,12 +3,14 @@ package ai.wanaku.backend.api.v1.servicecatalog;
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Method;
 import java.util.Base64;
+import java.util.List;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.DeploymentInstructions;
+import ai.wanaku.core.services.api.PlaceholderDefinition;
 import ai.wanaku.core.services.api.ServiceCatalogIndex;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,8 +62,13 @@ class DeploymentInstructionsBeanTest {
         assertEquals(1, instructions.systems().size());
 
         String instruction = instructions.systems().get(0).instruction();
-        assertTrue(instruction.contains("--client-id wanaku-service"), "Instructions should contain --client-id");
-        assertTrue(instruction.contains("--fail-fast"), "Instructions should still contain --fail-fast");
+        assertTrue(instruction.contains("--service-catalog testcatalog"), "Instructions should name the catalog");
+        assertTrue(instruction.contains("--service-catalog-system sys1"), "Instructions should name the system");
+        assertTrue(instruction.contains("--mcp-port <mcp-port>"), "Instructions should set the MCP port");
+        assertTrue(
+                instruction.contains("wanaku forwards add --name sys1 --service http://localhost:<mcp-port>/mcp"),
+                "Instructions should add the capability as a forward");
+        assertClassicOptionsAbsent(instruction);
     }
 
     @Test
@@ -72,13 +80,26 @@ class DeploymentInstructionsBeanTest {
         assertNotNull(instructions);
 
         String instruction = instructions.systems().get(0).instruction();
-        assertTrue(instruction.contains("CLIENT_ID=wanaku-service"), "Instructions should contain CLIENT_ID");
-        assertTrue(instruction.contains("TOKEN_ENDPOINT"), "Instructions should contain TOKEN_ENDPOINT");
-        assertTrue(instruction.contains("CLIENT_SECRET"), "Instructions should contain CLIENT_SECRET");
+        assertTrue(instruction.contains("-p <mcp-port>:9090"), "Instructions should map the MCP port");
+        assertTrue(instruction.contains("SERVICE_CATALOG_SYSTEM=sys1"), "Instructions should name the system");
+        assertTrue(
+                instruction.contains("wanaku forwards add --name sys1 --service http://localhost:<mcp-port>/mcp"),
+                "Instructions should add the capability as a forward");
+        assertClassicOptionsAbsent(instruction);
+        assertFalse(instruction.contains("CLIENT_ID"), "The capability has no OIDC client options");
 
-        boolean hasAuthPlaceholders = instructions.placeholders().stream()
-                .anyMatch(p -> "client-secret".equals(p.key()) || "token-endpoint".equals(p.key()));
-        assertTrue(hasAuthPlaceholders, "Should have auth placeholders");
+        assertEquals(
+                List.of("registration-url", "mcp-port"),
+                instructions.placeholders().stream()
+                        .map(PlaceholderDefinition::key)
+                        .toList());
+    }
+
+    private static void assertClassicOptionsAbsent(String instruction) {
+        assertFalse(instruction.toLowerCase().contains("grpc"), "Classic gRPC options must not appear");
+        assertFalse(instruction.contains("9190"), "Classic gRPC port must not appear");
+        assertFalse(instruction.toLowerCase().contains("announce"), "Classic announce address must not appear");
+        assertFalse(instruction.contains("client-id"), "The capability has no --client-id option");
     }
 
     @Test
