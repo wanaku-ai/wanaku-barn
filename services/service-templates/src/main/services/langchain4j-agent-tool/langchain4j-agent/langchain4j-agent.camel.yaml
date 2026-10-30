@@ -10,6 +10,17 @@
         parameter.systemMessage: string
         parameter.systemMessage.description: "Optional system prompt to set the agent's behavior"
       steps:
+        # Tool arguments arrive as headers. The agent reads the user message from the body
+        # and the system prompt from the CamelLangChain4jAgentSystemMessage header.
+        - choice:
+            when:
+              - simple: "${header.systemMessage} != null && ${header.systemMessage} != ''"
+                steps:
+                  - setHeader:
+                      name: CamelLangChain4jAgentSystemMessage
+                      simple: "${header.systemMessage}"
+        - setBody:
+            simple: "${header.message}"
         - to:
             uri: "langchain4j-agent:{{agent.id}}"
             parameters:
