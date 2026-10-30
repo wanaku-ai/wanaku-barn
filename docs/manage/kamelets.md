@@ -1,3 +1,8 @@
+---
+title: Kamelet catalog
+description: Upload, validate, search, download, and remove Kamelet definitions in Barn, and serve them to Camel applications and semantic routers.
+---
+
 # Kamelet catalog
 
 Barn stores native Kamelet definitions and serves them to Camel applications. The Kamelets page provides upload, search, download, and removal. The semantic routing wizard uses eligible actions and sinks from this catalog.

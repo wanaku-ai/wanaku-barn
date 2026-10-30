@@ -1,3 +1,8 @@
+---
+title: Run integrations in the cloud
+description: Use the wanaku cloud commands to run Camel routes and semantic routes in a Kubernetes or OpenShift cluster next to a Wanaku router.
+---
+
 # Running Integrations in the Cloud
 
 The `wanaku cloud` commands run your Camel routes and semantic routes in a Kubernetes or OpenShift cluster, next to a Wanaku router that the Wanaku operator manages.

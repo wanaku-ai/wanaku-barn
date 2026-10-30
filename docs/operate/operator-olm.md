@@ -1,3 +1,8 @@
+---
+title: Wanaku Operator on OperatorHub
+description: Install the Wanaku Operator from OperatorHub with the Operator Lifecycle Manager, and build and test the OLM bundle on your own cluster.
+---
+
 # Wanaku Operator on OperatorHub (OLM bundle)
 
 The Wanaku Operator is packaged as an [Operator Lifecycle Manager (OLM)](https://olm.operatorframework.io/)

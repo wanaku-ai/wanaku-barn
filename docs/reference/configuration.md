@@ -1,3 +1,8 @@
+---
+title: Configuration
+description: Look up the Wanaku and Quarkus configuration properties of the Barn components, with their defaults and how to set them in each mode.
+---
+
 # Wanaku Configuration
 
 This document provides a comprehensive overview of the configuration options for all components of the Wanaku project.

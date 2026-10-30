@@ -1,3 +1,8 @@
+---
+title: Secure a deployment
+description: "Secure a Wanaku and Barn deployment in production: authentication, network exposure, secrets, containers, and a checklist for go-live."
+---
+
 # Security Best Practices Guide
 
 This guide covers security best practices for deploying and operating Wanaku in production environments.

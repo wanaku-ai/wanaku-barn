@@ -1,3 +1,8 @@
+---
+title: Build Wanaku Barn from source
+description: Build the Wanaku CLI, the Barn backend, the Wanaku Operator, and the Admin UI plugins from source with Maven, including native CLI builds.
+---
+
 # Build Wanaku Barn from source
 
 ## Overview

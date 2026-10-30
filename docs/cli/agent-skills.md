@@ -1,3 +1,8 @@
+---
+title: Agent skills
+description: Install the Wanaku agent skills that teach coding agents to use the Wanaku CLI, deploy with the operator, and build service catalogs.
+---
+
 # Agent Skills
 
 Wanaku ships a set of [agent skills](https://github.com/wanaku-ai/wanaku-barn/tree/main/apps/wanaku-cli/src/main/resources/skills/) that teach coding agents how to use Wanaku.

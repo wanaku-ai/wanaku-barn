@@ -1,3 +1,8 @@
+---
+title: Testing MCP servers
+description: "Test an MCP server before you add it to Wanaku: run it locally, write unit and integration tests, and validate service catalog deployments."
+---
+
 # Testing MCP Servers
 
 This guide covers how to test your Wanaku MCP servers locally before deploying, how to mock the Wanaku router for unit tests, integration test patterns, and how to validate service catalog deployments.

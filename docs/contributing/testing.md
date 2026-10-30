@@ -1,3 +1,8 @@
+---
+title: Testing
+description: Use the Wanaku assertion helpers in Barn tests to keep the tests short and to get clear failure messages for core and operator checks.
+---
+
 # Wanaku Assertions Library
 
 Wanaku provides domain-specific assertion helpers designed to keep tests concise and to surface clear,

@@ -1,3 +1,8 @@
+---
+title: Release checklist
+description: Follow the multi-repository release checklist for Wanaku Barn and its related projects, in the order that their dependencies need.
+---
+
 # Wanaku Release Checklist
 
 This checklist covers the full multi-repository release process. Repositories must be released in

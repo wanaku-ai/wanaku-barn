@@ -68,6 +68,7 @@
       "collapsed": true,
       "items": [
         { "text": "Building", "link": "contributing/building" },
+        { "text": "Write documentation", "link": "contributing/documentation" },
         { "text": "Testing", "link": "contributing/testing" },
         { "text": "Testing MCP servers", "link": "contributing/testing-mcp-servers" },
         { "text": "Performance tests", "link": "contributing/performance-tests" },

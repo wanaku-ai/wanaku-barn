@@ -1,3 +1,8 @@
+---
+title: Create a semantic router
+description: Build a semantic router with the Semantic Routers page in the Admin UI, from native Kamelet actions and sinks, and run it with the WSR.
+---
+
 # Create a semantic router
 
 The Semantic Routers page helps you build a focused decision service from native business actions and sinks. Upload new native Kamelets through the [Kamelets page](kamelets.md). Eligible uploads become available when a wizard opens. Barn does not require a restart. Barn saves editable definitions and publishes catalogs. WSR runs the selected catalog revision. Wanaku applies governance before it forwards MCP requests.

@@ -1,3 +1,8 @@
+---
+title: Backup, restore, and upgrade
+description: Back up the Barn data, restore it into a new installation, and upgrade Barn safely, including the schema migrations that run at startup.
+---
+
 # Backup, Restore and Upgrade
 
 This guide explains how to back up the Barn data, restore it, and upgrade Barn safely.

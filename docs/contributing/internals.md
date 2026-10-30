@@ -1,3 +1,8 @@
+---
+title: Barn backend internals
+description: "Learn how the Barn backend is built: its Quarkus REST endpoints, Infinispan persistence, service catalog logic, and management APIs."
+---
+
 # Wanaku Barn Internals
 
 Barn provides persistence, service catalog management, service templates, semantic router definitions, audit history, and administration APIs. It uses Quarkus REST endpoints and Infinispan persistence.

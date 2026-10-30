@@ -1,3 +1,8 @@
+---
+title: Release guide
+description: "Cut a Wanaku Barn release from an X.Y.x release branch: prepare the branch, run the release workflow, and publish the artifacts."
+---
+
 # Wanaku Release Guide
 
 ## Automated Release Process
