@@ -11,6 +11,7 @@ These pages list the settings of the Barn components.
 
 - [Configuration](configuration.md): the Wanaku and Quarkus configuration properties of each component.
 - [Label expressions](label-expressions.md): filter entities by label with logical operators.
+- [Wanaku Operator custom resources](operator-crds.md): the fields, ports and status conditions of the operator resources.
 - [Service catalog API](service-catalog-api.md): the REST endpoints and the version, removal, and purge rules of service catalogs.
 - [Tool URIs and reserved arguments](uris.md): URI expressions and the reserved `wanaku_` argument names.
 

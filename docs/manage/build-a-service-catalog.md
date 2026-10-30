@@ -198,7 +198,7 @@ Add `--template` to the `versions`, `removed`, and `restore` commands to work wi
 
 ## Deploy a catalog with the Wanaku Operator
 
-On Kubernetes or OpenShift, the Wanaku Operator can deploy catalogs from a `WanakuServiceCatalog` resource. For the operator itself, see the [Kubernetes Operator Guide](../operate/operator.md).
+On Kubernetes or OpenShift, the Wanaku Operator can deploy catalogs from a `WanakuServiceCatalog` resource. For the operator itself, see the [Deploy with the Wanaku Operator](../operate/operator.md).
 
 1. Create the package with `wanaku service package`, as shown in [Deploy the catalog to Barn](#deploy-the-catalog-to-barn).
 

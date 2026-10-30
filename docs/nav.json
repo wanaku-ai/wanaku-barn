@@ -27,7 +27,7 @@
       "items": [
         { "text": "Install the Barn backend", "link": "operate/install" },
         { "text": "Keycloak", "link": "operate/keycloak" },
-        { "text": "Kubernetes Operator", "link": "operate/operator" },
+        { "text": "Deploy with the Operator", "link": "operate/operator" },
         { "text": "Operator on OperatorHub", "link": "operate/operator-olm" },
         { "text": "Backup, restore and upgrade", "link": "operate/backup-and-upgrade" },
         { "text": "Observability", "link": "operate/observability" },
@@ -57,6 +57,7 @@
       "items": [
         { "text": "Configuration", "link": "reference/configuration" },
         { "text": "Label expressions", "link": "reference/label-expressions" },
+        { "text": "Operator custom resources", "link": "reference/operator-crds" },
         { "text": "Service catalog API", "link": "reference/service-catalog-api" },
         { "text": "Tool URIs", "link": "reference/uris" }
       ]
