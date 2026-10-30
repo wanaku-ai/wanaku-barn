@@ -16,8 +16,7 @@ These pages are for operators who deploy and run Barn and the Wanaku Operator.
 - [Backup, restore and upgrade](backup-and-upgrade.md): export and import the Barn data, and upgrade Barn safely.
 - [Observability](observability.md): tracing, request IDs, and structured logs.
 - [Secure a deployment](secure-a-deployment.md): secrets, network policies, least privilege, audit, and TLS.
-- [FAQ](troubleshooting.md): answers to common questions.
-- [First-run troubleshooting](first-run.md): fixes for common problems on the first run.
+- [Troubleshoot Barn and the Wanaku CLI](troubleshooting.md): find the cause and the fix for common problems.
 
 ## Next steps
 

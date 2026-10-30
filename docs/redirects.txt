@@ -8,7 +8,8 @@ backup-and-upgrade operate/backup-and-upgrade
 observability operate/observability
 security-best-practices operate/secure-a-deployment
 faq operate/troubleshooting
-troubleshooting operate/first-run
+troubleshooting operate/troubleshooting
+operate/first-run operate/troubleshooting
 service-catalogs manage/service-catalogs
 service-templates manage/service-templates
 kamelets manage/kamelets

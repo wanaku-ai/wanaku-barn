@@ -32,8 +32,7 @@
         { "text": "Backup, restore and upgrade", "link": "operate/backup-and-upgrade" },
         { "text": "Observability", "link": "operate/observability" },
         { "text": "Secure a deployment", "link": "operate/secure-a-deployment" },
-        { "text": "FAQ", "link": "operate/troubleshooting" },
-        { "text": "First-run troubleshooting", "link": "operate/first-run" }
+        { "text": "Troubleshooting", "link": "operate/troubleshooting" }
       ]
     },
     {
