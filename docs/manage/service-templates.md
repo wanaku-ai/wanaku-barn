@@ -416,6 +416,52 @@ SELECT name, price FROM products WHERE price < 800 ORDER BY price
 
 Since this template is built on the Apache Camel SQL component, you can use any query pattern that the component supports — including named parameters. For advanced query patterns, refer to the [Camel SQL component documentation](https://camel.apache.org/components/next/sql-component.html).
 
+### `camel-qdrant-search-tool` and `camel-pinecone-tool`
+
+Templates for a similarity search tool on a Qdrant collection or a Pinecone index. The AI assistant sends a text `query`. The tool turns the query into an embedding vector, searches the vector store for the closest matches, and returns the text of each match.
+
+The tool creates the embedding with the [Camel OpenAI component](https://camel.apache.org/components/next/openai-component.html), so it works with any OpenAI-compatible embeddings endpoint, for example OpenAI or Ollama.
+
+> [!IMPORTANT]
+> Use the same embedding model that stored the data in the vector store. Vectors from different models are not comparable, and the search returns wrong matches.
+
+The tool reads the text of each match from the `text_segment` key of the Qdrant payload or the Pinecone metadata. This is the key that LangChain4j and Forage use when they store data. If your data uses a different key, the tool returns empty text.
+
+**Embedding parameters (both templates):**
+
+- `embedding.base.url`: The OpenAI-compatible API URL (e.g., `https://api.openai.com/v1` or `http://localhost:11434/v1` for Ollama)
+- `embedding.model`: The embedding model (e.g., `text-embedding-3-small` or `nomic-embed-text`)
+- `embedding.api.key`: The API key. Ollama ignores it, but it must not be empty.
+
+**Qdrant parameters:**
+
+- `qdrant.host` and `qdrant.port`: The Qdrant gRPC address (the default gRPC port is `6334`)
+- `qdrant.collection`: The collection to search
+- `qdrant.api.key`: The Qdrant API key
+- `qdrant.max.results`: The maximum number of matches. Default: `5`
+
+**Pinecone parameters:**
+
+- `pinecone.token`: The Pinecone API key
+- `pinecone.index.name` and `pinecone.index.host`: The index to search
+- `pinecone.cloud` and `pinecone.cloud.region`: The cloud and region of the index
+- `pinecone.collection`: The collection name
+- `pinecone.top.k`: The maximum number of matches. Default: `5`
+
+**Example:**
+
+```shell
+wanaku service template instantiate \
+  --name camel-qdrant-search-tool \
+  --property qdrant.host=qdrant \
+  --property qdrant.port=6334 \
+  --property qdrant.collection=docs \
+  --property qdrant.api.key= \
+  --property embedding.base.url=http://ollama:11434/v1 \
+  --property embedding.model=nomic-embed-text \
+  --property embedding.api.key=unused
+```
+
 ## Best Practices
 
 ### When to Use Templates
