@@ -279,7 +279,7 @@ curl -fsSL https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/main/get-wana
 ```
 
 > [!NOTE]
-> This script installs the Wanaku CLI. The wanaku repository has a different `get-wanaku.sh` script that installs the Wanaku server. Read the [Wanaku getting started guide](https://github.com/wanaku-ai/wanaku/blob/main/docs/getting-started.md) to install the server.
+> This script installs the Wanaku CLI. The wanaku repository has a different `get-wanaku.sh` script that installs the Wanaku server. Read the [Wanaku getting started guide](https://github.com/wanaku-ai/wanaku/blob/main/docs/get-started/quickstart.md) to install the server.
 
 The script detects your OS and architecture, downloads the release archive, verifies its SHA-256 checksum, and installs the `wanaku` and `wanaku-cli` commands to `$HOME/bin`.
 
@@ -1625,7 +1625,7 @@ See the [Label Expressions Guide](LABEL_EXPRESSIONS.md) for detailed information
 Evaluators are WASM- and LLM-backed governance processors that the router runs on MCP traffic. They can pass, block,
 warn, filter tools, or set metadata. The router loads them from `wanaku.yaml` at startup. The `wanaku evaluators`
 commands change them at runtime through the router's management API. See the router's
-[evaluator engine documentation](https://github.com/wanaku-ai/wanaku/blob/main/docs/evaluator-engine.md) for the
+[evaluator engine documentation](https://github.com/wanaku-ai/wanaku/blob/main/docs/govern/evaluators.md) for the
 evaluator definition format.
 
 Every change creates an immutable revision. The router keeps the revision history, and you can activate the

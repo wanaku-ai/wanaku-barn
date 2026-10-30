@@ -133,7 +133,7 @@ kubectl logs -n wanaku -l app.kubernetes.io/name=wanaku-operator
 ### Standard listener ports
 
 The operator uses the embedded listeners described in the
-[Wanaku configuration guide](https://github.com/wanaku-ai/wanaku/blob/main/docs/configuration.md):
+[Wanaku configuration guide](https://github.com/wanaku-ai/wanaku/blob/main/docs/reference/configuration.md):
 
 | Listener | Server port |
 |----------|-------------|
