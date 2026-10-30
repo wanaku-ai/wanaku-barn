@@ -139,6 +139,7 @@ public class DeploymentInstructionsBean {
                     "http://localhost:8180",
                     "url"));
             placeholders.add(mcpPortPlaceholder());
+            placeholders.add(wanakuUrlPlaceholder("http://localhost:8080"));
         }
         return placeholders;
     }
@@ -153,6 +154,7 @@ public class DeploymentInstructionsBean {
                     "http://host.docker.internal:8180",
                     "url"));
             placeholders.add(mcpPortPlaceholder());
+            placeholders.add(wanakuUrlPlaceholder("http://host.docker.internal:8080"));
         } else {
             Collections.addAll(
                     placeholders,
@@ -175,5 +177,14 @@ public class DeploymentInstructionsBean {
                 "MCP Port",
                 "Host port of the capability's MCP endpoint (one port for each system)",
                 "9090");
+    }
+
+    private static PlaceholderDefinition wanakuUrlPlaceholder(String defaultValue) {
+        return new PlaceholderDefinition(
+                "wanaku-url",
+                "Wanaku URL",
+                "URL of the Wanaku Server management API, where the capability registers itself as a forward",
+                defaultValue,
+                "url");
     }
 }

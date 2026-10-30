@@ -4,6 +4,8 @@ java -jar camel-integration-capability-main-*-jar-with-dependencies.jar \
   --service-catalog {{catalogName}} \
   --service-catalog-system {{systemName}} \
   --mcp-port <mcp-port> \
+  --register \
+  --wanaku-url <wanaku-url> \
+  --namespace default \
+  --advertised-address http://localhost:<mcp-port>/mcp \
   --fail-fast
-
-wanaku forwards add --name {{systemName}} --service http://localhost:<mcp-port>/mcp --namespace default

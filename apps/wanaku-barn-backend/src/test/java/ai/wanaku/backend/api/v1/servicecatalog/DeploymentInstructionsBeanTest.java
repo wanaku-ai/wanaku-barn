@@ -65,10 +65,17 @@ class DeploymentInstructionsBeanTest {
         assertTrue(instruction.contains("--service-catalog testcatalog"), "Instructions should name the catalog");
         assertTrue(instruction.contains("--service-catalog-system sys1"), "Instructions should name the system");
         assertTrue(instruction.contains("--mcp-port <mcp-port>"), "Instructions should set the MCP port");
+        assertTrue(instruction.contains("--register"), "The capability should register itself as a forward");
+        assertTrue(instruction.contains("--wanaku-url <wanaku-url>"), "Instructions should name Wanaku Server");
         assertTrue(
-                instruction.contains("wanaku forwards add --name sys1 --service http://localhost:<mcp-port>/mcp"),
-                "Instructions should add the capability as a forward");
+                instruction.contains("--advertised-address http://localhost:<mcp-port>/mcp"),
+                "Instructions should advertise the MCP address");
         assertClassicOptionsAbsent(instruction);
+        assertEquals(
+                List.of("registration-url", "mcp-port", "wanaku-url"),
+                instructions.placeholders().stream()
+                        .map(PlaceholderDefinition::key)
+                        .toList());
     }
 
     @Test
@@ -82,14 +89,16 @@ class DeploymentInstructionsBeanTest {
         String instruction = instructions.systems().get(0).instruction();
         assertTrue(instruction.contains("-p <mcp-port>:9090"), "Instructions should map the MCP port");
         assertTrue(instruction.contains("SERVICE_CATALOG_SYSTEM=sys1"), "Instructions should name the system");
+        assertTrue(instruction.contains("WANAKU_REGISTER=true"), "The capability should register itself");
+        assertTrue(instruction.contains("WANAKU_URL=<wanaku-url>"), "Instructions should name Wanaku Server");
         assertTrue(
-                instruction.contains("wanaku forwards add --name sys1 --service http://localhost:<mcp-port>/mcp"),
-                "Instructions should add the capability as a forward");
+                instruction.contains("MCP_ADDRESS=http://localhost:<mcp-port>/mcp"),
+                "Instructions should advertise the MCP address");
         assertClassicOptionsAbsent(instruction);
         assertFalse(instruction.contains("CLIENT_ID"), "The capability has no OIDC client options");
 
         assertEquals(
-                List.of("registration-url", "mcp-port"),
+                List.of("registration-url", "mcp-port", "wanaku-url"),
                 instructions.placeholders().stream()
                         .map(PlaceholderDefinition::key)
                         .toList());
