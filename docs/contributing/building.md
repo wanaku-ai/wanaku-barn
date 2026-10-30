@@ -1,8 +1,8 @@
-# Building Wanaku MCP Router
+# Build Wanaku Barn from source
 
 ## Overview
 
-Before running or deploying the Wanaku MCP Router, you need to build the project from source.
+This page shows how to build the Barn components from source: the Wanaku CLI, the Barn backend, the Wanaku Operator, and the Admin UI plugins.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ Before running or deploying the Wanaku MCP Router, you need to build the project
 
 ### Building the Project
 
-To build the Wanaku MCP Router, run:
+To build all the Barn components, run:
 
 ```shell
 mvn verify
