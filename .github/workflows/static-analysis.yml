@@ -7,6 +7,8 @@ on:
       - '[0-9]*.[0-9]*.x'
     paths-ignore:
       - docs/**
+      - design/**
+      - '**/*.md'
       - artwork/**
       - README.md
       - docker-*

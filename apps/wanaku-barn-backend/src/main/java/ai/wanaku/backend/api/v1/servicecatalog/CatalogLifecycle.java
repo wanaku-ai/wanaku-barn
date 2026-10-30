@@ -110,6 +110,9 @@ public class CatalogLifecycle {
             if (cacheManager.getCacheConfiguration(name) == null) {
                 cacheManager.defineConfiguration(name, configuration);
             }
+            // Start the cache now. Infinispan reports a defined cache that is not started as FAILED, so readiness
+            // stays DOWN until the first deploy. After a restart, nothing touches these caches at startup.
+            cacheManager.getCache(name);
         }
     }
 
