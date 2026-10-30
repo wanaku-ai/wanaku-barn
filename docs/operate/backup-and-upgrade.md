@@ -108,4 +108,5 @@ To restore over existing data, add `--replace`.
 ## Limits
 
 - Barn supports one process for each data directory. Do not start two Barn processes on the same directory.
+- Barn does not form a cluster. Barn processes on the same host or network do not discover each other.
 - The file store directory still uses the legacy `router` folder name. Issue #191 tracks the move to `${wanaku.home}/barn/`.

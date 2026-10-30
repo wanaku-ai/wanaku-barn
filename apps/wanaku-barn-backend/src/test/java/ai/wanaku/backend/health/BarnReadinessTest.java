@@ -33,4 +33,10 @@ class BarnReadinessTest {
         assertThat(cacheManager.getCacheConfiguration("activityRecord")).isNull();
         assertThat(cacheManager.getCacheConfiguration("service-lookup-cache")).isNull();
     }
+
+    @Test
+    void cacheManagerDoesNotJoinACluster() {
+        assertThat(cacheManager.getCacheManagerConfiguration().isClustered()).isFalse();
+        assertThat(cacheManager.getTransport()).isNull();
+    }
 }
