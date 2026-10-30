@@ -18,15 +18,23 @@ Each namespace acts as a separate logical container, ensuring that the LLM conte
 interfere with tools in another.
 This is particularly useful when you have a large number of tools or when different sets of tools are used for distinct purposes.
 
-Wanaku provides a fixed set of 10 available slots for namespaces, named from `ns-0` to `ns-9`.
-It also provides a `default` namespace,
-which is used if none is specified and a special `public` namespace that can be accessed without any authentication.
+Each namespace has a name and its own MCP endpoint, `<mcp-url>/<namespace>/mcp`.
+A name uses only lowercase letters, numbers, and hyphens, with 1 to 63 characters.
+Wanaku also provides a `default` namespace.
 
 ## Using Namespaces
 
 Tools and resources are associated with namespaces through the MCP servers that provide them.
+Each forward belongs to one namespace.
 
-Wanaku automatically associates namespace names with available numerical slots from ns-0 to ns-9.
+Create a namespace, then add a forward to it:
+
+```shell
+wanaku namespaces create finance --label team=finance
+wanaku forwards add --service="http://market-data-mcp:8080/mcp" --name market-data --namespace finance
+```
+
+Use `wanaku namespaces show <name>` to see one namespace, and `wanaku namespaces delete <name>` to delete it.
 
 All commands that accept `--namespace` (`-N`) also support `--namespace-id` for passing the namespace UUID directly. These options are mutually exclusive. Use `--namespace-id` when scripting with known UUIDs.
 
@@ -41,8 +49,7 @@ The output will look similar to this:
 ```shell
 name    address                              labels
 default http://localhost:8081/default/mcp
-ns-1    http://localhost:8081/ns-1/mcp
-public  http://localhost:8081/public/mcp
+finance http://localhost:8081/finance/mcp   team=finance
 ```
 
 The address uses the Wanaku Server MCP listener, which is `http://localhost:8081` by default. The management API

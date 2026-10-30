@@ -40,6 +40,7 @@
       "link": "manage/",
       "items": [
         { "text": "Service catalogs", "link": "manage/service-catalogs" },
+        { "text": "Build and deploy a service catalog", "link": "manage/build-a-service-catalog" },
         { "text": "Service templates", "link": "manage/service-templates" },
         { "text": "Kamelet catalog", "link": "manage/kamelets" },
         { "text": "Run integrations in the cloud", "link": "manage/cloud-run" },
@@ -56,6 +57,7 @@
       "items": [
         { "text": "Configuration", "link": "reference/configuration" },
         { "text": "Label expressions", "link": "reference/label-expressions" },
+        { "text": "Service catalog API", "link": "reference/service-catalog-api" },
         { "text": "Tool URIs", "link": "reference/uris" }
       ]
     },

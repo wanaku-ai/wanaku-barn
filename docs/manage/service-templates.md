@@ -3,7 +3,7 @@
 This document explains what service templates are, how they work, and how to use them to create parameterized service catalogs in Wanaku.
 
 > [!NOTE]
-> Service templates are parameterized blueprints that produce **service catalogs** when instantiated with user-provided values. For comprehensive documentation on service catalogs themselves — their structure, deployment, and management — see the [Service Catalogs Guide](service-catalogs.md).
+> Service templates are parameterized blueprints that produce **service catalogs** when instantiated with user-provided values. For the catalog format, see [Service catalogs](service-catalogs.md). To deploy a catalog and serve it to Wanaku, see [Build and deploy a service catalog](build-a-service-catalog.md).
 
 ## What Are Service Templates?
 
@@ -66,12 +66,12 @@ queue.name=my.queue
 wanaku service template list
 ```
 
-This displays all service templates available in the router, including their names and descriptions.
+This lists the service templates in Barn, with their names and descriptions.
 
 You can filter templates by name or description:
 
 ```shell
-wanaku service template list --search activemq
+wanaku service template list --search jms
 ```
 
 ### Instantiate a Template
@@ -80,34 +80,33 @@ To create a service catalog from a template, use the `wanaku service template in
 
 ```shell
 wanaku service template instantiate \
-  --name activemq6-tool \
-  --property broker.url=tcp://localhost:61616 \
-  --property broker.username=admin \
-  --property broker.password=admin \
-  --property queue.name=my.queue
+  --name jms-tool \
+  --property forage.jms.broker.url=tcp://broker:61616 \
+  --property request.queue=orders.request \
+  --property response.queue=orders.response
 ```
 
-This creates a new service catalog by filling in the template's property placeholders with the provided values.
+This creates a new service catalog by filling in the template's property placeholders with the provided values. To serve the new catalog to Wanaku, start a Camel Integration Capability for it. See [Serve the catalog to Wanaku](build-a-service-catalog.md#serve-the-catalog-to-wanaku).
 
 ### Initialize a New Template Locally
 
-You can scaffold a new service template locally using the `wanaku service init` command with the `--template` flag:
+To create a new template directory, add the `--template` flag to `wanaku service init`:
 
 ```shell
-wanaku service init --name my-service --template activemq6-tool
+wanaku service init --name=my-template --services=my-service --template
 ```
 
-This downloads the template from the router and extracts it into a local directory, allowing you to modify it before packaging and deploying.
+The command creates the same files as for a catalog, plus a `service.properties` file for each system and its `catalog.properties.<system>` line in `index.properties`.
 
-### Deploy a Template to the Router
+### Deploy a Template to Barn
 
-To package and deploy a local template directory to the router:
+To package and deploy a local template directory to Barn:
 
 ```shell
-wanaku service deploy --template /path/to/template
+wanaku service deploy --template --path=/path/to/template
 ```
 
-This packages the template directory into a ZIP and deploys it to the router's template registry.
+This packages the template directory into a ZIP file and deploys it to Barn as a template.
 
 ### Validate a Template
 
@@ -123,7 +122,7 @@ non-zero status when the template is invalid.
 ### Template Version History
 
 Barn keeps the version history of each template, in the same way as for service catalogs.
-See [Version History](service-catalogs.md#version-history) for the rules.
+See [Version history](../reference/service-catalog-api.md#version-history) for the rules.
 
 ```shell
 wanaku service versions list --template --name=my-template
@@ -141,7 +140,7 @@ wanaku service versions restore --template --name=my-template --version=1
 
 ### Remove and Restore a Template
 
-A template removal keeps the template and its versions, in the same way as for catalogs. See [Removal and Restore](service-catalogs.md#removal-and-restore).
+A template removal keeps the template and its versions, in the same way as for catalogs. See [Removal and restore](../reference/service-catalog-api.md#removal-and-restore).
 
 ```shell
 wanaku service removed --template
@@ -181,7 +180,7 @@ To create a service catalog from a template:
 2. Select a template from the list.
 3. If the template has parameterized properties, a form will appear with input fields for each placeholder.
 4. Fill in the values and click **Create**.
-5. The new service catalog is created and deployed to the router.
+5. Barn creates the new service catalog.
 
 ## Creating Custom Templates
 
@@ -195,9 +194,8 @@ A service template ZIP package has this structure:
 my-template/
 ├── index.properties                # Catalog metadata
 └── my-service/                     # Service directory (one or more)
-    ├── routes.yaml                 # Camel routes definition
-    ├── rules.yaml                  # (optional) MCP rules
-    ├── dependencies.txt            # (optional) Camel dependencies
+    ├── my-service.camel.yaml       # Camel routes definition
+    ├── my-service.dependencies.txt # (optional) Camel dependencies
     └── service.properties          # (optional) Parameterized properties
 ```
 
@@ -214,10 +212,9 @@ catalog.description=My custom service template
 # Service declarations
 catalog.services=my-service
 
-# System files (routes, rules, dependencies)
-my-service.routes=my-service/routes.yaml
-my-service.rules=my-service/rules.yaml
-my-service.dependencies=my-service/dependencies.txt
+# System files (routes, dependencies)
+catalog.routes.my-service=my-service/my-service.camel.yaml
+catalog.dependencies.my-service=my-service/my-service.dependencies.txt
 
 # Declare parameterized properties files
 catalog.properties.my-service=my-service/service.properties
@@ -250,8 +247,7 @@ Use the <code v-pre>{{key}}</code> syntax for any value that should be filled in
 To package your custom template:
 
 ```shell
-cd my-template/
-wanaku service package --output my-template.service.zip
+wanaku service package --path=my-template -o my-template.b64
 ```
 
 This creates a ZIP file suitable for deployment.
@@ -291,7 +287,7 @@ Before deploying, validate the packaged template against the expected structure:
 }
 ```
 
-The endpoint runs the same checks as the [service catalog validation endpoint](service-catalogs.md#validate-a-catalog)
+The endpoint runs the same checks as the [service catalog validation endpoint](../reference/service-catalog-api.md#validate-a-catalog)
 and additionally requires the package to provide a `service.properties` file for at least one system —
 a template without parameterized properties is just a service catalog.
 
@@ -301,34 +297,29 @@ carries no package data to validate.
 
 ### Deploying the Template
 
-To deploy your custom template to the router:
+To deploy your custom template to Barn:
 
 ```shell
-wanaku service template deploy --file my-template.service.zip
+wanaku service deploy --template --path=my-template
 ```
 
 Or use the Admin UI to upload the ZIP file via the **Service Templates** → **Upload Template** dialog.
 
 ## Built-in Templates
 
-Wanaku ships with several built-in service templates:
+Barn deploys built-in service templates at startup. Run `wanaku service template list` for the full list. Some of them are:
 
-### `activemq6-tool`
+### `jms-tool`
 
-A template for creating an ActiveMQ 6 (Artemis) tool service. This template includes:
-
-- Routes for sending and receiving messages
-- Parameterized broker connection settings
-- Queue/topic name placeholders
+A template for a JMS request and reply tool, for example with an ActiveMQ Artemis broker. The tool sends a message to a request queue and waits for the reply on a response queue.
 
 **Parameters:**
 
-- `broker.url`: ActiveMQ broker URL (e.g., `tcp://localhost:61616`)
-- `broker.username`: Broker username
-- `broker.password`: Broker password
-- `queue.name`: Queue name for message operations
-
-This template is ideal for quickly connecting Wanaku to an ActiveMQ instance without manually writing routes or configuring properties.
+- `forage.jms.broker.url`: The broker URL (e.g., `tcp://localhost:61616`)
+- `forage.jms.username` and `forage.jms.password`: The broker credentials
+- `request.queue`: The queue that receives the request
+- `response.queue`: The queue that receives the reply
+- `tool.description`: The tool description that AI agents see
 
 ### `kafka-tool`
 
@@ -440,7 +431,7 @@ Since this template is built on the Apache Camel SQL component, you can use any 
 
 ### Template Naming Conventions
 
-- Use lowercase kebab-case for template names (e.g., `activemq6-tool`, `kafka-producer`).
+- Use lowercase kebab-case for template names (e.g., `jms-tool`, `kafka-tool`).
 - Use descriptive names that indicate the integration or service type.
 
 ### Property Key Naming
@@ -454,7 +445,7 @@ Since this template is built on the Apache Camel SQL component, you can use any 
 
 If `wanaku service template list` doesn't show your template, check:
 
-- Was the template deployed successfully? Check the router logs for errors.
+- Was the template deployed successfully? Check the Barn backend logs for errors.
 - Does the ZIP contain a valid `index.properties` file?
 - Is the `catalog.properties.<system>` key declared (or does the template follow the convention with `<system>/service.properties`)?
 

@@ -9,7 +9,8 @@ The Barn backend stores integrations and data for Wanaku. You can use its featur
 
 ## Pages in this section
 
-- [Service catalogs](service-catalogs.md): package Camel routes as a catalog and deploy it.
+- [Service catalogs](service-catalogs.md): what a catalog contains and how Wanaku serves its tools.
+- [Build and deploy a service catalog](build-a-service-catalog.md): create a catalog with the CLI and serve it to Wanaku.
 - [Service templates](service-templates.md): create parameterized service catalogs.
 - [Kamelet catalog](kamelets.md): store Kamelet definitions and serve them to Camel applications.
 - [Run integrations in the cloud](cloud-run.md): run Camel routes and semantic routes in a cluster with `wanaku cloud`.

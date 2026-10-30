@@ -28,12 +28,12 @@ This can be useful for managing and troubleshooting MCP server integrations.
 To add an external MCP server to the Wanaku instance, use the `wanaku forwards add` command:
 
 ```bash
-wanaku forwards add --service="http://your-mcp-server.com:8080/mcp/sse" --name my-mcp-server
+wanaku forwards add --service="http://your-mcp-server.com:8080/mcp" --name my-mcp-server --namespace default
 ```
 
-- `--service`: The URL of the external MCP server's SSE (Server-Sent Events) endpoint.
+- `--service`: The URL of the MCP endpoint of the external MCP server (Streamable HTTP).
 - `--name`: A unique human-readable name for the forward, used for identification and management purposes.
-- `--namespace` / `-N` (required): The namespace name to associate the forward with (e.g., `public`, `default`). The CLI resolves the name to its UUID automatically.
+- `--namespace` / `-N` (required): The namespace name to associate the forward with (e.g., `default`). The CLI resolves the name to its UUID automatically.
 - `--namespace-id` (alternative to `--namespace`): The namespace UUID to use directly, for scripting or when the UUID is already known.
 
 Use `--namespace` for the common case (human-readable name), or `--namespace-id` when scripting with known UUIDs. These options are mutually exclusive.
@@ -83,14 +83,14 @@ wanaku forwards remove --name my-mcp-server
 
 ## Example Use Case
 
-Suppose you have two MCP servers: `http://mcp-server1.com:8080/mcp/sse` and `http://mcp-server2.com:8080/mcp/sse`.
+Suppose you have two MCP servers: `http://mcp-server1.com:8080/mcp` and `http://mcp-server2.com:8080/mcp`.
 
 To integrate these external MCP servers into your Wanaku instance, follow these steps:
 
 1. Add the first forward using the `wanaku forwards add` command:
 
 ```shell
-wanaku forwards add --service="http://mcp-server1.com:8080/mcp/sse" --name mcp-server-1
+wanaku forwards add --service="http://mcp-server1.com:8080/mcp" --name mcp-server-1 --namespace default
 ```
 
 1. Use the `wanaku forwards list` command to confirm that the forward has been successfully added:
@@ -114,7 +114,7 @@ laptop-order    => mcp-remote-tool => <remote>
 1. Add the second forward using the same command:
 
 ```bash
-wanaku forwards add --service="http://mcp-server2.com:8080/mcp/sse" --name mcp-server-2
+wanaku forwards add --service="http://mcp-server2.com:8080/mcp" --name mcp-server-2 --namespace default
 ```
 
 1. Confirm that tools and resources from both external MCP servers are now integrated into your Wanaku instance (use `wanaku tools list`)

@@ -1,732 +1,150 @@
-# Service Catalogs Guide
+---
+title: Service catalogs
+description: Learn what a Barn service catalog contains, how Barn, the Camel Integration Capability, and Wanaku serve it, and how it relates to templates.
+---
 
-This guide covers everything you need to know about service catalogs in Wanaku: what they are, how they differ from service templates, their structure, and how to create, package, and deploy them.
+# Service catalogs
 
-## What Are Service Catalogs?
+A service catalog packages Apache Camel routes and their dependencies as one versioned ZIP file. Barn stores the catalog. A Camel Integration Capability loads one system of the catalog and serves its routes as MCP tools. Wanaku reaches those tools through an MCP forward.
 
-Service catalogs are packaged bundles of integration services that include:
+Catalogs are a good fit when you want to:
 
-- **Camel routes** — the integration logic (YAML-based route definitions)
-- **Wanaku rules** — MCP tool definitions that expose routes to AI agents
-- **Optional dependencies** — Maven coordinates for required libraries
-
-They're packaged as a single ZIP file and deployed to the Wanaku router as a unit. This makes them ideal for:
-
-- Sharing pre-built integrations across teams
-- Automating deployment of complex multi-route services
-- Versioning and distributing integration packages
-- Bundling related routes with their configurations
+- Share prebuilt integrations across teams.
+- Deploy several related routes as one unit.
+- Keep a version history of an integration and restore an earlier version.
 
 > [!NOTE]
-> Service catalogs are independent of any specific MCP server or underlying service implementation.
-> Apache Camel is natively supported as the integration runtime, but the service catalog format is open —
-> other integration runtimes or custom implementations can be added to support additional technologies.
+> The catalog format does not depend on a specific runtime. Apache Camel is the runtime that Barn supports today.
 
-## Service Catalogs vs Service Templates
-
-It's important to understand the relationship between these two concepts:
-
-- **Service Catalogs** are concrete, deployable packages containing actual routes, rules, and dependencies. They're ready to deploy as-is.
-
-- **Service Templates** are parameterized blueprints that use Camel Property Placeholders (`{{placeholder}}` syntax) for values that should be filled in by users. Templates are not directly deployable.
-
-**Workflow:**
+## How a catalog reaches an AI agent
 
 ```text
-Service Template (with {{placeholders}})
-    ↓  (user provides values via instantiate)
-Service Catalog (ready to deploy)
-    ↓  (deploy to router)
-Running integration services
+wanaku service deploy ──► Barn (stores the catalog and its versions)
+                              │
+                              ▼  downloads one system of the catalog
+                Camel Integration Capability (MCP server)
+                              │
+                              ▼  MCP forward
+                         Wanaku ──► AI agent
 ```
 
-When you instantiate a service template with user-provided parameters, the result is a service catalog that can be deployed immediately.
+1. You deploy the catalog to Barn with the Wanaku CLI, the REST API, or the Wanaku Operator.
+2. Barn stores the catalog and creates a new version.
+3. You start a Camel Integration Capability with `--service-catalog <catalog>` and `--service-catalog-system <system>`. The capability downloads the catalog from Barn, loads the routes of that system, and starts an MCP server.
+4. You add the capability to Wanaku as an MCP forward, or the capability registers itself.
+5. Wanaku lists the tools of the capability to AI agents and forwards each tool call to it.
 
-> [!TIP]
-> For full details on creating and using parameterized templates, see the [Service Templates Guide](service-templates.md).
+## Service catalogs and service templates
 
-## Service Catalog Structure
-
-A service catalog is a directory with the following structure:
+- A **service catalog** contains concrete routes, values, and dependencies. You can deploy it as it is.
+- A **service template** is a catalog with `{{placeholder}}` values. You cannot run a template. You instantiate it with your values, and Barn creates a catalog from it.
 
 ```text
-my-service/
-├── index.properties              # Manifest describing the catalog
-├── system-a/
-│   ├── system-a.camel.yaml       # Camel routes for system-a
-│   ├── system-a.wanaku-rules.yaml  # Wanaku rules (auto-generated)
-│   └── system-a.dependencies.txt   # Optional Maven dependencies
-└── system-b/
-    ├── system-b.camel.yaml
-    ├── system-b.wanaku-rules.yaml
-    └── system-b.dependencies.txt
+Service template ({{placeholders}})
+    │  wanaku service template instantiate
+    ▼
+Service catalog (stored in Barn)
+    │  Camel Integration Capability
+    ▼
+MCP tools in Wanaku
 ```
 
-### The Manifest File: `index.properties`
+For templates, see [Service templates](service-templates.md).
 
-The `index.properties` file is the catalog's manifest. It describes the catalog metadata and maps service names to their files:
+## Catalog structure
+
+A service catalog is a directory with one subdirectory for each system:
+
+```text
+hr-system/
+├── index.properties                  # Manifest of the catalog
+├── employees/
+│   ├── employees.camel.yaml          # Camel routes of the system
+│   ├── employees.wanaku-rules.yaml   # Optional, legacy
+│   └── employees.dependencies.txt    # Optional Maven dependencies
+└── payroll/
+    ├── payroll.camel.yaml
+    └── payroll.dependencies.txt
+```
+
+### The manifest file
+
+The `index.properties` file describes the catalog and maps each system to its files:
 
 ```properties
-catalog.name=my-service
-catalog.description=Service catalog for my-service
-catalog.services=system-a,system-b
+catalog.name=hr-system
+catalog.description=Employee and payroll tools
+catalog.services=employees,payroll
 
-# Routes mapping
-catalog.routes.system-a=system-a/system-a.camel.yaml
-catalog.routes.system-b=system-b/system-b.camel.yaml
+catalog.routes.employees=employees/employees.camel.yaml
+catalog.routes.payroll=payroll/payroll.camel.yaml
 
-# Rules mapping (optional, legacy)
-catalog.rules.system-a=system-a/system-a.wanaku-rules.yaml
-catalog.rules.system-b=system-b/system-b.wanaku-rules.yaml
-
-# Dependencies mapping (optional)
-catalog.dependencies.system-a=system-a/system-a.dependencies.txt
-catalog.dependencies.system-b=system-b/system-b.dependencies.txt
+catalog.dependencies.employees=employees/employees.dependencies.txt
+catalog.dependencies.payroll=payroll/payroll.dependencies.txt
 ```
 
-**Key fields:**
+| Property | Required | Description |
+|----------|----------|-------------|
+| `catalog.name` | Yes | The catalog name. Barn identifies the catalog by this value. Give the same value to `--service-catalog`. |
+| `catalog.description` | Yes | A description of the catalog. |
+| `catalog.services` | Yes | A comma-separated list of system names. |
+| `catalog.icon` | No | An icon for the catalog. Barn uses a default icon if you do not set it. |
+| `catalog.routes.<system>` | Yes | The path of the Camel routes file of the system. |
+| `catalog.dependencies.<system>` | No | The path of the dependencies file of the system. |
+| `catalog.properties.<system>` | No | The path of the `service.properties` file of the system. Templates use it. |
+| `catalog.rules.<system>` | No | The path of a Wanaku rules file. This property is legacy. Barn does not validate it, and the Camel Integration Capability does not read it. |
 
-- `catalog.name` — unique identifier for the catalog
-- `catalog.description` — human-readable description
-- `catalog.services` — comma-separated list of service names
-- `catalog.routes.<service>` — path to Camel routes file
-- `catalog.rules.<service>` — path to Wanaku rules file (optional). Superseded by Camel's built-in
-  MCP support: as of 0.3.0 it is no longer required nor validated
-- `catalog.dependencies.<service>` — path to dependencies file (optional)
+All paths are relative to the catalog root.
 
-### Camel Routes Files
+### Routes files
 
-Each service has a Camel routes file (`*.camel.yaml`) containing integration routes. Example:
+Each system has a Camel YAML DSL routes file (`*.camel.yaml`). A route that starts from an `ai-tool:` endpoint becomes an MCP tool:
 
 ```yaml
 - route:
-    id: get-employee-information
-    description: Retrieve employee basic information
+    id: get-employee-by-id
     from:
-      uri: direct:employee-information
+      uri: ai-tool:get-employee-by-id
+      parameters:
+        tags: wanaku
+        description: "Get the profile of an employee"
+        parameter.employeeId: string
+        parameter.employeeId.description: "The ID of the employee"
       steps:
-        - setHeader:
-            name: CamelHttpMethod
-            constant: GET
-        - to:
-            uri: "http://employee-service/api/employees"
+        - toD: "http://hr-api:8080/api/employees/${header.employeeId}"
 ```
 
-The route `id` field is critical — it's used by the `expose` command to generate MCP tool definitions.
+- `description` is the tool description that AI agents see.
+- Each `parameter.<name>` entry declares a tool argument and its type. The route receives the argument as the `<name>` header.
+- The Camel Integration Capability exposes only the `ai-tool:` routes that have one of its MCP tags. The default tag is `wanaku`.
 
-### Wanaku Rules Files
+### Dependencies files
 
-Rules files (`*.wanaku-rules.yaml`) define MCP tools that expose routes to AI agents. These are typically auto-generated by the `wanaku service expose` command. Example:
-
-```yaml
-rules:
-  - id: get-employee-information
-    description: Retrieve employee basic information
-    tool:
-      name: get_employee_information
-      type: direct
-      endpoint: direct:employee-information
-```
-
-> [!NOTE]
-> While you can write rules manually, the recommended workflow is to define route IDs in your Camel routes and use `wanaku service expose` to generate the rules automatically.
-
-### Dependencies Files
-
-Dependencies files (`*.dependencies.txt`) list Maven coordinates for libraries required by the routes. One dependency per line:
+A dependencies file (`*.dependencies.txt`) lists the Maven coordinates that the routes need, one for each line:
 
 ```text
 org.apache.camel:camel-http
 org.apache.camel:camel-jackson
+org.apache.activemq:artemis-commons:2.44.0
 ```
 
-> [!NOTE]
-> Apache Camel and Forage dependencies do not require a version — they are resolved automatically.
-> All other dependencies must include the version (e.g., `org.apache.activemq:artemis-commons:2.44.0`).
+Apache Camel and Forage dependencies do not need a version. All other dependencies must include a version.
 
-## CLI Workflow
+### Rules files
 
-The `wanaku service` command provides a complete lifecycle for working with service catalogs.
+Older catalogs contain Wanaku rules files (`*.wanaku-rules.yaml`), which `wanaku service expose` generates. The `ai-tool:` routes replace them. As of 0.3.0, rules files are optional, and Barn does not validate them.
 
-### Step 1: Initialize
+## Service catalogs in the Admin UI
 
-Scaffold a new service catalog:
+When Barn runs as a Wanaku plugin, the Wanaku Admin UI shows a **Service Catalog** page in the **Extensions** menu. The page shows the catalogs that you deployed with the CLI, the REST API, or the Wanaku Operator. On this page, you can:
 
-```shell
-wanaku service init --name=my-service --services=system-a,system-b
-```
+- Search the deployed catalogs.
+- See the systems and routes of each catalog.
+- Remove a catalog.
 
-This creates:
+## Next steps
 
-- A root directory `my-service/` with `index.properties`
-- A subdirectory for each service with skeleton files
-
-### Step 2: Define Routes
-
-Edit the Camel route files (`*.camel.yaml`) in each service directory. Define your integration routes with meaningful route IDs.
-
-Example — `hr-system/employees/employees.camel.yaml`:
-
-```yaml
-- route:
-    id: list-employees
-    description: List all employees
-    from:
-      uri: direct:list-employees
-      steps:
-        - to:
-            uri: "http://hr-api/api/employees"
-
-- route:
-    id: get-employee-by-id
-    description: Get employee by ID
-    from:
-      uri: direct:get-employee-by-id
-      steps:
-        - to:
-            uri: "http://hr-api/api/employees/${header.employeeId}"
-```
-
-### Step 3: Expose Routes
-
-Generate Wanaku rules from your route IDs:
-
-```shell
-wanaku service expose --path=my-service
-```
-
-This scans each service's Camel route file and generates a corresponding rules file that exposes each route as an MCP tool.
-
-You can optionally assign a namespace to all generated rules:
-
-```shell
-wanaku service expose --path=my-service --namespace=production
-```
-
-> [!IMPORTANT]
-> The `expose` command only extracts **route-level IDs** (the `id` field directly under `- route:`). Step-level IDs (on individual processors like `setHeader` or `bean`) are ignored.
-
-### Step 4: Validate
-
-Check the catalog for structural errors before packaging or deploying it:
-
-```shell
-wanaku service validate --path=my-service --host=http://localhost:8080
-```
-
-The command packages the directory and sends it to the validation endpoint, so nothing is deployed.
-It lists every problem found, each one pointing at the file (and property or YAML location) at
-fault, for example:
-
-```text
-index.properties#catalog.description: Required property 'catalog.description' is missing or empty in index.properties
-my-service/my-service.camel.yaml#/0/route: Invalid Camel YAML DSL: required property 'from' not found
-index.properties#catalog.icon: Optional property 'catalog.icon' is not set: a default icon will be used
-Service catalog 'my-service' is invalid: 2 error(s), 1 warning(s)
-```
-
-Errors make the command exit with a non-zero status, which makes it suitable for CI pipelines.
-Warnings are printed but do not fail the validation. Add `--template` to validate a service
-template instead of a catalog.
-
-### Step 5: Package
-
-Create a Base64-encoded ZIP package:
-
-```shell
-wanaku service package --path=my-service
-```
-
-This creates a `<catalog-name>.b64` file in the current directory. You can specify a custom output path:
-
-```shell
-wanaku service package --path=my-service -o /tmp/my-service.b64
-```
-
-The packaged file is useful for deploying via the Kubernetes operator or storing in version control.
-
-### Step 6: Deploy
-
-Deploy the service catalog directly to the Wanaku router:
-
-```shell
-wanaku service deploy --path=my-service --host=http://localhost:8080
-```
-
-This command:
-
-1. Validates the catalog structure and `index.properties`
-2. Packages the entire directory into a ZIP archive
-3. Base64-encodes the ZIP
-4. Uploads it to the router via the REST API
-
-Once deployed, the service catalog appears in the Wanaku admin UI under the **Service Catalog** page.
-
-Use `wanaku service catalog list` to see currently deployed catalogs, and `wanaku service catalog remove` to delete one by name:
-
-```shell
-wanaku service catalog list --host=http://localhost:8080
-
-wanaku service catalog remove --host=http://localhost:8080 --name=my-catalog
-```
-
-### Step 7: Remove a Catalog
-
-Remove a deployed service catalog by name:
-
-```shell
-wanaku service catalog remove --name=my-catalog --host=http://localhost:8080
-```
-
-This sends a `DELETE` request to Barn. Barn hides the catalog from lists and downloads, but keeps the catalog and its versions so that you can restore it. Use `wanaku service catalog list` to see currently deployed catalogs and their names.
-
-To see the removed catalogs and restore one:
-
-```shell
-wanaku service removed
-wanaku service restore --name=my-catalog
-```
-
-See [Removal and Restore](#removal-and-restore).
-
-> [!TIP]
-> Use `wanaku service deploy` for quick iteration during development. Use the operator approach (below) for production deployments on Kubernetes.
-
-### Step 8: Inspect and Restore Earlier Versions
-
-Barn keeps the version history of each catalog.
-Each deploy creates a new version, and you can restore an earlier version at any time.
-
-```shell
-# List the versions, newest first
-wanaku service versions list --name=my-catalog
-
-# Download the package of version 2
-wanaku service versions download --name=my-catalog --version=2 --output=my-catalog-v2.service.zip
-
-# Make the content of version 2 active again
-wanaku service versions restore --name=my-catalog --version=2
-```
-
-Add `--template` to these commands to work with a service template. See [Version History](#version-history).
-
-## Complete End-to-End Example
-
-Here's a complete workflow for creating and deploying an HR service catalog with employee and payroll routes.
-
-### 1. Initialize the Catalog
-
-```shell
-wanaku service init --name=hr-system --services=employees,payroll
-```
-
-This creates:
-
-```text
-hr-system/
-├── index.properties
-├── employees/
-│   ├── employees.camel.yaml
-│   ├── employees.wanaku-rules.yaml
-│   └── employees.dependencies.txt
-└── payroll/
-    ├── payroll.camel.yaml
-    ├── payroll.wanaku-rules.yaml
-    └── payroll.dependencies.txt
-```
-
-### 2. Define Employee Routes
-
-Edit `hr-system/employees/employees.camel.yaml`:
-
-```yaml
-- route:
-    id: list-employees
-    description: List all employees
-    from:
-      uri: direct:list-employees
-      steps:
-        - setHeader:
-            name: CamelHttpMethod
-            constant: GET
-        - to:
-            uri: "http://hr-api:8080/api/employees"
-
-- route:
-    id: get-employee-by-id
-    description: Get employee by ID
-    from:
-      uri: direct:get-employee-by-id
-      steps:
-        - setHeader:
-            name: CamelHttpMethod
-            constant: GET
-        - to:
-            uri: "http://hr-api:8080/api/employees/${header.employeeId}"
-```
-
-### 3. Define Payroll Routes
-
-Edit `hr-system/payroll/payroll.camel.yaml`:
-
-```yaml
-- route:
-    id: calculate-payroll
-    description: Calculate payroll for an employee
-    from:
-      uri: direct:calculate-payroll
-      steps:
-        - setHeader:
-            name: CamelHttpMethod
-            constant: POST
-        - to:
-            uri: "http://payroll-service:8080/api/calculate"
-```
-
-### 4. Generate Rules
-
-```shell
-wanaku service expose --path=hr-system --namespace=hr
-```
-
-This auto-generates `employees.wanaku-rules.yaml` and `payroll.wanaku-rules.yaml` with tool definitions for each route.
-
-### 5. Deploy to Router
-
-```shell
-wanaku service deploy --path=hr-system --host=http://localhost:8080
-```
-
-### 6. Verify in Admin UI
-
-Navigate to `http://localhost:8080` and open the **Service Catalog** page. You should see `hr-system` listed with its services and routes.
-
-## Deploying with the Kubernetes Operator
-
-When running Wanaku on Kubernetes or OpenShift with the Wanaku Operator, you can deploy service catalogs declaratively using the `WanakuServiceCatalog` custom resource.
-
-> [!NOTE]
-> For complete operator documentation, see the [Kubernetes Operator Guide](../operate/operator.md).
-
-Before proceeding, create and package your service catalog using the [CLI workflow](#cli-workflow) above (steps 1 through 4). You should have a `.b64` file ready.
-
-### Step 1: Create a ConfigMap
-
-Store the Base64-encoded ZIP in a Kubernetes ConfigMap under the key `catalog.zip`:
-
-```shell
-kubectl create configmap finance-catalog-data \
-  --from-file=catalog.zip=finance.b64 \
-  -n wanaku
-```
-
-### Step 2: Create the WanakuServiceCatalog Resource
-
-Create a file named `wanaku-service-catalog.yaml`:
-
-```yaml
-apiVersion: "wanaku.ai/v1alpha1"
-kind: WanakuServiceCatalog
-metadata:
-  name: my-service-catalogs
-spec:
-  # Reference to the WanakuRouter CR name
-  routerRef: wanaku-dev
-  # List of catalogs to deploy
-  catalogs:
-    - name: finance-catalog
-      configMapRef: finance-catalog-data
-```
-
-Apply it:
-
-```shell
-kubectl apply -f wanaku-service-catalog.yaml -n wanaku
-```
-
-The operator reads the ConfigMap data and deploys the catalog to the router automatically.
-
-### Step 3: Verify the Deployment
-
-```shell
-kubectl get wanakuservicecatalog -n wanaku
-kubectl describe wanakuservicecatalog my-service-catalogs -n wanaku
-```
-
-The status section shows the list of successfully deployed catalogs and the `Ready` condition.
-
-### Removing Service Catalogs
-
-When you delete the `WanakuServiceCatalog` resource, the operator automatically removes the deployed catalogs from the router:
-
-```shell
-kubectl delete wanakuservicecatalog my-service-catalogs -n wanaku
-```
-
-> [!IMPORTANT]
-> The `routerRef` field must match the name of an existing `WanakuRouter` CR in the same namespace. The operator connects to the router's internal service URL pattern: `http://barn-{routerRef}:8080`
-
-## REST API Reference
-
-Service catalogs can be managed via the Wanaku router's REST API.
-
-### Deploy a Catalog
-
-**Endpoint:** `POST /api/v1/service-catalog/deploy`
-
-**Body:** Base64-encoded ZIP file (raw string, not JSON-wrapped)
-
-**Response:**
-
-```json
-{
-  "data": {
-    "catalogName": "my-service",
-    "servicesCount": 2,
-    "message": "Service catalog deployed successfully"
-  },
-  "error": null
-}
-```
-
-**Example with curl:**
-
-```shell
-# Package the catalog
-wanaku service package --path=my-service -o my-service.b64
-
-# Deploy via REST API
-curl -X POST \
-  -H "Content-Type: text/plain" \
-  --data @my-service.b64 \
-  http://localhost:8080/api/v1/service-catalog/deploy
-```
-
-### List Deployed Catalogs
-
-**Endpoint:** `GET /api/v1/service-catalog`
-
-**Response:**
-
-```json
-{
-  "data": [
-    {
-      "catalogName": "my-service",
-      "description": "Service catalog for my-service",
-      "services": ["system-a", "system-b"],
-      "deployedAt": "2026-05-25T10:30:00Z"
-    }
-  ],
-  "error": null
-}
-```
-
-### Validate a Catalog
-
-Validates a packaged catalog without deploying it. Useful to check a package before shipping it, from
-CI pipelines, external tools or the admin UI. The `wanaku service validate` command is a CLI front end
-for this endpoint.
-
-**Endpoint:** `POST /api/v1/service-catalog/validate`
-
-**Body:** the same payload used to deploy a catalog — a JSON object with the package name and the
-Base64-encoded ZIP:
-
-```json
-{
-  "name": "my-service.zip",
-  "data": "<base64-encoded ZIP>"
-}
-```
-
-**Response:** every problem found is reported at once, each one pointing at the file (and property)
-that is at fault:
-
-```json
-{
-  "data": {
-    "type": "catalog",
-    "name": "my-service",
-    "valid": false,
-    "errors": [
-      {
-        "path": "index.properties#catalog.routes.system-a",
-        "message": "Referenced file 'system-a/system-a.camel.yaml' is not present in the package"
-      },
-      {
-        "path": "system-b/system-b.camel.yaml#/0/route/from",
-        "message": "Invalid Camel YAML DSL: required property 'steps' not found"
-      }
-    ],
-    "warnings": [
-      {
-        "path": "index.properties#catalog.icon",
-        "message": "Optional property 'catalog.icon' is not set: a default icon will be used"
-      }
-    ]
-  },
-  "error": null
-}
-```
-
-**Checks performed:**
-
-- The payload is valid Base64 and a readable ZIP archive
-- The archive contains a parseable `index.properties` manifest
-- `catalog.name`, `catalog.description` and `catalog.services` are declared
-- Every system declares `catalog.routes.<system>`, and the referenced file has a safe relative path
-  and is present in the archive
-- The optional `catalog.dependencies.<system>` and `catalog.properties.<system>` entries, when
-  declared, point to files present in the archive
-- The route file of every system is valid Camel YAML DSL, checked with Camel's own
-  [YAML DSL validator](https://camel.apache.org/manual/camel-yaml-dsl-validator-maven-plugin.html) —
-  the same validation used by the Camel Maven plugin, so both YAML syntax errors and DSL violations
-  (unknown or misplaced elements, missing required properties) are reported
-- `service.properties` files are well-formed property files
-
-> [!NOTE]
-> Rules files are not validated: they are superseded by Camel's built-in MCP support and are no
-> longer required as of 0.3.0.
-
-**Status codes:**
-
-| Status | Meaning |
-|--------|---------|
-| `200`  | The package was validated. Check `data.valid` and `data.errors` for the outcome |
-| `422`  | The request carries no package data to validate |
-
-**Example with curl:**
-
-```shell
-wanaku service package --path=my-service -o my-service.b64
-
-jq -n --arg data "$(cat my-service.b64)" '{name: "my-service.zip", data: $data}' | \
-  curl -X POST -H "Content-Type: application/json" --data @- \
-  http://localhost:8080/api/v1/service-catalog/validate
-```
-
-> [!TIP]
-> Warnings do not make a package invalid: they point at things that are likely mistakes, such as a
-> catalog that declares parameterized properties and should be deployed as a
-> [service template](service-templates.md) instead.
-
-### Version History
-
-Barn identifies a catalog by the `catalog.name` value in `index.properties`.
-The data store name that the deploy request sends (for example, `my-service.service.zip`) is a file name. It does not identify the catalog.
-
-Each deploy stores an immutable version of the package:
-
-- The first deploy creates version 1. Each later deploy of the same catalog name creates the next version.
-- The catalog entry keeps its ID when the content changes. The `wanaku.version` label of the entry contains the active version.
-- A version has one of these statuses: `active` (the current content), `superseded` (an earlier content), or `rejected` (never activated).
-- Barn keeps the newest 50 versions of each catalog. Set `wanaku.catalog.max-versions` to change the limit. Barn never removes the active version.
-- A restore creates a new version with the earlier content. Barn never changes an earlier version.
-- Version numbers continue after a catalog is removed and deployed again.
-- Barn does not keep the content of rejected versions.
-- Catalogs and templates that existed before version history was added get version 1 (origin `legacy`) at startup.
-
-To prevent lost updates, send the active version that you expect in the `expectedVersion` query parameter of the deploy or restore request. If the active version is different, Barn returns HTTP 409 and does not create a version.
-
-The generic data store API (`/api/v1/data-store`) cannot create or update catalog entries. Use the service catalog API, so that each change creates a version.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/service-catalog?expectedVersion={n}` | Deploy a new version. `expectedVersion` is optional. |
-| `GET` | `/api/v1/service-catalog/{name}/versions?from={time}&to={time}` | List the versions, newest first. `from` and `to` are optional ISO 8601 UTC timestamps (inclusive) that filter on `createdAt`. |
-| `GET` | `/api/v1/service-catalog/{name}/versions/{version}` | Get the metadata of one version. |
-| `GET` | `/api/v1/service-catalog/{name}/versions/{version}/download` | Get the package of one version (Base64-encoded ZIP in `data`). |
-| `POST` | `/api/v1/service-catalog/{name}/versions/{version}/activate?expectedVersion={n}` | Restore one version as a new version. |
-
-**Version metadata example:**
-
-```json
-{
-  "data": {
-    "type": "catalog",
-    "name": "my-service",
-    "version": 3,
-    "status": "active",
-    "createdAt": "2026-10-08T10:15:30.123Z",
-    "activatedAt": "2026-10-08T10:15:30.125Z",
-    "checksum": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
-    "origin": "restore",
-    "restoredFrom": 1,
-    "dataStoreName": "my-service.service.zip"
-  },
-  "error": null
-}
-```
-
-The `checksum` field is the SHA-256 digest of the decoded ZIP package.
-The `origin` field is `api`, `startup`, `instantiate`, `restore` or `legacy`.
-The `actor` field is empty, because Barn has no identity source.
-
-### Removal and Restore
-
-A removal does not delete the catalog. These rules apply:
-
-- Barn marks the catalog as removed. The `wanaku.type` label changes to `catalog.removed` and the `wanaku.removed-at` label records the removal time.
-- A removed catalog does not appear in lists. Get, download, deployment instructions and instantiation return HTTP 404.
-- The version history of a removed catalog stays available through the version endpoints.
-- A removed name is reserved. A deploy with the same name returns HTTP 409 until you restore the catalog.
-- A restore makes the catalog visible again with its ID and its active version. A restore does not create a version.
-- A second removal of the same catalog returns HTTP 404.
-- The generic data store API cannot delete catalogs or templates, removed or not.
-- Built-in templates that you remove are not deployed again at startup.
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `DELETE` | `/api/v1/service-catalog/{name}` | Remove a catalog. |
-| `GET` | `/api/v1/service-catalog/removed` | List removed catalogs with `name`, `removedAt`, `version` and `dataStoreName`. |
-| `POST` | `/api/v1/service-catalog/{name}/restore` | Restore a removed catalog. |
-
-#### Purge
-
-Barn can delete removed catalogs and templates permanently after a retention period. Purge is disabled by default.
-
-- Set `wanaku.catalog.purge-after` to a duration (for example, `P30D`) to enable purge.
-- Barn checks for expired items at the interval in `wanaku.catalog.purge-interval` (default `1h`).
-- Barn purges an item when its removal time is equal to or earlier than the current time minus `wanaku.catalog.purge-after`.
-- A purge deletes the item and all its versions. Version numbers are not reused if you deploy the name again.
-- Each purge records an audit event with the operation `service_catalog.purge` or `service_template.purge`.
-
-### Remove a Catalog
-
-**Endpoint:** `DELETE /api/v1/service-catalog/{name}`
-
-**Response:**
-
-```json
-{
-  "data": {
-    "catalogName": "my-service",
-    "message": "Service catalog removed successfully"
-  },
-  "error": null
-}
-```
-
-> [!NOTE]
-> All responses use the `WanakuResponse<T>` wrapper format: `{"data": ..., "error": ...}`
-
-## Admin UI
-
-Deployed service catalogs are visible in the Wanaku admin UI under the **Service Catalog** page at `http://<router-host>:8080`.
-
-The Service Catalog page provides:
-
-- A searchable list of all deployed catalogs
-- Details for each catalog (name, description, services, routes)
-- Ability to remove catalogs via the UI
-- Links to view individual routes and their MCP tool definitions
-
-> [!TIP]
-> The admin UI also shows service catalogs deployed via the Kubernetes operator, providing a unified view of all deployed integrations regardless of deployment method.
-
-## See Also
-
-- [Service Templates Guide](service-templates.md) — Parameterized service catalog blueprints
-- [Use the Wanaku CLI](../cli/index.md) — General Wanaku CLI usage
-- [Configurations Guide](../reference/configuration.md) — Tool and MCP server configurations
+- [Build and deploy a service catalog](build-a-service-catalog.md): create a catalog with the CLI and serve it to Wanaku.
+- [Service catalog API](../reference/service-catalog-api.md): the REST endpoints, the validation checks, and the version rules.
+- [Service templates](service-templates.md): create parameterized catalogs.
+- [Camel Integration Capability usage](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/usage.md): the options of the capability that serves a catalog.
