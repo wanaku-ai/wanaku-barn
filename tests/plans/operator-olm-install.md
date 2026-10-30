@@ -5,7 +5,7 @@
 This test plan verifies that the OLM bundle of the Wanaku Operator is valid and installs through the Operator
 Lifecycle Manager on a local cluster (minikube or OpenShift Local/CRC). It covers bundle generation, static
 validation, installation with `operator-sdk run bundle`, the scorecard, a `WanakuRouter` smoke test, and cleanup.
-See [docs/operator-olm.md](../../docs/operator-olm.md) for the background.
+See [docs/operate/operator-olm.md](../../docs/operate/operator-olm.md) for the background.
 
 Every step is fully automatable.
 

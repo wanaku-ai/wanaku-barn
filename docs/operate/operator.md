@@ -17,7 +17,7 @@ The Wanaku Operator manages the following custom resource definitions (CRDs):
 > The `WanakuCapability`, `WanakuCamelRoute` and `WanakuCamelCodeExecutionEngine` CRDs were
 > removed. Capability services (such as the Camel Integration Capability) are now deployed as
 > regular `Deployment` resources and registered with the router using `wanaku forwards add`
-> (see [usage.md](usage.md#forwarding-other-mcp-servers-via-the-mcp-forwarder)).
+> (see [usage.md](../cli/usage.md#forwarding-other-mcp-servers-via-the-mcp-forwarder)).
 
 When you create these custom resources, the operator automatically provisions:
 
@@ -82,7 +82,7 @@ Before installing the operator, ensure you have:
 - `kubectl` or `oc` CLI installed and configured
 - `helm` CLI (version 3.x or later)
 - Cluster admin or namespace admin permissions
-- **Keycloak instance** (for authentication) — see [Keycloak Setup](usage.md#keycloak-setup-for-wanaku)
+- **Keycloak instance** (for authentication) — see [Keycloak Setup](../cli/usage.md#keycloak-setup-for-wanaku)
 
 ## Installation
 
@@ -548,7 +548,7 @@ Then register the running service with the router as a forward:
 wanaku forwards add --service="http://camel-integration-capability:9090/mcp" --name cic
 ```
 
-See [usage.md](usage.md#forwarding-other-mcp-servers-via-the-mcp-forwarder) for the forward
+See [usage.md](../cli/usage.md#forwarding-other-mcp-servers-via-the-mcp-forwarder) for the forward
 workflow and [camel-integration-capability](https://github.com/wanaku-ai/camel-integration-capability/)
 for the service itself.
 
@@ -702,7 +702,7 @@ kubectl delete crd wanakurouters.wanaku.ai wanakuservicecatalogs.wanaku.ai
 
 ## References
 
-- [Usage guide](usage.md) — CLI installation, authentication and forwards
-- [Service catalogs guide](service-catalogs.md) — authoring and packaging catalogs
+- [Usage guide](../cli/usage.md) — CLI installation, authentication and forwards
+- [Service catalogs guide](../manage/service-catalogs.md) — authoring and packaging catalogs
 - [Samples](https://github.com/wanaku-ai/wanaku-barn/tree/main/apps/wanaku-operator/samples) —
   sample `WanakuRouter` and `WanakuServiceCatalog` manifests

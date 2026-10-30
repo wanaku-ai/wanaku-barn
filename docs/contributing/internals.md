@@ -6,7 +6,7 @@ The MCP routing engine is [Wanaku](https://github.com/wanaku-ai/wanaku), a Rust-
 
 ## Related Documentation
 
-- [Persistence](internals-persistence.md)
-- [Architecture Overview](architecture.md)
-- [Configuration Guide](configurations.md)
-- [Service Catalogs](service-catalogs.md)
+- [Persistence](persistence-internals.md)
+- [Architecture Overview](../get-started/architecture.md)
+- [Configuration Guide](../reference/configuration.md)
+- [Service Catalogs](../manage/service-catalogs.md)

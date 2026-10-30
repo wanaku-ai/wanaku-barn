@@ -10,7 +10,7 @@ filtering capabilities exposed to Large Language Models (LLMs).
 
 The Wanaku MCP Router itself does not directly host tools or resources; instead, it acts as an integration service that connects AI agents with external resources and tools, including enterprise systems and cloud services. It manages and governs access between agent types and specific resources, proxying and filtering available capabilities to agents and their LLM
 
-![Diagram showing Wanaku's layered architecture with LLM client connecting to router backend, which communicates with tool services and resource providers](imgs/wanaku-architecture.jpg)
+![Diagram showing Wanaku's layered architecture with LLM client connecting to router backend, which communicates with tool services and resource providers](../imgs/wanaku-architecture.jpg)
 
 Wanaku connects to downstream MCP servers that provide specific functionalities to the Wanaku MCP Router.
 
@@ -176,7 +176,7 @@ Finally, for security, you must regenerate the client secret for the `wanaku-ser
 5. Go to the **Credentials** tab.
 6. Click the **Regenerate secret** button and confirm. Copy the new secret to use in your application's configuration.
 
-![Screenshot of Keycloak admin console showing the wanaku-service client credentials tab with the Regenerate secret button](imgs/keycloak-service.png)
+![Screenshot of Keycloak admin console showing the wanaku-service client credentials tab with the Regenerate secret button](../imgs/keycloak-service.png)
 
 ## Running Without Authentication
 
@@ -340,7 +340,7 @@ The Wanaku Operator simplifies the deployment and management of Wanaku instances
 It automates the creation and configuration of all necessary resources, making it the recommended approach for production deployments.
 
 > [!NOTE]
-> For comprehensive operator documentation including CRD field reference, deployment patterns, lifecycle management, Helm configuration, and troubleshooting, see the **[Kubernetes Operator Guide](operator.md)**.
+> For comprehensive operator documentation including CRD field reference, deployment patterns, lifecycle management, Helm configuration, and troubleshooting, see the **[Kubernetes Operator Guide](../operate/operator.md)**.
 
 #### Quick Start
 
@@ -400,7 +400,7 @@ without the operator. You can use the Helm chart directly:
    ```
 
 2. Create and apply a `WanakuRouter` custom resource for your environment (see the
-   [Operator Guide](operator.md) for the spec reference and examples)
+   [Operator Guide](../operate/operator.md) for the spec reference and examples)
 
 ### Configuring the Wanaku MCP Router
 
@@ -423,7 +423,7 @@ java -jar wanaku-barn-backend-runner.jar
 ```
 
 For the full list of available properties and more details on configuration precedence, see the
-[Configuration Guide](configurations.md).
+[Configuration Guide](../reference/configuration.md).
 
 ### Accessing the Administration Web User Interface
 
@@ -545,7 +545,7 @@ with a valid authentication token.
 ## Configuring Wanaku Components for Secure Access
 
 Each Wanaku component requires a specific set of configurations for secure access. You can find the full set of
-configuration options in the [Configuration Guide](configurations.md).
+configuration options in the [Configuration Guide](../reference/configuration.md).
 
 The configuration varies depending on the component's role in the system.
 
@@ -604,7 +604,7 @@ export WANAKU_SECRETS_ENCRYPTION_SALT="unique-salt-value"
 > [!WARNING]
 > If the encryption password or salt is lost, encrypted secrets cannot be recovered. Ensure these values are backed up securely.
 
-For more details, see the [Configuration Guide](configurations.md#secret-encryption).
+For more details, see the [Configuration Guide](../reference/configuration.md#secret-encryption).
 
 # Using the Wanaku MCP Router
 
@@ -1038,7 +1038,7 @@ want to have system-specific ones (i.e.: a billing service, an employee system s
 The recommended way to create those downstream MCP servers is to use the [Camel Integration Capability for Wanaku](https://wanaku.ai/docs/camel-integration-capability/). This is a
 subcomponent of Wanaku that leverages Apache Camel to exchange data with any system that Camel is capable of talking to.
 
-![Diagram showing available Wanaku downstream MCP server types including tool services, resource providers, and MCP server bridges](imgs/wanaku-capabilities.jpg)
+![Diagram showing available Wanaku downstream MCP server types including tool services, resource providers, and MCP server bridges](../imgs/wanaku-capabilities.jpg)
 
 > [!NOTE]
 > Downstream MCP servers were, at some point, also called "capabilities", "downstream services", or "targets". You may still see
@@ -1371,7 +1371,7 @@ wanaku data-store remove --name employee-routes
 
 Service catalogs provide a way to package, distribute, and deploy complete integration services to the Wanaku router. A service catalog bundles Camel routes, Wanaku rules, and optional dependencies into a single ZIP package that can be deployed as a unit. This is especially useful for teams that want to share pre-built integrations or automate the deployment of complex multi-route services.
 
-For comprehensive documentation on service catalogs — including structure, CLI workflow, Kubernetes deployment, and REST API reference — see the [Service Catalogs Guide](service-catalogs.md).
+For comprehensive documentation on service catalogs — including structure, CLI workflow, Kubernetes deployment, and REST API reference — see the [Service Catalogs Guide](../manage/service-catalogs.md).
 
 ### Quick Start
 
@@ -1390,10 +1390,10 @@ wanaku service expose --path=hr-system
 wanaku service deploy --path=hr-system --host=http://localhost:8080
 ```
 
-See [Service Catalogs Guide](service-catalogs.md) for details on structure, packaging, operator deployment, and REST API usage.
+See [Service Catalogs Guide](../manage/service-catalogs.md) for details on structure, packaging, operator deployment, and REST API usage.
 
 > [!TIP]
-> If you need parameterized, reusable service catalogs, see [Service Templates](service-templates.md) for details on creating and instantiating templates.
+> If you need parameterized, reusable service catalogs, see [Service Templates](../manage/service-templates.md) for details on creating and instantiating templates.
 
 ## Configuring Downstream MCP Servers
 
@@ -1426,7 +1426,7 @@ These configurations are handled when adding a new tool to Wanaku MCP Router.
 
 ## Running Integrations in the Cloud
 
-To run a Camel route file with MCP tools in a cluster that runs the Wanaku operator, use `wanaku cloud run integration`. To run a semantic route, use `wanaku cloud run semantic`. Both register with the router automatically. See [Running Integrations in the Cloud](cloud-run.md).
+To run a Camel route file with MCP tools in a cluster that runs the Wanaku operator, use `wanaku cloud run integration`. To run a semantic route, use `wanaku cloud run semantic`. Both register with the router automatically. See [Running Integrations in the Cloud](../manage/cloud-run.md).
 
 ## Accessing Other MCP servers (MCP Forwards)
 
@@ -2136,7 +2136,7 @@ Cursor stores its global MCP config in `~/.cursor/mcp.json` and the command will
 Wanaku works with [HyperChat](https://github.com/BigSweetPotatoStudio/HyperChat). To do so,
 you can configure Wanaku as an MCP server using the MCP configuration as shown below:
 
-![Screenshot of HyperChat configuration panel showing MCP server connection settings with Wanaku router URL](imgs/hyperchat-configuration.png)
+![Screenshot of HyperChat configuration panel showing MCP server connection settings with Wanaku router URL](../imgs/hyperchat-configuration.png)
 
 > [!IMPORTANT]
 > Make sure to have Wanaku up and running before configuring HyperChat. You may also need to
@@ -2195,7 +2195,7 @@ By using these CLI commands, you can manage resources and tools for your Wanaku 
 ## Troubleshooting
 
 > [!TIP]
-> If you are setting up Wanaku for the first time, see the [First-Run Troubleshooting Guide](troubleshooting.md) for the most common setup issues (authentication, MCP connections, Docker Compose, SDK, and deployment).
+> If you are setting up Wanaku for the first time, see the [First-Run Troubleshooting Guide](../operate/first-run.md) for the most common setup issues (authentication, MCP connections, Docker Compose, SDK, and deployment).
 
 This section provides solutions to common issues you may encounter while using Wanaku.
 

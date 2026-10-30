@@ -246,7 +246,7 @@ The exact configuration depends on your Keycloak deployment method. Check the [K
 ### Barn Audit Trail
 
 Barn records every change to data stores, service catalogs, service templates, Kamelets and semantic routers in a durable audit trail.
-Read the events at `GET /api/v1/audit/events`. See [Barn Audit Trail](audit-trail.md).
+Read the events at `GET /api/v1/audit/events`. See [Barn Audit Trail](../manage/audit-trail.md).
 
 Barn also writes operational log lines. These log lines are not an audit trail. Configure the log level in `application.properties`:
 

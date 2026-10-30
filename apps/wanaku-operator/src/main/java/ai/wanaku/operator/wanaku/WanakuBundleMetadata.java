@@ -43,7 +43,7 @@ import io.quarkiverse.operatorsdk.annotations.SharedCSVMetadata;
 
                 ## Documentation
 
-                - [Operator guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/operator.md)
+                - [Operator guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/operate/operator.md)
                 - [Wanaku documentation](https://wanaku.ai/docs)
                 """,
         annotations =

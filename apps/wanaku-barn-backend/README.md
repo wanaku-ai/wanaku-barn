@@ -52,7 +52,7 @@ podman run -p 8080:8080 quay.io/wanaku/wanaku-barn-backend:latest
 
 ## Configuration
 
-Key configuration properties (see [Configuration Guide](../../docs/configurations.md) for complete reference):
+Key configuration properties (see [Configuration Guide](../../docs/reference/configuration.md) for complete reference):
 
 ```properties
 # HTTP
@@ -71,7 +71,7 @@ wanaku.persistence.infinispan.base-folder=${wanaku.home}/barn/
 
 ## Related Documentation
 
-- [Usage Guide](../../docs/usage.md)
-- [Architecture](../../docs/architecture.md)
-- [Router Internals](../../docs/wanaku-router-internals.md)
-- [Configuration Reference](../../docs/configurations.md)
+- [Usage Guide](../../docs/cli/usage.md)
+- [Architecture](../../docs/get-started/architecture.md)
+- [Router Internals](../../docs/contributing/internals.md)
+- [Configuration Reference](../../docs/reference/configuration.md)

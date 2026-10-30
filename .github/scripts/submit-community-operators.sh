@@ -86,7 +86,7 @@ cat > "${BODY}" <<EOF
 ## Wanaku Operator ${VERSION}
 
 Adds the \`${PACKAGE}\` ${VERSION} bundle, generated from https://github.com/wanaku-ai/wanaku-barn
-(\`apps/wanaku-operator\`, see \`docs/operator-olm.md\`).
+(\`apps/wanaku-operator\`, see \`docs/operate/operator-olm.md\`).
 
 ### Checklist
 

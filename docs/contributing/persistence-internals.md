@@ -623,4 +623,4 @@ When adding a new entity type:
 
 6. **Proto3 Serialization**: Efficient binary format with forward/backward compatibility. Field numbers must not change once deployed. Register each schema initializer in `META-INF/services/org.infinispan.protostream.SerializationContextInitializer`. `FileStoreRestartTest` loads the schemas only from this file and checks that the data survives a restart.
 
-7. **Schema Version**: `SchemaMigrations` stores a schema version and runs ordered, idempotent migration steps at startup. Add a step and increment `SchemaMigrations.CURRENT_VERSION` when existing data needs a change. See [Backup, Restore and Upgrade](backup-and-upgrade.md).
+7. **Schema Version**: `SchemaMigrations` stores a schema version and runs ordered, idempotent migration steps at startup. Add a step and increment `SchemaMigrations.CURRENT_VERSION` when existing data needs a change. See [Backup, Restore and Upgrade](../operate/backup-and-upgrade.md).

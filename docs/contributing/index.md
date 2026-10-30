@@ -45,7 +45,7 @@ Ideally, most of the MCP tools and MCP resource providers should be created usin
 
 #### Using a Static Client
 
-![Screenshot of OAuth configuration inspector showing client credentials and authentication settings](imgs/oauth-config-inspector.png)
+![Screenshot of OAuth configuration inspector showing client credentials and authentication settings](../imgs/oauth-config-inspector.png)
 
 #### Using Dynamic Client Registration
 
@@ -187,6 +187,18 @@ Committers should check the [Release Guide](release-guide.md) for details about 
 
 ## Learn More
 
-To contribute new core features and connectors, also read the [Wanaku MCP Router Internals](wanaku-router-internals.md) guide.
+To contribute new core features and connectors, also read the [Wanaku MCP Router Internals](internals.md) guide.
 
-If you want to understand what each of the components do, then read the [Wanaku Components and Architecture](architecture.md) guide.
+If you want to understand what each of the components do, then read the [Wanaku Components and Architecture](../get-started/architecture.md) guide.
+
+## Pages in this section
+
+- [Building](building.md): build and package the project from source.
+- [Testing](testing.md): the Wanaku assertions library for tests.
+- [Testing MCP servers](testing-mcp-servers.md): test MCP servers locally and in integration tests.
+- [Performance tests](performance-tests.md): the k6 load test scripts.
+- [Test plans](test-plans.md): where the test plans for humans and AI agents live.
+- [Release guide](release-guide.md): how to cut a release.
+- [Release checklist](release-checklist.md): the multi-repository release steps.
+- [Internals](internals.md): what the Barn backend provides and how Wanaku uses it.
+- [Persistence internals](persistence-internals.md): the persistence layer of the Barn backend.

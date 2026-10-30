@@ -1,0 +1,70 @@
+{
+  "sidebar": [
+    {
+      "text": "Get started",
+      "link": "get-started/",
+      "items": [
+        { "text": "Architecture", "link": "get-started/architecture" }
+      ]
+    },
+    {
+      "text": "Use the CLI",
+      "link": "cli/",
+      "items": [
+        { "text": "Usage guide", "link": "cli/usage" },
+        { "text": "Agent skills", "link": "cli/agent-skills" }
+      ]
+    },
+    {
+      "text": "Deploy and operate",
+      "link": "operate/",
+      "items": [
+        { "text": "Kubernetes Operator", "link": "operate/operator" },
+        { "text": "Operator on OperatorHub", "link": "operate/operator-olm" },
+        { "text": "Backup, restore and upgrade", "link": "operate/backup-and-upgrade" },
+        { "text": "Observability", "link": "operate/observability" },
+        { "text": "Secure a deployment", "link": "operate/secure-a-deployment" },
+        { "text": "FAQ", "link": "operate/troubleshooting" },
+        { "text": "First-run troubleshooting", "link": "operate/first-run" }
+      ]
+    },
+    {
+      "text": "Manage integrations and data",
+      "link": "manage/",
+      "items": [
+        { "text": "Service catalogs", "link": "manage/service-catalogs" },
+        { "text": "Service templates", "link": "manage/service-templates" },
+        { "text": "Kamelet catalog", "link": "manage/kamelets" },
+        { "text": "Run integrations in the cloud", "link": "manage/cloud-run" },
+        { "text": "Data stores", "link": "manage/data-stores" },
+        { "text": "Create a semantic router", "link": "manage/semantic-routing-wizard" },
+        { "text": "Semantic router contract", "link": "manage/semantic-router-contract" },
+        { "text": "Audit trail", "link": "manage/audit-trail" },
+        { "text": "Deployment debugger", "link": "manage/deployment-debugger" }
+      ]
+    },
+    {
+      "text": "Reference",
+      "link": "reference/",
+      "items": [
+        { "text": "Configuration", "link": "reference/configuration" }
+      ]
+    },
+    {
+      "text": "Contribute",
+      "link": "contributing/",
+      "collapsed": true,
+      "items": [
+        { "text": "Building", "link": "contributing/building" },
+        { "text": "Testing", "link": "contributing/testing" },
+        { "text": "Testing MCP servers", "link": "contributing/testing-mcp-servers" },
+        { "text": "Performance tests", "link": "contributing/performance-tests" },
+        { "text": "Test plans", "link": "contributing/test-plans" },
+        { "text": "Release guide", "link": "contributing/release-guide" },
+        { "text": "Release checklist", "link": "contributing/release-checklist" },
+        { "text": "Internals", "link": "contributing/internals" },
+        { "text": "Persistence internals", "link": "contributing/persistence-internals" }
+      ]
+    }
+  ]
+}

@@ -2,7 +2,7 @@ name: release-olm-bundle
 
 # Publishes the OLM bundle of a released Wanaku Operator and opens the pull requests that list it on
 # OperatorHub.io and in the OpenShift community catalog. Run it after release-artifacts, once
-# quay.io/wanaku/wanaku-operator:<version> exists. See docs/operator-olm.md.
+# quay.io/wanaku/wanaku-operator:<version> exists. See docs/operate/operator-olm.md.
 
 on:
   workflow_dispatch:

@@ -1,7 +1,7 @@
 name: OLM Bundle
 
 # Builds the OLM bundle of the Wanaku Operator and validates it with the same checks that the
-# community-operators pipelines run. See docs/operator-olm.md.
+# community-operators pipelines run. See docs/operate/operator-olm.md.
 
 on:
   pull_request:

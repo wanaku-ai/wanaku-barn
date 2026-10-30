@@ -168,7 +168,7 @@ This workflow will:
 
 ### Publish the OLM Bundle
 
-Run after the operator image is published (see [operator-olm.md](operator-olm.md)):
+Run after the operator image is published (see [operator-olm.md](../operate/operator-olm.md)):
 
 ```shell
 gh workflow run release-olm-bundle \

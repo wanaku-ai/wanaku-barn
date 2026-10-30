@@ -123,4 +123,4 @@ validation result, and documentation follow-up.
   `status.streamableEndpoint` use the MCP Route hostname. The default deployment does not need
   `routes/custom-host`.
 - Validation: unit and mock-API-server tests. Cluster validation is pending.
-- Documentation follow-up: conditions table and troubleshooting steps in `docs/operator.md`.
+- Documentation follow-up: conditions table and troubleshooting steps in `docs/operate/operator.md`.

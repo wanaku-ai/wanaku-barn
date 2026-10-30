@@ -406,7 +406,7 @@ Navigate to `http://localhost:8080` and open the **Service Catalog** page. You s
 When running Wanaku on Kubernetes or OpenShift with the Wanaku Operator, you can deploy service catalogs declaratively using the `WanakuServiceCatalog` custom resource.
 
 > [!NOTE]
-> For complete operator documentation, see the [Kubernetes Operator Guide](operator.md).
+> For complete operator documentation, see the [Kubernetes Operator Guide](../operate/operator.md).
 
 Before proceeding, create and package your service catalog using the [CLI workflow](#cli-workflow) above (steps 1 through 4). You should have a `.b64` file ready.
 
@@ -728,5 +728,5 @@ The Service Catalog page provides:
 ## See Also
 
 - [Service Templates Guide](service-templates.md) — Parameterized service catalog blueprints
-- [Usage Guide](usage.md) — General Wanaku CLI and operator usage
-- [Configurations Guide](configurations.md) — Tool and MCP server configurations
+- [Usage Guide](../cli/usage.md) — General Wanaku CLI and operator usage
+- [Configurations Guide](../reference/configuration.md) — Tool and MCP server configurations

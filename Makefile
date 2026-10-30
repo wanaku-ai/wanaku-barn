@@ -74,7 +74,7 @@ load-test: test-resources test-tools
 early-builds:
 	gh workflow run early-access --ref $$(git rev-parse --abbrev-ref HEAD) -f currentDevelopmentVersion=$$(cat core/core-util/target/classes/version.txt)
 
-# OLM bundle targets (see docs/operator-olm.md): olm-bundle, olm-validate, olm-bundle-image,
+# OLM bundle targets (see docs/operate/operator-olm.md): olm-bundle, olm-validate, olm-bundle-image,
 # olm-minikube-up, olm-minikube-smoke, olm-minikube-down, olm-crc-up, olm-crc-smoke, olm-crc-down
 olm-%:
 	$(MAKE) -C apps/wanaku-operator/olm $*

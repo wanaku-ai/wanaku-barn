@@ -67,7 +67,7 @@ Keycloak is required only if you want to run Wanaku with authentication enabled.
 - Use an existing Keycloak instance
 
 The Barn backend itself does not require Keycloak: authentication is handled by the Governed Execution Proxy (GEP),
-so you can skip the Keycloak setup for local development or testing. See [Running Without Authentication](usage.md#running-without-authentication).
+so you can skip the Keycloak setup for local development or testing. See [Running Without Authentication](../cli/usage.md#running-without-authentication).
 
 ### Can I run Wanaku without Kubernetes?
 
@@ -81,7 +81,7 @@ Kubernetes/OpenShift deployment is recommended for production but not required.
 
 ### How do I install the Wanaku CLI?
 
-See the [Installing the CLI](usage.md#installing-the-command-line-interface-cli) section in the usage guide for all installation methods and PATH configuration.
+See the [Installing the CLI](../cli/usage.md#installing-the-command-line-interface-cli) section in the usage guide for all installation methods and PATH configuration.
 
 ## Usage and Configuration
 
@@ -89,7 +89,7 @@ See the [Installing the CLI](usage.md#installing-the-command-line-interface-cli)
 
 Tools and resources are managed through MCP servers added to the router. Register an MCP server with the router and its tools and resources become available automatically.
 
-See the [Usage Guide](usage.md#managing-mcp-tools) for detailed instructions.
+See the [Usage Guide](../cli/usage.md#managing-mcp-tools) for detailed instructions.
 
 ### What are namespaces and when should I use them?
 
@@ -125,11 +125,11 @@ http://localhost:8080/ns-1/mcp/sse
 > The `wanaku mcp` CLI commands only support Streamable HTTP, so pass the `/mcp/` endpoint to `--uri`
 > (for example, `http://localhost:8080/ns-1/mcp/`).
 
-See [Supported/Tested Clients](usage.md#supportedtested-clients) for client-specific configuration.
+See [Supported/Tested Clients](../cli/usage.md#supportedtested-clients) for client-specific configuration.
 
 ### Can I use Wanaku with Claude Desktop?
 
-Yes, Wanaku works with Claude Desktop and other MCP-compatible clients. See the [Usage Guide](usage.md#claude) for configuration examples.
+Yes, Wanaku works with Claude Desktop and other MCP-compatible clients. See the [Usage Guide](../cli/usage.md#claude) for configuration examples.
 
 ## Security
 
@@ -188,7 +188,7 @@ When using the Wanaku CLI, set the `--verbose` parameter to show additional logg
 
 ### Where can I get help?
 
-- Check the [Troubleshooting Guide](usage.md#troubleshooting)
+- Check the [Troubleshooting Guide](../cli/usage.md#troubleshooting)
 - Search [GitHub Issues](https://github.com/wanaku-ai/wanaku/issues)
 - Ask in [GitHub Discussions](https://github.com/wanaku-ai/wanaku/discussions)
 - Review the full [documentation](https://github.com/wanaku-ai/wanaku/tree/main/docs)

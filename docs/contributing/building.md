@@ -60,7 +60,7 @@ make cli-native
 make install
 ```
 
-See [PATH Configuration](usage.md#path-configuration) if `$HOME/bin` is not on your default `PATH`.
+See [PATH Configuration](../cli/usage.md#path-configuration) if `$HOME/bin` is not on your default `PATH`.
 
 ## Building with the containers
 

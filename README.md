@@ -47,13 +47,13 @@ the [Java SDK](https://github.com/wanaku-ai/wanaku-capabilities-java-sdk/), etc.
 
 Contributors working on the project may want to refer to the [development version of the documentation](/docs) including
 
-- [Pre-release Usage Guide](docs/usage.md) - Pre-release usage guide
-- [Architecture](docs/architecture.md) - System architecture and components
-- [Building](docs/building.md) - Build and package the project
-- [Deployment Debugger](docs/deployment-debugger.md) - Inspect deployed MCP servers from Wanaku
-- [Audit Trail](docs/audit-trail.md) - Durable record of changes to Barn-managed resources
-- [Backup, Restore and Upgrade](docs/backup-and-upgrade.md) - Export, import and schema migrations
-- [Agent Skills](docs/agent-skills.md) - Skills that teach coding agents how to use Wanaku
+- [Pre-release Usage Guide](docs/cli/usage.md) - Pre-release usage guide
+- [Architecture](docs/get-started/architecture.md) - System architecture and components
+- [Building](docs/contributing/building.md) - Build and package the project
+- [Deployment Debugger](docs/manage/deployment-debugger.md) - Inspect deployed MCP servers from Wanaku
+- [Audit Trail](docs/manage/audit-trail.md) - Durable record of changes to Barn-managed resources
+- [Backup, Restore and Upgrade](docs/operate/backup-and-upgrade.md) - Export, import and schema migrations
+- [Agent Skills](docs/cli/agent-skills.md) - Skills that teach coding agents how to use Wanaku
 - [Test Plans](https://github.com/wanaku-ai/wanaku-tests) - Test plans for humans and AI agents
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 - [Security](SECURITY.md) - Security policy and best practices

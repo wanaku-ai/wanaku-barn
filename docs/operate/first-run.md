@@ -2,7 +2,7 @@
 
 This guide covers the most common problems new users encounter when setting up and running Wanaku for the first time. Issues are grouped by category and ranked by how likely you are to hit them.
 
-For operational troubleshooting (authentication errors, tool invocation failures, performance tuning), see the [Troubleshooting section in the Usage Guide](usage.md#troubleshooting).
+For operational troubleshooting (authentication errors, tool invocation failures, performance tuning), see the [Troubleshooting section in the Usage Guide](../cli/usage.md#troubleshooting).
 
 ## Authentication and Keycloak
 
@@ -377,7 +377,7 @@ Currently, Wanaku supports single-instance deployments only. Running multiple re
 
 If your issue is not covered here:
 
-1. Check the [operational troubleshooting section](usage.md#troubleshooting) in the Usage Guide
-2. Review the [FAQ](faq.md) for common questions
+1. Check the [operational troubleshooting section](../cli/usage.md#troubleshooting) in the Usage Guide
+2. Review the [FAQ](troubleshooting.md) for common questions
 3. Search [GitHub Issues](https://github.com/wanaku-ai/wanaku/issues) for similar problems
 4. Open a new issue with your Wanaku version, deployment environment, steps to reproduce, and relevant log excerpts

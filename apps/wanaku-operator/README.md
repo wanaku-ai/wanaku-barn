@@ -13,7 +13,7 @@ Capability services (such as the Camel Integration Capability) are deployed as r
 Sample manifests are available under `samples/`.
 
 The operator is also packaged as an OLM bundle for OperatorHub.io and the OpenShift catalog. The bundle metadata,
-scripts and local test targets are described in [docs/operator-olm.md](../../docs/operator-olm.md); the scripts live
+scripts and local test targets are described in [docs/operate/operator-olm.md](../../docs/operate/operator-olm.md); the scripts live
 in `olm/`.
 
 ## Running the operator

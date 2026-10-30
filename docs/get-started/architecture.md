@@ -13,14 +13,14 @@ The Wanaku MCP Router is a distributed system for managing Model Context Protoco
 
 ### High-Level Architecture
 
-![Diagram showing Wanaku's layered architecture with LLM client connecting to router backend, which communicates with tool services and resource providers](imgs/wanaku-architecture.jpg)
+![Diagram showing Wanaku's layered architecture with LLM client connecting to router backend, which communicates with tool services and resource providers](../imgs/wanaku-architecture.jpg)
 
 Wanaku doesn't directly host tools or resources. Instead, it acts as a central hub that manages and governs how AI agents access specific resources and tools through registered MCP servers.
 
 > [!NOTE]
 > The primary MCP routing engine is now [Wanaku](https://github.com/wanaku-ai/wanaku), a Rust-based router.
 > This repository (wanaku-barn) provides the "Classic Wanaku" Java backend for persistence, service catalogs, the operator, and administration.
-> For detailed information about the backend's internal implementation, see [Wanaku Router Internals](wanaku-router-internals.md).
+> For detailed information about the backend's internal implementation, see [Wanaku Router Internals](../contributing/internals.md).
 
 ## System Components
 
@@ -224,7 +224,7 @@ graph TB
 
 ### Data Persistence
 
-Barn uses embedded Infinispan for data stores, service catalogs and templates, immutable catalog versions, semantic router definitions, and audit events. See [Persistence](internals-persistence.md) and [Barn Audit Trail](audit-trail.md).
+Barn uses embedded Infinispan for data stores, service catalogs and templates, immutable catalog versions, semantic router definitions, and audit events. See [Persistence](../contributing/persistence-internals.md) and [Barn Audit Trail](../manage/audit-trail.md).
 
 ### Extensibility Model
 
@@ -401,8 +401,8 @@ Typical request latency breakdown:
 
 ## Related Documentation
 
-- **[Wanaku Router Internals](wanaku-router-internals.md)** - Deep dive into proxy architecture and implementation
-- **[Configuration Guide](configurations.md)** - Complete configuration reference
+- **[Wanaku Router Internals](../contributing/internals.md)** - Deep dive into proxy architecture and implementation
+- **[Configuration Guide](../reference/configuration.md)** - Complete configuration reference
 - **[Contributing Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/CONTRIBUTING.md)** - How to extend Wanaku with new MCP servers
 - **[Security Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/SECURITY.md)** - Security best practices and policies
-- **[Usage Guide](usage.md)** - Operational guide for using Wanaku
+- **[Usage Guide](../cli/usage.md)** - Operational guide for using Wanaku

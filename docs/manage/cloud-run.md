@@ -7,7 +7,7 @@ The commands work with any cluster that you can reach with `kubectl`. They do no
 
 ## Prerequisites
 
-- The Wanaku operator is installed in the cluster, at a version that serves the `WanakuIntegration` and `WanakuSemanticRouter` resources. See the [Kubernetes Operator Guide](operator.md).
+- The Wanaku operator is installed in the cluster, at a version that serves the `WanakuIntegration` and `WanakuSemanticRouter` resources. See the [Kubernetes Operator Guide](../operate/operator.md).
 - A `WanakuRouter` is ready in the namespace that you use.
 - Your kubeconfig can reach the cluster. Your account can create ConfigMaps, `WanakuIntegration` and `WanakuSemanticRouter` resources in the namespace.
 

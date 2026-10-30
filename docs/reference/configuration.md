@@ -156,7 +156,7 @@ java -Dwanaku.home=/path/to/custom/home -jar quarkus-run.jar
 
 | Directory | Purpose |
 |-----------|---------|
-| `<home>/barn/` | Infinispan data store (SoftIndexFileStore) for data stores, service catalogs and templates, catalog versions, audit events. See [Backup, Restore and Upgrade](backup-and-upgrade.md). |
+| `<home>/barn/` | Infinispan data store (SoftIndexFileStore) for data stores, service catalogs and templates, catalog versions, audit events. See [Backup, Restore and Upgrade](../operate/backup-and-upgrade.md). |
 | `<home>/local/logs/` | Router log file (`wanaku-router.log`) when running with the `local` Quarkus profile |
 | `<home>/credentials` | CLI credential store (0600 permissions) |
 
@@ -198,7 +198,7 @@ java -Dwanaku.home=/tmp/sysprop-home -jar quarkus-run.jar
 
 | Property                   | Description                                                                                       |
 |----------------------------|---------------------------------------------------------------------------------------------------|
-| `wanaku.audit.max-records` | `10000` - The number of audit events to keep. See [Barn Audit Trail](audit-trail.md).            |
+| `wanaku.audit.max-records` | `10000` - The number of audit events to keep. See [Barn Audit Trail](../manage/audit-trail.md).            |
 | `wanaku.audit.stream-id`   | `barn` - The `stream_id` value of the audit events.                                               |
 
 ### Namespaces

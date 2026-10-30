@@ -7,7 +7,7 @@ spec:
 # Valid values: Always, IfNotPresent, Never
 # Default: IfNotPresent
 #  imagePullPolicy: IfNotPresent
-# Exposure configuration for external access (see docs/operator.md#exposure)
+# Exposure configuration for external access (see docs/operate/operator.md#exposure)
 # type: Auto (default: Routes on OpenShift, Ingress elsewhere), Route, Ingress or None
 # Shared host: management on "/" and MCP on "/mcp" (Ingress requires the host)
 #  exposure:

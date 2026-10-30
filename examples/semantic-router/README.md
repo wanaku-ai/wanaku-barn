@@ -38,4 +38,4 @@ Use the dedicated WSR preview service for classification tests. Set Barn's `wana
 
 The reference covers both branches, explicit no-match, provider failure, and malformed output through deterministic native Camel fixtures in WSR. The cross-repository acceptance test publishes through Barn, downloads and verifies the ZIP in WSR, initializes MCP, invokes the tool through Wanaku, and checks policy denial before dispatch.
 
-See [the contract](../../docs/semantic-router-contract.md) and [the wizard guide](../../docs/semantic-routing-wizard.md).
+See [the contract](../../docs/manage/semantic-router-contract.md) and [the wizard guide](../../docs/manage/semantic-routing-wizard.md).
