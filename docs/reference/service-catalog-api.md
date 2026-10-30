@@ -51,6 +51,8 @@ jq -n --arg data "$(cat my-service.b64)" '{name: "my-service.service.zip", data:
 
 The response contains the stored data store entry. Barn identifies the catalog by the `catalog.name` value in `index.properties`, not by the package name.
 
+Barn validates the package before it stores it. The checks are the same as for [Validate a catalog](#validate-a-catalog). If the package has an error, Barn returns HTTP `422` and does not store the package. The error message lists each problem.
+
 ## List catalogs
 
 Example response:

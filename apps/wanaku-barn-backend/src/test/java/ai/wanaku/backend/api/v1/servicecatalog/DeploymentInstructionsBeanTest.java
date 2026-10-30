@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.DeploymentInstructions;
 import ai.wanaku.core.services.api.PlaceholderDefinition;
@@ -118,7 +117,7 @@ class DeploymentInstructionsBeanTest {
 
         // The kubernetes deployment model emitted WanakuCapability manifests, which the
         // operator no longer supports; until a replacement exists it is not offered
-        assertThrows(WanakuException.class, () -> bean.generateInstructions("testcatalog", "kubernetes"));
+        assertThrows(IllegalArgumentException.class, () -> bean.generateInstructions("testcatalog", "kubernetes"));
     }
 
     private String createTestZipBase64(String name, String description, String... systems) {

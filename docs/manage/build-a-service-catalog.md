@@ -101,7 +101,7 @@ index.properties#catalog.icon: Optional property 'catalog.icon' is not set: a de
 Service catalog 'hr-system' is invalid: 2 error(s), 1 warning(s)
 ```
 
-An error makes the command exit with a non-zero status. A warning does not. You can use the command in a CI pipeline. For the full list of checks, see [Validate a catalog](../reference/service-catalog-api.md#validate-a-catalog).
+An error makes the command exit with a non-zero status. A warning does not. Barn also does these checks when you deploy a catalog, and it rejects a catalog that has an error. You can use the command in a CI pipeline. For the full list of checks, see [Validate a catalog](../reference/service-catalog-api.md#validate-a-catalog).
 
 ## Deploy the catalog to Barn
 

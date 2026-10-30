@@ -99,7 +99,7 @@ public class DeploymentInstructionsBean {
                 placeholders = getDockerPlaceholders(catalogType);
                 break;
             default:
-                throw new WanakuException(
+                throw new IllegalArgumentException(
                         "Unsupported deployment model: %s. Use: local, docker".formatted(deploymentModel));
         }
 
