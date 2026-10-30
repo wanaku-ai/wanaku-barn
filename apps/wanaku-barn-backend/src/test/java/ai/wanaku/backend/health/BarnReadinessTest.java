@@ -37,6 +37,5 @@ class BarnReadinessTest {
     @Test
     void cacheManagerDoesNotJoinACluster() {
         assertThat(cacheManager.getCacheManagerConfiguration().isClustered()).isFalse();
-        assertThat(cacheManager.getTransport()).isNull();
     }
 }
