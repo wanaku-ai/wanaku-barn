@@ -142,7 +142,7 @@ Wanaku provides security features including:
 - TLS support for external endpoints
 - Network isolation via Kubernetes
 
-However, you must properly configure these features. See the [Security Guide](../SECURITY.md) for best practices.
+However, you must properly configure these features. See the [Security Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/SECURITY.md) for best practices.
 
 ### How do I secure API keys and secrets used by tools?
 
@@ -266,7 +266,7 @@ Check the [releases page](https://github.com/wanaku-ai/wanaku/releases) for the 
 
 ### How can I contribute to Wanaku?
 
-See the [Contributing Guide](../CONTRIBUTING.md) for information on:
+See the [Contributing Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/CONTRIBUTING.md) for information on:
 
 - Setting up your development environment
 - Submitting pull requests

@@ -15,8 +15,7 @@ This guide covers how to test your Wanaku MCP servers locally before deploying, 
 - **Java 21 or later**
 - **Maven 3.9+** (for running integration tests)
 - **Docker** or **Podman** (for Testcontainers-based tests)
-- Completed [Getting Started with Wanaku](../1.01-your-first-tool/README.md) (demo 1.01)
-- Completed [Introduction to MCP Servers](../2.01-introduction-to-capabilities/README.md) (demo 2.01)
+- Completed demos 1.01 (Getting Started with Wanaku) and 2.01 (Introduction to MCP Servers) from the [Wanaku demos](https://wanaku.ai/docs/demos/)
 
 ## Part 1: Testing Tools Locally Before Deploying
 

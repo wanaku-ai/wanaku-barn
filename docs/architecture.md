@@ -403,6 +403,6 @@ Typical request latency breakdown:
 
 - **[Wanaku Router Internals](wanaku-router-internals.md)** - Deep dive into proxy architecture and implementation
 - **[Configuration Guide](configurations.md)** - Complete configuration reference
-- **[Contributing Guide](../CONTRIBUTING.md)** - How to extend Wanaku with new MCP servers
-- **[Security Guide](../SECURITY.md)** - Security best practices and policies
+- **[Contributing Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/CONTRIBUTING.md)** - How to extend Wanaku with new MCP servers
+- **[Security Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/SECURITY.md)** - Security best practices and policies
 - **[Usage Guide](usage.md)** - Operational guide for using Wanaku

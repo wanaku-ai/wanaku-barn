@@ -1,10 +1,10 @@
-# Wanaku Barn - A Collection of Enterprise Utilities for the Wanaku Governed Execution Proxy
+# Wanaku Barn - A Collection of Enterprise Utilities for Wanaku
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/wanaku-ai/wanaku/main-build.yml?branch=main)](https://github.com/wanaku-ai/wanaku/actions)
-[![Release](https://img.shields.io/github/v/release/wanaku-ai/wanaku)](https://github.com/wanaku-ai/wanaku/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/wanaku-ai/wanaku-barn/main-build.yml?branch=main)](https://github.com/wanaku-ai/wanaku-barn/actions)
+[![Release](https://img.shields.io/github/v/release/wanaku-ai/wanaku-barn)](https://github.com/wanaku-ai/wanaku-barn/releases)
 
-Wanaku Barn is a collection of utilities for the [Wanaku Governed Execution Proxy](https://github.com/wanaku-ai/wanaku) (formerly known as
+Wanaku Barn is a collection of utilities for [Wanaku](https://github.com/wanaku-ai/wanaku) (formerly known as
 Wanaku MCP Router). It provides the project with the OpenShift/Kubernetes operator for simplified deployment on the
 cloud, a CLI that helps manage the project and tools for simplifying the administration of credentials when using
 Keycloak.

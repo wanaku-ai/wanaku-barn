@@ -1618,7 +1618,7 @@ wanaku namespaces list --label-filter 'env=production'
 wanaku namespaces list --label-filter 'env=production & tier=backend'
 ```
 
-See the [Label Expressions Guide](LABEL_EXPRESSIONS.md) for detailed information on the label expression syntax and advanced filtering options.
+See the [Label Expressions Guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-cli/src/main/resources/docs/LABEL_EXPRESSIONS.md) for detailed information on the label expression syntax and advanced filtering options.
 
 ## Managing Evaluators
 

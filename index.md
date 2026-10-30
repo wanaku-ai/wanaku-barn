@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: "Wanaku MCP Router"
+  name: "Wanaku Barn"
   text: "Documentation"
-  tagline: Documentation guides to help you learn and use the Wanaku MCP Router.
+  tagline: Documentation for the Wanaku CLI, the Wanaku Operator, the Keycloak tools, and the Barn backend.
   actions:
     - theme: brand
       text: Read the Usage Guide
@@ -12,10 +12,10 @@ hero:
 
 features:
   - title: Architecture
-    details: Learn about Wanaku system architecture
+    details: Learn how Barn fits with Wanaku
     link: ./docs/architecture
   - title: Configuration Guide
-    details: A list of all configuration parameters for Wanaku
+    details: A list of all configuration parameters for Barn
     link: ./docs/configurations
   - title: Building
     details: Learn how to build and package this project
@@ -24,10 +24,10 @@ features:
     details: Learn how to contribute to Wanaku
     link: ./docs/contributing
   - title: Wanaku Internals
-    details: Learn about the internals of Wanaku
+    details: Learn about the internals of the Barn backend
     link: ./docs/wanaku-router-internals
   - title: Label Expression
     details: Learn how to filter entities using label expressions and logical operators
-    link: ./cli/src/main/resources/docs/LABEL_EXPRESSIONS
+    link: ./apps/wanaku-cli/src/main/resources/docs/LABEL_EXPRESSIONS
 
 ---

@@ -1,6 +1,6 @@
 # Agent Skills
 
-Wanaku ships a set of [agent skills](../apps/wanaku-cli/src/main/resources/skills/) that teach coding agents how to use Wanaku.
+Wanaku ships a set of [agent skills](https://github.com/wanaku-ai/wanaku-barn/tree/main/apps/wanaku-cli/src/main/resources/skills/) that teach coding agents how to use Wanaku.
 Each skill is a self-contained guide written for coding agents, following the common
 `SKILL.md` format: a directory with a `SKILL.md` file whose YAML frontmatter declares the
 skill `name` and a `description` of when to use it.
@@ -9,9 +9,9 @@ skill `name` and a `description` of when to use it.
 
 | Skill | Description |
 |-------|-------------|
-| [`wanaku-mcp-basics`](../apps/wanaku-cli/src/main/resources/skills/wanaku-mcp-basics/SKILL.md) | Connecting agents to Wanaku, discovering tools, resources and prompts, forwarding external MCP servers, data stores and namespaces |
-| [`wanaku-service-catalogs`](../apps/wanaku-cli/src/main/resources/skills/wanaku-service-catalogs/SKILL.md) | Creating, packaging and deploying service catalogs; instantiating service templates |
-| [`wanaku-operator`](../apps/wanaku-cli/src/main/resources/skills/wanaku-operator/SKILL.md) | Installing the operator and running Wanaku on Kubernetes or OpenShift |
+| [`wanaku-mcp-basics`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-cli/src/main/resources/skills/wanaku-mcp-basics/SKILL.md) | Connecting agents to Wanaku, discovering tools, resources and prompts, forwarding external MCP servers, data stores and namespaces |
+| [`wanaku-service-catalogs`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-cli/src/main/resources/skills/wanaku-service-catalogs/SKILL.md) | Creating, packaging and deploying service catalogs; instantiating service templates |
+| [`wanaku-operator`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-cli/src/main/resources/skills/wanaku-operator/SKILL.md) | Installing the operator and running Wanaku on Kubernetes or OpenShift |
 
 ## Using the skills
 

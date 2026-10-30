@@ -183,7 +183,7 @@ The script should print the Keycloak and Wanaku HTTPS URLs at the end:
 
 ## Release Guide
 
-Committers should check the [Release Guide](release-guide) for details about how to build and distribute Wanaku.
+Committers should check the [Release Guide](release-guide.md) for details about how to build and distribute Wanaku.
 
 ## Learn More
 

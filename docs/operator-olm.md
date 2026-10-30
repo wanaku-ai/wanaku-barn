@@ -12,7 +12,7 @@ extension. Nothing in `target/bundle` is committed.
 
 | Content | Source |
 |---------|--------|
-| ClusterServiceVersion (name, description, icon, links, maintainers, install modes, keywords, `alm-examples`) | [`WanakuBundleMetadata`](../apps/wanaku-operator/src/main/java/ai/wanaku/operator/wanaku/WanakuBundleMetadata.java) |
+| ClusterServiceVersion (name, description, icon, links, maintainers, install modes, keywords, `alm-examples`) | [`WanakuBundleMetadata`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-operator/src/main/java/ai/wanaku/operator/wanaku/WanakuBundleMetadata.java) |
 | Display name and description of each CRD | `@CSVMetadata` on each reconciler |
 | Deployment, RBAC | Generated from the Kubernetes and `@RBACRule` configuration, like the Helm chart |
 | Icon | `apps/wanaku-operator/src/main/kubernetes/icon.png` |
@@ -20,15 +20,15 @@ extension. Nothing in `target/bundle` is committed.
 | `createdAt` | `application.properties` via the `olm.createdAt` property (defaults to a placeholder). Pass `CREATED_AT=<yyyy-mm-ddThh:mm:ssZ>` to `make olm-bundle` to override it. The release workflow sets it automatically |
 | `containerImage` | `WanakuBundleMetadata`. `olm/Makefile` overrides it with the versioned operator image |
 | `replaces`, `olm.skipRange` | `REPLACES` and `SKIP_RANGE` make variables, passed to Maven as `quarkus.operator-sdk.bundle.*` properties |
-| `relatedImages`, supported OpenShift versions, scorecard | [`finish-bundle.sh`](../apps/wanaku-operator/olm/scripts/finish-bundle.sh), because the generator cannot express them |
-| Operand images listed in `relatedImages` | [`related-images.txt`](../apps/wanaku-operator/olm/related-images.txt) |
+| `relatedImages`, supported OpenShift versions, scorecard | [`finish-bundle.sh`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-operator/olm/scripts/finish-bundle.sh), because the generator cannot express them |
+| Operand images listed in `relatedImages` | [`related-images.txt`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-operator/olm/related-images.txt) |
 
 The operator watches the namespace it is installed in, so the bundle supports the `OwnNamespace` and
 `SingleNamespace` install modes. `MultiNamespace` and `AllNamespaces` are not supported.
 
 > [!NOTE]
 > When you change the defaults of an operand image in the operator code, update
-> [`related-images.txt`](../apps/wanaku-operator/olm/related-images.txt). Disconnected OpenShift clusters mirror
+> [`related-images.txt`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-operator/olm/related-images.txt). Disconnected OpenShift clusters mirror
 > exactly the images listed there.
 
 ## Requirements
@@ -36,7 +36,7 @@ The operator watches the namespace it is installed in, so the bundle supports th
 `mvn`, `podman` (or `docker`, with `CONTAINER_TOOL=docker`) and
 [`operator-sdk`](https://sdk.operatorframework.io/docs/installation/) 1.42+.
 Local cluster tests also need `kubectl`, `docker` and `minikube`, or `oc`, `podman` and `crc`. The commands below run
-from the repository root and delegate to [`apps/wanaku-operator/olm/Makefile`](../apps/wanaku-operator/olm/Makefile).
+from the repository root and delegate to [`apps/wanaku-operator/olm/Makefile`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-operator/olm/Makefile).
 
 ## Build and validate
 
@@ -85,14 +85,14 @@ make olm-crc-down
 
 Set `NAMESPACE` to use a namespace other than `wanaku-olm-test` (for example `make olm-minikube-up NAMESPACE=my-test`).
 The detailed procedure and assertions are in
-[`tests/plans/operator-olm-install.md`](../tests/plans/operator-olm-install.md).
+[`tests/plans/operator-olm-install.md`](https://github.com/wanaku-ai/wanaku-barn/blob/main/tests/plans/operator-olm-install.md).
 
 ## Continuous integration
 
 | Workflow | When | What |
 |----------|------|------|
-| [`olm-bundle.yml`](../.github/workflows/olm-bundle.yml) | Pull requests that touch `apps/wanaku-operator/**` | Builds the bundle, runs `operator-sdk bundle validate`, lints the scripts and uploads the bundle |
-| [`release-olm-bundle.yml`](../.github/workflows/release-olm-bundle.yml) | Manually, after `release-artifacts` | Builds and validates the release bundle, pushes `quay.io/wanaku/wanaku-operator-bundle:<version>`, attaches the ZIP to the GitHub release and opens the community-operators pull requests |
+| [`olm-bundle.yml`](https://github.com/wanaku-ai/wanaku-barn/blob/main/.github/workflows/olm-bundle.yml) | Pull requests that touch `apps/wanaku-operator/**` | Builds the bundle, runs `operator-sdk bundle validate`, lints the scripts and uploads the bundle |
+| [`release-olm-bundle.yml`](https://github.com/wanaku-ai/wanaku-barn/blob/main/.github/workflows/release-olm-bundle.yml) | Manually, after `release-artifacts` | Builds and validates the release bundle, pushes `quay.io/wanaku/wanaku-operator-bundle:<version>`, attaches the ZIP to the GitHub release and opens the community-operators pull requests |
 
 The release workflow needs these repository settings:
 
@@ -132,7 +132,7 @@ The first submission also creates `operators/wanaku-operator/ci.yaml` with `upda
 switch a package to `semver-mode` you cannot go back.
 
 To prepare a submission without pushing, run the script with `DRY_RUN=true`. See
-[`submit-community-operators.sh`](../.github/scripts/submit-community-operators.sh) for the variables.
+[`submit-community-operators.sh`](https://github.com/wanaku-ai/wanaku-barn/blob/main/.github/scripts/submit-community-operators.sh) for the variables.
 
 ## Certified operators
 

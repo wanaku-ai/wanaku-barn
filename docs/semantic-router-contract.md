@@ -80,7 +80,7 @@ Generated catalogs target Camel `4.23.0-SNAPSHOT`. The bundled schema and genera
 
 Barn's ordinary catalog validator remains on Camel `4.22.1`. Semantic catalogs use a separately bundled YAML DSL schema from `camel-yaml-dsl-4.23.0-20261009.103642-37.jar`. This avoids changing unrelated Barn Camel dependencies. The schema is Apache Camel material licensed under Apache License 2.0.
 
-The schema build includes [Camel PR #27494](https://github.com/apache/camel/pull/27494), merged as `7c0fca7a09cb7cc2acf70715edd597a8adb334c1`. The schema artifact and SHA-256 are recorded in [`semanticCamelYamlDsl.provenance.properties`](../apps/wanaku-barn-backend/src/main/resources/schema/semanticCamelYamlDsl.provenance.properties).
+The schema build includes [Camel PR #27494](https://github.com/apache/camel/pull/27494), merged as `7c0fca7a09cb7cc2acf70715edd597a8adb334c1`. The schema artifact and SHA-256 are recorded in [`semanticCamelYamlDsl.provenance.properties`](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-barn-backend/src/main/resources/schema/semanticCamelYamlDsl.provenance.properties).
 
 Generated catalogs declare `semantic.evaluation.department` with `operation: choice`, `state: ${body}`, and `expert` naming a Camel bean. `parameters` contains `instructions` and the fixed label-to-criterion map `criteria`. Barn does not generate the legacy `semantic.question` or `type: choice` declaration. The native choice operation returns one criterion label; evaluation errors remain distinct from the explicit `no_match` criterion. Its language expression is `ref:department`. Selection occurs once in `direct:classify-router`. Camel EIPs map fixed labels to fixed Kamelet endpoints.
 

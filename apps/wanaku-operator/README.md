@@ -16,8 +16,7 @@ The operator is also packaged as an OLM bundle for OperatorHub.io and the OpenSh
 scripts and local test targets are described in [docs/operator-olm.md](../../docs/operator-olm.md); the scripts live
 in `olm/`.
 
-
-### Running the operator
+## Running the operator
 
 The operator uses the [Java Operator SDK](https://javaoperatorsdk.io/). This SDK will resolve the
 Kubernetes cluster by inspecting the local configuration for the `kubectl` command. This process is
