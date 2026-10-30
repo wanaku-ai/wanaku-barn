@@ -164,6 +164,6 @@ the full CRD reference.
 
 ## References
 
-- [Service catalogs guide](../../docs/service-catalogs.md) — manifest format, rules files, end-to-end example
-- [Usage guide](../../docs/usage.md) — CLI installation and authentication
-- [Operator guide](../../docs/operator.md) — CRD reference and deployment patterns
+- [Service catalogs guide](../../docs/service-catalogs.md)<!-- wanaku:versioned --> — manifest format, rules files, end-to-end example
+- [Usage guide](../../docs/usage.md)<!-- wanaku:versioned --> — CLI installation and authentication
+- [Operator guide](../../docs/operator.md)<!-- wanaku:versioned --> — CRD reference and deployment patterns
