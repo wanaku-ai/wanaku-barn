@@ -44,7 +44,7 @@ features:
 |---|---|---|
 | Manage Wanaku from the command line | [Install the Wanaku CLI](cli/install.md) | [Authenticate](cli/authenticate.md), [Forward MCP servers](cli/forwards.md) |
 | Add the Barn pages to the Admin UI | [Install the Barn backend](operate/install.md) | [Service catalogs](manage/service-catalogs.md) |
-| Deploy on Kubernetes or OpenShift | [Deploy with the Wanaku Operator](operate/operator.md) | [Wanaku Operator on OperatorHub](operate/operator-olm.md) |
+| Deploy on Kubernetes or OpenShift | [Deploy with the Wanaku Operator](operate/operator.md) | [Operator custom resources](reference/operator-crds.md) |
 | Serve Camel routes as MCP tools | [Build and deploy a service catalog](manage/build-a-service-catalog.md) | [Service templates](manage/service-templates.md) |
 | Set up sign-in | [Set up Keycloak for Wanaku](operate/keycloak.md) | [Secure a deployment](operate/secure-a-deployment.md) |
 | Fix a problem | [Troubleshooting](operate/troubleshooting.md) | [Configuration](reference/configuration.md) |
