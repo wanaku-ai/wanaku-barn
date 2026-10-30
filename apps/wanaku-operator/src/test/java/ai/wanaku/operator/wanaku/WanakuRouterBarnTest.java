@@ -69,6 +69,48 @@ class WanakuRouterBarnTest {
     }
 
     @Test
+    void theServerClaimIsNamedPerRouter() {
+        WanakuRouter router = createRouter(false);
+
+        reconciler.reconcile(router, null);
+
+        assertThat(pvc(RouterResourceFactory.SERVER_VOLUME_CLAIM)).isNull();
+        assertThat(pvc("wanaku-dev-server-data")).isNotNull();
+        assertThat(claimOf(deployment("wanaku-dev-server"), "server-volume")).isEqualTo("wanaku-dev-server-data");
+    }
+
+    @Test
+    void anOwnedLegacyServerClaimKeepsItsData() {
+        WanakuRouter router = createRouter(false);
+        PersistentVolumeClaim legacy =
+                RouterResourceFactory.makeServerVolumePVC(router, RouterResourceFactory.SERVER_VOLUME_CLAIM);
+        client.persistentVolumeClaims().inNamespace(NAMESPACE).resource(legacy).create();
+
+        reconciler.reconcile(router, null);
+
+        assertThat(pvc("wanaku-dev-server-data")).isNull();
+        assertThat(claimOf(deployment("wanaku-dev-server"), "server-volume"))
+                .isEqualTo(RouterResourceFactory.SERVER_VOLUME_CLAIM);
+    }
+
+    @Test
+    void aLegacyServerClaimOfAnotherRouterIsNotShared() {
+        WanakuRouter other = createRouter(false);
+        other.getMetadata().setName("other");
+        other.getMetadata().setUid("other-uid");
+        PersistentVolumeClaim legacy =
+                RouterResourceFactory.makeServerVolumePVC(other, RouterResourceFactory.SERVER_VOLUME_CLAIM);
+        client.persistentVolumeClaims().inNamespace(NAMESPACE).resource(legacy).create();
+
+        reconciler.reconcile(createRouter(false), null);
+
+        assertThat(claimOf(deployment("wanaku-dev-server"), "server-volume")).isEqualTo("wanaku-dev-server-data");
+        assertThat(pvc(RouterResourceFactory.SERVER_VOLUME_CLAIM).getMetadata().getOwnerReferences())
+                .extracting("uid")
+                .containsExactly("other-uid");
+    }
+
+    @Test
     void anExistingClaimIsUsedAsIs() {
         WanakuRouter router = createRouter(true);
         WanakuRouterSpec.StorageSpec storage = new WanakuRouterSpec.StorageSpec();
@@ -152,8 +194,12 @@ class WanakuRouterBarnTest {
     }
 
     private static String claimOf(Deployment deployment) {
+        return claimOf(deployment, "barn-volume");
+    }
+
+    private static String claimOf(Deployment deployment, String volume) {
         return deployment.getSpec().getTemplate().getSpec().getVolumes().stream()
-                .filter(v -> "barn-volume".equals(v.getName()))
+                .filter(v -> volume.equals(v.getName()))
                 .findFirst()
                 .orElseThrow()
                 .getPersistentVolumeClaim()
