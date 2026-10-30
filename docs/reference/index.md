@@ -10,6 +10,7 @@ These pages list the settings of the Barn components.
 ## Pages in this section
 
 - [Configuration](configuration.md): the Wanaku and Quarkus configuration properties of each component.
+- [Label expressions](label-expressions.md): filter entities by label with logical operators.
 - [Tool URIs and reserved arguments](uris.md): URI expressions and the reserved `wanaku_` argument names.
 
 ## Next steps

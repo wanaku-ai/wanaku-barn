@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class DocumentationLoader {
 
     /** Path to the label expressions documentation. */
-    private static final String LABEL_EXPRESSIONS_DOC = "docs/LABEL_EXPRESSIONS.md";
+    private static final String LABEL_EXPRESSIONS_DOC = "docs/label-expressions.md";
 
     /**
      * Private constructor to prevent instantiation.
@@ -87,9 +87,23 @@ public class DocumentationLoader {
 
             try (BufferedReader reader =
                     new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
-                return reader.lines().collect(Collectors.joining("\n"));
+                return stripFrontmatter(reader.lines().collect(Collectors.joining("\n")));
             }
         }
+    }
+
+    /**
+     * Removes the YAML frontmatter block that the website reads from the documentation pages.
+     *
+     * @param markdown the documentation content
+     * @return the content without a leading {@code ---} delimited block
+     */
+    static String stripFrontmatter(String markdown) {
+        if (!markdown.startsWith("---\n")) {
+            return markdown;
+        }
+        int end = markdown.indexOf("\n---\n", 4);
+        return end < 0 ? markdown : markdown.substring(end + 5).stripLeading();
     }
 
     /**

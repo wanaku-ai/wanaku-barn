@@ -2,6 +2,45 @@
 
 This guide covers security best practices for deploying and operating Wanaku in production environments.
 
+## Deployment checklist
+
+Check these items before you go live.
+
+### Authentication
+
+- Always use Keycloak or another OIDC provider for authentication
+- Change default admin passwords immediately after setup
+- Regenerate client secrets for the `wanaku-service` client in production
+- Use strong, unique passwords for all service accounts
+
+### Network
+
+- Enable TLS/HTTPS for all external endpoints in production
+- Configure CORS appropriately for your environment
+- Use network policies to restrict access between services
+- Never expose Keycloak or the Barn backend directly to the internet without proper security controls
+
+### Secrets
+
+- Never commit secrets, passwords, or API keys to version control
+- Use Kubernetes Secrets, Sealed Secrets, or external secret management tools
+- Rotate secrets regularly
+- Use environment-specific secrets for development and production
+
+### Containers
+
+- Always use the latest stable version of Wanaku images
+- Scan container images for vulnerabilities regularly
+- Run containers with minimal privileges
+- Use read-only file systems where possible
+
+### Monitoring
+
+- Enable access logging for the Barn backend
+- Monitor authentication failures and unusual access patterns
+- Review audit logs regularly
+- Set up alerts for suspicious activity
+
 ## Secret Management
 
 ### Kubernetes Secrets
@@ -342,3 +381,8 @@ For enhanced security, plan for mTLS:
 
 If you find a bug, please [report it](https://github.com/wanaku-ai/wanaku/issues).
 To get in touch with the community, visit the [Wanaku project](https://github.com/wanaku-ai/wanaku).
+
+## Next steps
+
+- [Set up Keycloak for Wanaku](keycloak.md): deploy Keycloak and rotate the default secrets.
+- [Observability](observability.md): collect the traces and logs that the audit needs.

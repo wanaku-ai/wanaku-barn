@@ -3,6 +3,7 @@ package ai.wanaku.cli.main.support;
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,10 +26,24 @@ class DocumentationLoaderTest {
 
     @Test
     void testLoadDocWithValidPath() throws IOException {
-        String doc = DocumentationLoader.loadDoc("docs/LABEL_EXPRESSIONS.md");
+        String doc = DocumentationLoader.loadDoc("docs/label-expressions.md");
 
         assertNotNull(doc);
         assertFalse(doc.isEmpty());
+    }
+
+    @Test
+    void testLoadedDocHasNoFrontmatter() throws IOException {
+        String doc = DocumentationLoader.loadLabelExpressionsDoc();
+
+        assertTrue(doc.startsWith("# Label Expressions Guide"));
+    }
+
+    @Test
+    void testStripFrontmatter() {
+        assertEquals("# Title\n", DocumentationLoader.stripFrontmatter("---\ntitle: T\n---\n\n# Title\n"));
+        assertEquals("# Title", DocumentationLoader.stripFrontmatter("# Title"));
+        assertEquals("---\nno end", DocumentationLoader.stripFrontmatter("---\nno end"));
     }
 
     @Test

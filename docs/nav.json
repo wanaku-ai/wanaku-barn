@@ -55,6 +55,7 @@
       "link": "reference/",
       "items": [
         { "text": "Configuration", "link": "reference/configuration" },
+        { "text": "Label expressions", "link": "reference/label-expressions" },
         { "text": "Tool URIs", "link": "reference/uris" }
       ]
     },

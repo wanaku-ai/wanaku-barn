@@ -92,5 +92,5 @@ The CLI stores configuration in `~/.wanaku/`:
 ## Related Documentation
 
 - [CLI guide](../../docs/cli/index.md) - Complete CLI reference
-- [Label Expressions Guide](src/main/resources/docs/LABEL_EXPRESSIONS.md) - Advanced filtering
+- [Label Expressions Guide](../../docs/reference/label-expressions.md) - Advanced filtering
 - [Architecture](../../docs/get-started/architecture.md)

@@ -28,6 +28,6 @@ features:
     link: ./docs/contributing/internals
   - title: Label Expression
     details: Learn how to filter entities using label expressions and logical operators
-    link: ./apps/wanaku-cli/src/main/resources/docs/LABEL_EXPRESSIONS
+    link: ./docs/reference/label-expressions
 
 ---
