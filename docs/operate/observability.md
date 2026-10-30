@@ -1,3 +1,8 @@
+---
+title: Observability
+description: Trace requests across Barn with OpenTelemetry, follow request IDs in structured logs, and collect Micrometer metrics from the Barn backend.
+---
+
 # Observability: Tracing, Logging, and Auditing
 
 This document describes the observability architecture in Wanaku, covering distributed tracing, request ID propagation, and structured logging with traceability.

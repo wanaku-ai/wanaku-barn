@@ -1,3 +1,8 @@
+---
+title: Deployment debugger
+description: Install the Deployment Debugger plugin and use it to inspect the MCP, A2A, and inference listeners of a Wanaku deployment from the Admin UI.
+---
+
 # Deployment Debugger
 
 The Deployment Debugger is an independent Wanaku UI plugin for inspecting a deployment. It connects directly from your browser to MCP, A2A, and inference listeners and uses the same-origin Wanaku management API for registry and audit data. It does not require the Wanaku Barn backend.

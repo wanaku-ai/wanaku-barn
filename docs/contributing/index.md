@@ -1,3 +1,8 @@
+---
+title: Contribute to Wanaku Barn
+description: "Contribute to Wanaku Barn: authentication setup, tests, development deployments on Minikube and OpenShift, and the build and release pages."
+---
+
 # Contributing
 
 ## Tools, Providers, and Prompts
@@ -194,6 +199,7 @@ If you want to understand what each of the components do, then read the [Wanaku 
 ## Pages in this section
 
 - [Building](building.md): build and package the project from source.
+- [Write documentation](documentation.md): the page conventions and the docs checks that CI runs.
 - [Testing](testing.md): the Wanaku assertions library for tests.
 - [Testing MCP servers](testing-mcp-servers.md): test MCP servers locally and in integration tests.
 - [Performance tests](performance-tests.md): the k6 load test scripts.

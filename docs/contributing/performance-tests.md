@@ -1,3 +1,8 @@
+---
+title: Performance tests
+description: Run the k6 load test scripts against a Wanaku deployment and a downstream MCP server, and read the results to find throughput limits.
+---
+
 # Performance Tests
 
 The standalone k6 scripts under `tests/load/` exercise an MCP router over SSE. Run them against a separately deployed Wanaku instance and downstream MCP server. Barn supplies management and persistence APIs and does not run the MCP request path.

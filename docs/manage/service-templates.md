@@ -1,3 +1,8 @@
+---
+title: Service templates
+description: "Create, deploy, and instantiate service templates: parameterized service catalogs that Barn turns into catalogs with your values."
+---
+
 # Service Templates
 
 This document explains what service templates are, how they work, and how to use them to create parameterized service catalogs in Wanaku.

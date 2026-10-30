@@ -1,3 +1,8 @@
+---
+title: Semantic router contract
+description: Learn the semantic router definition that Barn accepts and the Camel catalog that Barn generates from it for the Wanaku Semantic Router.
+---
+
 # Semantic router authoring and artifact contract
 
 Barn turns a focused routing definition into an executable Camel catalog. The catalog contains a fixed MCP tool, native Camel semantic evaluation, and curated Kamelet branches. Wanaku authorizes the tool call. WSR loads the selected catalog before Camel starts. See the [wizard guide](semantic-routing-wizard.md) for the authoring workflow.

@@ -1,3 +1,8 @@
+---
+title: Audit trail
+description: "Read the Barn audit trail: what each record contains, how Barn stores and retains it, and how to query it from the Admin UI and the API."
+---
+
 # Barn Audit Trail
 
 Barn records every change to the resources that it manages in a durable audit trail.

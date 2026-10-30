@@ -1,3 +1,8 @@
+---
+title: Data stores
+description: Inspect the records in the Barn data store from the Admin UI, and share static data between Wanaku and MCP servers with the Wanaku CLI.
+---
+
 # Inspect stored records
 
 The admin UI's **Data Stores** page lists records from the backend data store. Each row shows the record name, the exact `wanaku.type` label, additional labels, creation and update dates, and its persisted revision. Missing metadata on older records appears as **Not recorded**; records without a type appear as **Unspecified**. Dates use your browser's local time zone.

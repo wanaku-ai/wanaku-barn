@@ -1,3 +1,8 @@
+---
+title: Persistence internals
+description: Learn the layers of the Barn persistence code, from the repository interfaces to the embedded Infinispan cache that stores the data.
+---
+
 # Wanaku Persistence Architecture
 
 This document describes the Wanaku persistence layer architecture, designed as a reference for implementing similar persistence systems.
@@ -379,7 +384,8 @@ public class DataStoreMarshaller implements MessageMarshaller<DataStore> {
 
 This example shows the basic pattern. The actual `DataStoreMarshaller` reads and writes `DataStoreRecord`, including the metadata fields, under the `DataStore` message name.
 
-> **Note:** The caches store Java objects. Ickle queries match the class of the stored values, not the proto message name. Queries on the data store cache use `from ai.wanaku.core.services.api.DataStoreRecord`. Override `queryEntityName()` in a repository when the stored class is different from `entityType()`.
+> [!NOTE]
+> The caches store Java objects. Ickle queries match the class of the stored values, not the proto message name. Queries on the data store cache use `from ai.wanaku.core.services.api.DataStoreRecord`. Override `queryEntityName()` in a repository when the stored class is different from `entityType()`.
 
 ### Schema Initializer
 

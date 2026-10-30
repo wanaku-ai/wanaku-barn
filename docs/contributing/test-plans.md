@@ -1,3 +1,8 @@
+---
+title: Test plans
+description: Find the test plans for humans and AI agents in the wanaku-tests repository, and learn how to follow, create, and update a plan.
+---
+
 # Test Plans
 
 Test plans for execution by humans and AI agents have moved to
