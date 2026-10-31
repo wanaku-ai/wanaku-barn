@@ -26,14 +26,14 @@ You should see an Extensions menu, with several items. If you select, for instan
 
 ## Documentation
 
-The Barn documentation is in the [`docs`](docs/index.md) directory:
+The [Wanaku Barn documentation](https://wanaku.ai/docs/barn/next/) covers:
 
-- [Get started](docs/get-started/index.md): the Barn components and how they connect to Wanaku.
-- [Use the CLI](docs/cli/index.md): install the Wanaku CLI and manage Wanaku from the command line.
-- [Deploy and operate](docs/operate/index.md): install the Barn backend, deploy with the Wanaku Operator, and set up Keycloak.
-- [Manage integrations and data](docs/manage/index.md): service catalogs, templates, Kamelets, data stores, and semantic routers.
-- [Reference](docs/reference/index.md): configuration, the service catalog API, and the operator resources.
-- [Contribute](docs/contributing/index.md): build from source, run the tests, and prepare a release.
+- [Get started](https://wanaku.ai/docs/barn/next/get-started/): the Barn components and how they connect to Wanaku.
+- [Use the CLI](https://wanaku.ai/docs/barn/next/cli/): install the Wanaku CLI and manage Wanaku from the command line.
+- [Deploy and operate](https://wanaku.ai/docs/barn/next/operate/): install the Barn backend, deploy with the Wanaku Operator, and set up Keycloak.
+- [Manage integrations and data](https://wanaku.ai/docs/barn/next/manage/): service catalogs, templates, Kamelets, data stores, and semantic routers.
+- [Reference](https://wanaku.ai/docs/barn/next/reference/): configuration, the service catalog API, and the operator resources.
+- [Contribute](https://wanaku.ai/docs/barn/next/contributing/): build from source, run the tests, and prepare a release.
 
 For Wanaku itself, see the [Wanaku documentation](https://wanaku.ai/docs/next/). The [guided tutorial](https://wanaku.ai/docs/demos/) is the easiest way to learn Wanaku.
 
