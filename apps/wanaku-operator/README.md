@@ -20,7 +20,7 @@ in `olm/`.
 
 The operator uses the [Java Operator SDK](https://javaoperatorsdk.io/). This SDK will resolve the
 Kubernetes cluster by inspecting the local configuration for the `kubectl` command. This process is
-described in more detail in the [Getting Started section of the documentation](https://javaoperatorsdk.io/docs/getting-started/#getting-started).
+described in more detail in the [Getting Started section of the documentation](https://javaoperatorsdk.io/docs/getting-started/).
 
 **NOTE**: Podman Desktop can manage the Kubernetes contexts for you. You can set it using the tray icon or the Dashboard.
 

@@ -42,9 +42,10 @@ jobs:
             --exclude-path specs
             --exclude-path node_modules
             --exclude-path target
+            --exclude '^https://docs\.redhat\.com/'
             '**/*.md'
-          # Report only until the docs restructure (#336) fixes the existing findings.
-          fail: false
+          # docs.redhat.com returns 403 to CI runners, so its links are excluded.
+          fail: true
 
   docs-conventions:
     runs-on: ubuntu-latest

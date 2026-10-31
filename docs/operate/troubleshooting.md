@@ -363,7 +363,7 @@ quarkus.http.cors.origins=http://localhost:8180,http://127.0.0.1:8180,http://loc
 
 **Why this happens:**
 
-All services in the provided `docker-compose.yml` use `network_mode: host`, which is not supported on macOS with Podman (see [podman#15664](https://github.com/containers/podman/issues/15664)).
+All services in the provided `docker-compose.yml` use `network_mode: host`, which is not supported on macOS with Podman.
 
 **Fix:**
 
