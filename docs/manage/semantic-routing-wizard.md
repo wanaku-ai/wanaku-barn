@@ -78,10 +78,10 @@ The review summary is the main view. Select the eye control, **View generated fi
 5. Start WSR with the saved route name.
 
 ```shell
-java -jar target/wanaku-semantic-router-0.1.0-SNAPSHOT.jar runtime --semantic-route support-route
+java -jar target/wanaku-semantic-router-0.3.0-SNAPSHOT.jar runtime --semantic-route support-route
 ```
 
-Replace `support-route` with the saved name. The local defaults use Barn at `http://localhost:8180` and Wanaku management at `http://localhost:8080`. Kubernetes can set `WSR_SEMANTIC_ROUTE`, `WSR_BARN_URL`, `WSR_REGISTRATION_URL`, and `WSR_MCP_ADDRESS`. Set `WSR_BIND=0.0.0.0` for the container listener. See the [WSR deployment guide](https://github.com/wanaku-ai/wanaku-semantic-router/blob/ci-issue-182/docs/deployment.md) for the complete manifest and custom expert settings.
+Replace `support-route` with the saved name. The local defaults use Barn at `http://localhost:8180` and Wanaku management at `http://localhost:8080`. Kubernetes can set `WSR_SEMANTIC_ROUTE`, `WSR_BARN_URL`, `WSR_REGISTRATION_URL`, and `WSR_MCP_ADDRESS`. Set `WSR_BIND=0.0.0.0` for the container listener. See [Run Wanaku Semantic Router](https://wanaku.ai/docs/semantic-router/next/operate/) for the complete manifest and custom expert settings.
 
 Publication creates an immutable catalog revision. Publication does not start WSR. The UI reports runtime status as not observed because Barn does not have a runtime observation for this workflow. WSR must load the selected revision and pass its startup checks before it registers with Wanaku. Restart or replace WSR to select another revision.
 
