@@ -9,7 +9,7 @@ This guide shows how to test an MCP server before and after you add it to Wanaku
 
 ## Prerequisites
 
-- A running Wanaku instance. See the [Wanaku quickstart](https://wanaku.ai/docs/next/get-started/quickstart).
+- A running Wanaku instance. See the [Wanaku quickstart](https://wanaku.ai/docs/next/get-started/quickstart.html).
 - The [Wanaku CLI](../cli/install.md).
 - Java 21 or later and Maven 3.9 or later, for the unit and integration tests.
 - Docker or Podman, for tests that use Testcontainers.
