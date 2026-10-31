@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceCatalogService;
 import ai.wanaku.core.services.api.ServiceTemplateService;
@@ -16,12 +17,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.commonResponseErrorHandl
 @CommandLine.Command(name = "removed", description = "List removed service catalogs or templates that can be restored")
 public class ServiceRemoved extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--template"},
@@ -32,10 +29,10 @@ public class ServiceRemoved extends BaseCommand {
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
         try {
             List<Map<String, Object>> removed = template
-                    ? initAuthenticatedService(ServiceTemplateService.class, host)
+                    ? initAuthenticatedService(ServiceTemplateService.class, barn.baseUri())
                             .removed()
                             .data()
-                    : initAuthenticatedService(ServiceCatalogService.class, host)
+                    : initAuthenticatedService(ServiceCatalogService.class, barn.baseUri())
                             .removed()
                             .data();
             if (removed == null || removed.isEmpty()) {

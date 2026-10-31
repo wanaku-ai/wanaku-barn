@@ -4,6 +4,7 @@ import jakarta.ws.rs.WebApplicationException;
 
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceCatalogService;
 import ai.wanaku.core.services.api.ServiceTemplateService;
@@ -14,12 +15,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.handleNotFound;
 @CommandLine.Command(name = "restore", description = "Restore a removed service catalog or template")
 public class ServiceRestore extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--name"},
@@ -37,9 +34,11 @@ public class ServiceRestore extends BaseCommand {
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
         try {
             if (template) {
-                initAuthenticatedService(ServiceTemplateService.class, host).restore(name);
+                initAuthenticatedService(ServiceTemplateService.class, barn.baseUri())
+                        .restore(name);
             } else {
-                initAuthenticatedService(ServiceCatalogService.class, host).restore(name);
+                initAuthenticatedService(ServiceCatalogService.class, barn.baseUri())
+                        .restore(name);
             }
         } catch (WebApplicationException ex) {
             return handleNotFound(ex, template ? "Removed service template" : "Removed service catalog", name, printer);

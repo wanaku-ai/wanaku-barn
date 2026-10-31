@@ -10,6 +10,7 @@ import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceCatalogService;
 import ai.wanaku.core.services.api.ServiceTemplateService;
@@ -31,12 +32,8 @@ public class ServiceValidate extends BaseCommand {
             arity = "0..1")
     private String path;
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--template"},
@@ -71,10 +68,12 @@ public class ServiceValidate extends BaseCommand {
         try {
             WanakuResponse<ValidationResult> response;
             if (template) {
-                templateService = initAuthenticatedServiceIfNeeded(templateService, ServiceTemplateService.class, host);
+                templateService =
+                        initAuthenticatedServiceIfNeeded(templateService, ServiceTemplateService.class, barn.baseUri());
                 response = templateService.validate(dataStore);
             } else {
-                catalogService = initAuthenticatedServiceIfNeeded(catalogService, ServiceCatalogService.class, host);
+                catalogService =
+                        initAuthenticatedServiceIfNeeded(catalogService, ServiceCatalogService.class, barn.baseUri());
                 response = catalogService.validate(dataStore);
             }
             result = response.data();

@@ -26,6 +26,8 @@ wanaku backup export --output barn-backup.json
 
 Add `--no-audit` to leave out the audit events.
 
+The `wanaku backup` commands reach Barn through the Wanaku plugin proxy at `--host` (default `http://localhost:8080`). To call Barn directly, add `--direct-access` and set `--host` to the address of the Barn backend.
+
 The REST endpoint is `GET /api/v1/management/export?includeAudit=true`. The archive is in the `data` field of the response.
 
 The archive is a logical export. It does not depend on the Infinispan file format. It contains:

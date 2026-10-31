@@ -10,12 +10,12 @@ This guide builds an `hr-system` catalog with two systems, `employees` and `payr
 ## Prerequisites
 
 - The [Wanaku CLI](../cli/install.md).
-- A running Barn backend. The examples use `http://localhost:8180`, the default address of the backend.
+- A running Barn backend, configured as the `wanaku-barn` plugin of Wanaku. The examples use `http://localhost:8180`, the default address of the backend.
 - A running Wanaku instance. The examples use the management API at `http://localhost:8080`.
 - The [Camel Integration Capability](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/usage.md), as a JAR file or as the `quay.io/wanaku/camel-integration-capability` container image.
 
 > [!IMPORTANT]
-> The `--host` option of the `wanaku service` commands is the address of the Barn backend. Its default value is `http://localhost:8080`. Set `--host` when Barn listens on a different address.
+> The `wanaku service` commands send their requests to Barn through the Wanaku plugin proxy, at `<host>/api/plugins/wanaku-barn/wanaku-barn-api`. The `--host` option is the address of Wanaku. Its default value is `http://localhost:8080`. To call Barn directly, add `--direct-access` and set `--host` to the address of the Barn backend, for example `--host=http://localhost:8180 --direct-access`.
 
 ## Create the catalog
 
@@ -89,7 +89,7 @@ This guide builds an `hr-system` catalog with two systems, `employees` and `payr
 Validate the catalog before you deploy it:
 
 ```shell
-wanaku service validate --path=hr-system --host=http://localhost:8180
+wanaku service validate --path=hr-system
 ```
 
 Barn checks the package and does not deploy it. The command lists each problem with the file and the property or YAML location at fault:
@@ -106,7 +106,7 @@ An error makes the command exit with a non-zero status. A warning does not. You 
 ## Deploy the catalog to Barn
 
 ```shell
-wanaku service deploy --path=hr-system --host=http://localhost:8180
+wanaku service deploy --path=hr-system
 ```
 
 The command packages the directory as a ZIP file and sends it to Barn. Barn stores it as a new version of the `hr-system` catalog. Each later deploy of the same catalog name creates the next version.
@@ -163,20 +163,20 @@ The capability can also register itself as a forward when it starts and remove t
 List the deployed catalogs:
 
 ```shell
-wanaku service catalog list --host=http://localhost:8180
+wanaku service catalog list
 ```
 
 Barn keeps a version history of each catalog. You can download an earlier version, or make its content active again:
 
 ```shell
 # List the versions, newest first
-wanaku service versions list --name=hr-system --host=http://localhost:8180
+wanaku service versions list --name=hr-system
 
 # Download the package of version 2
-wanaku service versions download --name=hr-system --version=2 --output=hr-system-v2.service.zip --host=http://localhost:8180
+wanaku service versions download --name=hr-system --version=2 --output=hr-system-v2.service.zip
 
 # Make the content of version 2 active again
-wanaku service versions restore --name=hr-system --version=2 --host=http://localhost:8180
+wanaku service versions restore --name=hr-system --version=2
 ```
 
 A restore creates a new version with the earlier content. Restart the capabilities of the catalog to load the new content.
@@ -184,14 +184,14 @@ A restore creates a new version with the earlier content. Restart the capabiliti
 Remove a catalog:
 
 ```shell
-wanaku service catalog remove --name=hr-system --host=http://localhost:8180
+wanaku service catalog remove --name=hr-system
 ```
 
 Barn hides a removed catalog, but keeps it and its versions. To list the removed catalogs and restore one:
 
 ```shell
-wanaku service removed --host=http://localhost:8180
-wanaku service restore --name=hr-system --host=http://localhost:8180
+wanaku service removed
+wanaku service restore --name=hr-system
 ```
 
 Add `--template` to the `versions`, `removed`, and `restore` commands to work with a service template. For the version and removal rules, see the [Service catalog API](../reference/service-catalog-api.md#version-history).
