@@ -147,4 +147,4 @@ When Barn runs as a Wanaku plugin, the Wanaku Admin UI shows a **Service Catalog
 - [Build and deploy a service catalog](build-a-service-catalog.md): create a catalog with the CLI and serve it to Wanaku.
 - [Service catalog API](../reference/service-catalog-api.md): the REST endpoints, the validation checks, and the version rules.
 - [Service templates](service-templates.md): create parameterized catalogs.
-- [Camel Integration Capability usage](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/usage.md): the options of the capability that serves a catalog.
+- [Camel Integration Capability CLI reference](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/reference/cli.md): the options of the capability that serves a catalog.

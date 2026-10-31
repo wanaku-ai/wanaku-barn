@@ -12,7 +12,7 @@ This guide builds an `hr-system` catalog with two systems, `employees` and `payr
 - The [Wanaku CLI](../cli/install.md).
 - A running Barn backend, configured as the `wanaku-barn` plugin of Wanaku. The examples use `http://localhost:8180`, the default address of the backend.
 - A running Wanaku instance. The examples use the management API at `http://localhost:8080`.
-- The [Camel Integration Capability](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/usage.md), as a JAR file or as the `quay.io/wanaku/camel-integration-capability` container image.
+- The [Camel Integration Capability](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/get-started/index.md), as a JAR file or as the `quay.io/wanaku/camel-integration-capability` container image.
 
 > [!IMPORTANT]
 > The `wanaku service` commands send their requests to Barn through the Wanaku plugin proxy, at `<host>/api/plugins/wanaku-barn/wanaku-barn-api`. The `--host` option is the address of Wanaku. Its default value is `http://localhost:8080`. To call Barn directly, add `--direct-access` and set `--host` to the address of the Barn backend, for example `--host=http://localhost:8180 --direct-access`.
@@ -144,7 +144,7 @@ Start one Camel Integration Capability for each system of the catalog. The capab
 
 3. Do steps 1 and 2 again for the `payroll` system, with a different name and MCP port.
 
-The capability can also register itself as a forward when it starts and remove the forward when it stops. Use `--register`, `--wanaku-url`, and `--advertised-address`. See [Self-registration with Wanaku](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/usage.md#self-registration-with-wanaku).
+The capability can also register itself as a forward when it starts and remove the forward when it stops. Use `--register`, `--wanaku-url`, and `--advertised-address`. See [Wanaku self-registration parameters](https://github.com/wanaku-ai/camel-integration-capability/blob/main/docs/reference/cli.md#wanaku-self-registration-parameters).
 
 ## Verify the tools
 
