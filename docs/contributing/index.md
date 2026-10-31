@@ -65,11 +65,10 @@ video that shows how to use the MCP Inspector to perform these steps.
 
 There are multiple ways you can test Wanaku and the integrations you develop.
 
-1. Wanaku's LLMchat page in the Web UI
-2. You can use the [MCP inspector](https://modelcontextprotocol.io/docs/tools/inspector) to easily test your tool or provider.
-3. Use the maintained test suites under `tests/e2e`, `tests/mcp-servers`, and `tests/load`.
+1. Use the [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector) to test your MCP server, directly and through Wanaku. See [Testing MCP servers](testing-mcp-servers.md).
+2. Use the Admin UI end-to-end tests under `tests/e2e`.
+3. Run the integration test suite in [wanaku-tests](https://github.com/wanaku-ai/wanaku-tests).
 4. Follow or create test plans in [wanaku-tests](https://github.com/wanaku-ai/wanaku-tests) under `plans/`.
-5. Any agent application (such as [HyperChat](https://github.com/BigSweetPotatoStudio/HyperChat))
 
 ### Writing Test Plans
 
@@ -202,7 +201,6 @@ If you want to understand what each of the components do, then read the [Wanaku 
 - [Write documentation](documentation.md): the page conventions and the docs checks that CI runs.
 - [Testing](testing.md): the Wanaku assertions library for tests.
 - [Testing MCP servers](testing-mcp-servers.md): test MCP servers locally and in integration tests.
-- [Performance tests](performance-tests.md): the k6 load test scripts.
 - [Test plans](test-plans.md): where the test plans for humans and AI agents live.
 - [Release guide](release-guide.md): how to cut a release.
 - [Release checklist](release-checklist.md): the multi-repository release steps.

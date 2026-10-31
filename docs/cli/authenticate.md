@@ -20,7 +20,7 @@ oauth2-proxy instances accept:
 | Client | Used by | Token accepted by oauth2-proxy? |
 |--------|---------|---------------------------------|
 | `wanaku-mcp-router` | oauth2-proxy itself, and the `wanaku` CLI password login | Yes. Confidential client: needs its secret. Direct access grants enabled for local development. |
-| `mcp-client` | MCP clients such as MCP Inspector (browser OAuth flow) | Yes. Public client, no password grant. |
+| `mcp-client` | MCP clients such as MCP Inspector (browser OAuth flow) | Yes. Public client. The `wanaku-mcp-client` scope is a default scope, so its tokens carry the router audience. Direct access grants enabled for local development. |
 | `admin-cli` | `wanaku-keycloak-admin` against the Keycloak `master` realm | No. Its tokens lack the router audience. |
 | `wanaku-service` | Downstream capabilities and services (client credentials) | Yes. Not meant for interactive users. |
 
@@ -54,6 +54,12 @@ wanaku auth login \
   --client-secret <secret> \
   --username alice \
   --password
+```
+
+To log in without a client secret, use the public `mcp-client` client. The bundled realm enables the password grant for it:
+
+```shell
+wanaku auth login --client-id mcp-client --username alice --password
 ```
 
 If you already have a token (for example one obtained with `curl` or from another tool), store it directly:

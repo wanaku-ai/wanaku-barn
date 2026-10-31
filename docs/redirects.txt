@@ -22,7 +22,7 @@ deployment-debugger manage/deployment-debugger
 configurations reference/configuration
 contributing contributing/
 building contributing/building
-performance-tests contributing/performance-tests
+performance-tests contributing/testing-mcp-servers
 release-guide contributing/release-guide
 release-checklist contributing/release-checklist
 testing-the-code contributing/testing
@@ -30,3 +30,4 @@ testing-capabilities contributing/testing-mcp-servers
 contributing-test-plans contributing/test-plans
 wanaku-router-internals contributing/internals
 internals-persistence contributing/persistence-internals
+contributing/performance-tests contributing/testing-mcp-servers

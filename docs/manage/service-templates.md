@@ -20,7 +20,7 @@ Think of a service template as a blueprint: it defines the structure, routes, an
 
 The lifecycle of a service template follows this pattern:
 
-1. **Template Creation**: A template is created with parameterized `service.properties` files using Camel Property Placeholders (<code v-pre>{{key}}</code>).
+1. **Template Creation**: A template is created with routes that use Camel Property Placeholders (<code v-pre>{{key}}</code>) and a `service.properties` file that lists their values.
 2. **User Fills Parameters**: When instantiating the template, the user provides values for the placeholders.
 3. **Service Catalog Creation**: The template is transformed into a deployable service catalog with the user's values substituted in.
 
@@ -32,29 +32,34 @@ Service Catalog (ready to deploy)
 
 ## How `service.properties` Works with Camel Property Placeholders
 
-Service templates use Camel Property Placeholders to mark values that should be filled in by users. The placeholder syntax is <code v-pre>{{key}}</code>.
+The routes of a template refer to configurable values with Camel Property Placeholders, for example <code v-pre>{{broker.url}}</code>. The `service.properties` file of each system lists these properties and their template values.
 
 Example `service.properties` file in a template:
 
 ```properties
-broker.url={{broker.url}}
-broker.username={{broker.username}}
-broker.password={{broker.password}}
-queue.name={{queue.name}}
+broker.url=tcp://broker:61616
+broker.username=changeme
+broker.password=changeme
+queue.name=my.queue
 ```
 
-When a user instantiates the template, they provide a map of key-value pairs:
+When a user instantiates the template, they provide a flat map of property keys and values:
 
 ```json
 {
   "broker.url": "tcp://localhost:61616",
   "broker.username": "admin",
-  "broker.password": "admin",
-  "queue.name": "my.queue"
+  "broker.password": "admin"
 }
 ```
 
-The resulting service catalog will have a `service.properties` file with these values substituted:
+Barn matches the map against the keys of each `service.properties` file:
+
+- When a key is in the file, Barn replaces its value.
+- When a key is not in the file, Barn ignores it.
+- A property that the user does not provide keeps its template value.
+
+The resulting service catalog has this `service.properties` file:
 
 ```properties
 broker.url=tcp://localhost:61616
@@ -62,6 +67,8 @@ broker.username=admin
 broker.password=admin
 queue.name=my.queue
 ```
+
+Barn also removes the `catalog.properties.<system>` lines from the `index.properties` file of the new catalog.
 
 ## Using Service Templates via CLI
 

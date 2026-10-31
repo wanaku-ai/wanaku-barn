@@ -71,7 +71,6 @@
         { "text": "Write documentation", "link": "contributing/documentation" },
         { "text": "Testing", "link": "contributing/testing" },
         { "text": "Testing MCP servers", "link": "contributing/testing-mcp-servers" },
-        { "text": "Performance tests", "link": "contributing/performance-tests" },
         { "text": "Test plans", "link": "contributing/test-plans" },
         { "text": "Release guide", "link": "contributing/release-guide" },
         { "text": "Release checklist", "link": "contributing/release-checklist" },

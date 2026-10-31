@@ -97,30 +97,18 @@ When the same property is defined in multiple places, the following priority app
 
 For complete details, see the [Quarkus Configuration Guide](https://quarkus.io/guides/config).
 
-## 1. Router Backend
+## 1. Barn Backend
 
-Configuration for the main Wanaku Router Backend (`wanaku-barn-backend`), which provides management and persistence APIs.
+Configuration for the Barn backend (`wanaku-barn-backend`), which provides the management and persistence APIs. The backend does not serve MCP.
 
 ### General & HTTP
 
 | Property                          | Description                                                                           |
 |-----------------------------------|---------------------------------------------------------------------------------------|
-| `quarkus.http.port`               | `8080` - The primary HTTP port for the router backend.                                |
+| `quarkus.http.port`               | `8180` - The HTTP port of the Barn backend.                                           |
 | `quarkus.http.cors.enabled`       | `true` - Enables Cross-Origin Resource Sharing (CORS).                                |
 | `quarkus.http.cors.origins`       | A comma-separated list of allowed origins for CORS requests (e.g., for the admin UI). |
 | `quarkus.http.access-log.enabled` | `true` - Enables the HTTP access log for monitoring requests.                         |
-
-### Multi-Component Protocol (MCP) Server
-
-| Property                                           | Description                                                                                        |
-|----------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| `quarkus.mcp.server.wanaku-internal.sse.root-path` | `/wanaku-internal/mcp` - The SSE endpoint path for the internal MCP namespace.                     |
-| `quarkus.mcp.server.ns-*.sse.root-path`            | `/ns-*/mcp` - The SSE endpoint paths for the 10 available external namespaces (`ns-1` to `ns-10`). |
-| `quarkus.mcp.server.traffic-logging.enabled`       | `true` - Enables logging of all MCP traffic for debugging.                                         |
-| `quarkus.mcp.server.traffic-logging.text-limit`    | `1000000` - The maximum length of the body to log for MCP traffic.                                 |
-| `quarkus.mcp.server.server-info.name`              | `Wanaku` - The name of the server.                                                                 |
-| `quarkus.mcp.server.server-info.version`           | The version of the server, taken from the project version.                                         |
-| `quarkus.mcp.server.client-logging.default-level`  | `debug` - The default logging level for MCP clients.                                               |
 
 ### Authentication & Authorization
 
