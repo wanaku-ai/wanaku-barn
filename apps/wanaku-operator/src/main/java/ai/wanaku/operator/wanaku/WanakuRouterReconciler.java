@@ -419,7 +419,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
             WanakuRouterStatus wanakuStatus,
             AuthCheck authCheck) {
 
-        deployServerStorageAndService(resource, namespace);
+        final String serverClaimName = deployServerStorageAndService(resource, namespace);
 
         final boolean authEnabled = RouterResourceFactory.isAuthEnabled(resource);
         final List<ServerListener> extraProxied = RouterResourceFactory.exposedListeners(resource).keySet().stream()
@@ -438,7 +438,12 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
 
         // The A2A public URL is only known once its Route or Ingress exists
         final String a2aHost = exposure.hosts.get(ServerListener.A2A);
-        deployServerDeployment(resource, context, namespace, a2aHost != null ? "https://%s/".formatted(a2aHost) : null);
+        deployServerDeployment(
+                resource,
+                context,
+                namespace,
+                a2aHost != null ? "https://%s/".formatted(a2aHost) : null,
+                serverClaimName);
 
         // A proxy without a valid Secret cannot start, so wait until AuthConfigured is True
         if (authEnabled && authCheck.configured) {
@@ -679,15 +684,33 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                         Objects.equals(ref.getUid(), resource.getMetadata().getUid()));
     }
 
-    private void deployServerStorageAndService(WanakuRouter resource, String namespace) {
-        final PersistentVolumeClaim serverPVC = RouterResourceFactory.makeServerVolumePVC(resource);
-        PersistentVolumeClaim existingServerPVC = kubernetesClient
+    /**
+     * Chooses the Wanaku Server PVC: the legacy shared {@code server-volume-claim} when this router already owns it
+     * (so existing data is kept), or {@code <router>-server-data}.
+     */
+    private String serverClaimName(WanakuRouter resource, String namespace) {
+        final PersistentVolumeClaim legacy = kubernetesClient
                 .persistentVolumeClaims()
                 .inNamespace(namespace)
                 .withName(RouterResourceFactory.SERVER_VOLUME_CLAIM)
                 .get();
+        if (legacy != null && isOwnedBy(legacy, resource)) {
+            return RouterResourceFactory.SERVER_VOLUME_CLAIM;
+        }
+        return RouterResourceFactory.serverClaimName(resource.getMetadata().getName());
+    }
+
+    /** Deploys the Wanaku Server PVC and Service, and returns the name of the PVC. */
+    private String deployServerStorageAndService(WanakuRouter resource, String namespace) {
+        final String claimName = serverClaimName(resource, namespace);
+        final PersistentVolumeClaim serverPVC = RouterResourceFactory.makeServerVolumePVC(resource, claimName);
+        PersistentVolumeClaim existingServerPVC = kubernetesClient
+                .persistentVolumeClaims()
+                .inNamespace(namespace)
+                .withName(claimName)
+                .get();
         if (!match(serverPVC, existingServerPVC)) {
-            LOG.infof("Creating or updating PVC server-volume-claim in %s", namespace);
+            LOG.infof("Creating or updating PVC %s in %s", claimName, namespace);
             kubernetesClient
                     .persistentVolumeClaims()
                     .inNamespace(namespace)
@@ -711,12 +734,17 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     .resource(desiredService)
                     .createOr(Replaceable::update);
         }
+        return claimName;
     }
 
     private void deployServerDeployment(
-            WanakuRouter resource, Context<WanakuRouter> context, String namespace, String a2aPublicUrl) {
+            WanakuRouter resource,
+            Context<WanakuRouter> context,
+            String namespace,
+            String a2aPublicUrl,
+            String claimName) {
         final Deployment desiredDeployment =
-                RouterResourceFactory.makeDesiredServerDeployment(resource, context, a2aPublicUrl);
+                RouterResourceFactory.makeDesiredServerDeployment(resource, context, a2aPublicUrl, claimName);
         Deployment existingDeployment = kubernetesClient
                 .apps()
                 .deployments()

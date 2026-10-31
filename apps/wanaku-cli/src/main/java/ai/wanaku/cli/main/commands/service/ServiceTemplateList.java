@@ -8,6 +8,7 @@ import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.ServiceTemplateSummary;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceTemplateService;
 import picocli.CommandLine;
@@ -20,12 +21,8 @@ public class ServiceTemplateList extends BaseCommand {
     private static final String COLUMN_NAME = "name";
     private static final String COLUMN_DESCRIPTION = "description";
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--search"},
@@ -35,7 +32,7 @@ public class ServiceTemplateList extends BaseCommand {
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
-        ServiceTemplateService service = initAuthenticatedService(ServiceTemplateService.class, host);
+        ServiceTemplateService service = initAuthenticatedService(ServiceTemplateService.class, barn.baseUri());
 
         try {
             WanakuResponse<List<ServiceTemplateSummary>> response = service.list(search);

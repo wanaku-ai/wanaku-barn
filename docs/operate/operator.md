@@ -375,6 +375,15 @@ remove the old workloads. Configure Barn through `spec.barn`; the deprecated `sp
 field still works when `spec.barn` is not set. A `barn-volume-claim` PVC that the router already
 owns stays in use, so existing data is kept.
 
+### Upgrade the Wanaku Server PVC name
+
+The Wanaku Server PVC is named `<router>-server-data` instead of `server-volume-claim`.
+Each router in a namespace now has its own registry volume.
+A `server-volume-claim` PVC that the router already owns stays in use, so existing data is kept.
+The operator does not migrate storage. When you delete the old PVC, the operator creates an
+empty `<router>-server-data` PVC. Back up the registry data before you delete the old PVC, and
+restore it into the new PVC.
+
 ## Next steps
 
 - [Wanaku Operator custom resources](../reference/operator-crds.md): the fields, ports and conditions of each resource.

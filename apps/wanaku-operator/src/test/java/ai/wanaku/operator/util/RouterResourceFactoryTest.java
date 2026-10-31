@@ -166,7 +166,7 @@ class RouterResourceFactoryTest {
                 deployment.getSpec().getSelector().getMatchLabels(),
                 service.getSpec().getSelector());
         assertEquals(service.getSpec().getSelector(), pod.getMetadata().getLabels());
-        assertEquals("server-volume-claim", pvc.getMetadata().getName());
+        assertEquals("test-router-server-data", pvc.getMetadata().getName());
         assertEquals(
                 pvc.getMetadata().getName(),
                 pod.getSpec().getVolumes().getFirst().getPersistentVolumeClaim().getClaimName());

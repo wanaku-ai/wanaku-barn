@@ -6,6 +6,7 @@ import java.util.List;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.CatalogVersion;
 import ai.wanaku.core.services.api.ServiceCatalogService;
@@ -17,12 +18,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.handleNotFound;
 @CommandLine.Command(name = "list", description = "List the versions of a service catalog or template")
 public class ServiceVersionsList extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--name"},
@@ -40,9 +37,9 @@ public class ServiceVersionsList extends BaseCommand {
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
         try {
             WanakuResponse<List<CatalogVersion>> response = template
-                    ? initAuthenticatedService(ServiceTemplateService.class, host)
+                    ? initAuthenticatedService(ServiceTemplateService.class, barn.baseUri())
                             .versions(name)
-                    : initAuthenticatedService(ServiceCatalogService.class, host)
+                    : initAuthenticatedService(ServiceCatalogService.class, barn.baseUri())
                             .versions(name);
             printer.printTable(response.data(), "version", "status", "createdAt", "origin", "restoredFrom", "checksum");
         } catch (WebApplicationException ex) {

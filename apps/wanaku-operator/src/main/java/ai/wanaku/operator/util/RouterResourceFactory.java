@@ -190,6 +190,11 @@ public final class RouterResourceFactory {
         return barn != null && barn.isEnabled();
     }
 
+    /** The default name of the Wanaku Server PVC for a router. */
+    public static String serverClaimName(String routerName) {
+        return routerName + "-server-data";
+    }
+
     /** The default name of the Barn PVC for a router. */
     public static String barnClaimName(String routerName) {
         return routerName + "-barn-data";
@@ -499,13 +504,18 @@ public final class RouterResourceFactory {
     }
 
     public static PersistentVolumeClaim makeServerVolumePVC(WanakuRouter resource) {
+        return makeServerVolumePVC(
+                resource, serverClaimName(resource.getMetadata().getName()));
+    }
+
+    public static PersistentVolumeClaim makeServerVolumePVC(WanakuRouter resource, String claimName) {
         PersistentVolumeClaim pvc = ReconcilerUtilsInternal.loadYaml(
                 PersistentVolumeClaim.class, WanakuRouterReconciler.class, SERVICES_VOLUME_PVC_FILE);
 
         String deploymentName = resource.getMetadata().getName();
         String ns = resource.getMetadata().getNamespace();
 
-        pvc.getMetadata().setName(SERVER_VOLUME_CLAIM);
+        pvc.getMetadata().setName(claimName);
         pvc.getMetadata().setNamespace(ns);
         pvc.getMetadata().getLabels().put("app", serverName(deploymentName));
         pvc.getMetadata().getLabels().put("component", "wanaku-server-storage");
@@ -515,16 +525,18 @@ public final class RouterResourceFactory {
     }
 
     public static Deployment makeDesiredServerDeployment(WanakuRouter resource, Context<WanakuRouter> context) {
-        return makeDesiredServerDeployment(resource, context, null);
+        return makeDesiredServerDeployment(
+                resource, context, null, serverClaimName(resource.getMetadata().getName()));
     }
 
     /**
      * Builds the Wanaku Server Deployment.
      *
      * @param a2aPublicUrl the public URL of the A2A listener, advertised in agent proxy URLs (may be null)
+     * @param claimName the PVC that holds the Wanaku Server registry
      */
     public static Deployment makeDesiredServerDeployment(
-            WanakuRouter resource, Context<WanakuRouter> context, String a2aPublicUrl) {
+            WanakuRouter resource, Context<WanakuRouter> context, String a2aPublicUrl, String claimName) {
         Deployment desiredDeployment = ReconcilerUtilsInternal.loadYaml(
                 Deployment.class, WanakuRouterReconciler.class, SERVER_DEPLOYMENT_FILE);
 
@@ -539,6 +551,9 @@ public final class RouterResourceFactory {
         serviceSpec.getSelector().getMatchLabels().put("component", "wanaku-server");
         serviceSpec.getTemplate().getMetadata().getLabels().put("app", serverName(deploymentName));
         serviceSpec.getTemplate().getMetadata().getLabels().put("component", "wanaku-server");
+        serviceSpec.getTemplate().getSpec().getVolumes().stream()
+                .filter(v -> "server-volume".equals(v.getName()))
+                .forEach(v -> v.getPersistentVolumeClaim().setClaimName(claimName));
 
         final Container serverContainer = serviceSpec.getTemplate().getSpec().getContainers().stream()
                 .filter(c -> c.getName().equals("wanaku-server"))

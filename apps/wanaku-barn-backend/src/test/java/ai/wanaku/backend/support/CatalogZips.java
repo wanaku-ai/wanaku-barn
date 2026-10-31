@@ -3,8 +3,10 @@ package ai.wanaku.backend.support;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Properties;
+import java.util.function.Function;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -16,7 +18,8 @@ public final class CatalogZips {
     private CatalogZips() {}
 
     /**
-     * Builds a Base64-encoded package with one route and one rules file per system.
+     * Builds a Base64-encoded package with one valid route and one rules file per system. The route logs the
+     * description, so packages with different descriptions have different content.
      *
      * @param name the catalog name in {@code index.properties}
      * @param description the catalog description
@@ -24,6 +27,32 @@ public final class CatalogZips {
      * @return the Base64-encoded ZIP
      */
     public static String base64(String name, String description, String... systems) {
+        return base64WithRoutes(name, description, system -> route(system, description), systems);
+    }
+
+    private static String route(String system, String message) {
+        return """
+                - route:
+                    id: %s
+                    from:
+                      uri: "direct:%s"
+                      steps:
+                        - log: "%s"
+                """
+                .formatted(system, system, message);
+    }
+
+    /**
+     * Builds a Base64-encoded package with the given Camel YAML DSL content for each system.
+     *
+     * @param name the catalog name in {@code index.properties}
+     * @param description the catalog description
+     * @param routes the route file content of a system
+     * @param systems the system identifiers
+     * @return the Base64-encoded ZIP
+     */
+    public static String base64WithRoutes(
+            String name, String description, Function<String, String> routes, String... systems) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             try (ZipOutputStream zos = new ZipOutputStream(baos)) {
@@ -39,7 +68,7 @@ public final class CatalogZips {
                     props.setProperty("catalog.rules." + sys, rulesPath);
 
                     zos.putNextEntry(new ZipEntry(routesPath));
-                    zos.write(("# Routes for " + sys + " " + description).getBytes());
+                    zos.write(routes.apply(sys).getBytes(StandardCharsets.UTF_8));
                     zos.closeEntry();
 
                     zos.putNextEntry(new ZipEntry(rulesPath));

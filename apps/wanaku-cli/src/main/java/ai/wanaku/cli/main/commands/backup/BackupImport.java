@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.BackupService;
 import picocli.CommandLine;
@@ -16,12 +17,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.commonResponseErrorHandl
 @CommandLine.Command(name = "import", description = "Import the Barn data from a JSON file that an export created")
 public class BackupImport extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--input"},
@@ -38,7 +35,7 @@ public class BackupImport extends BaseCommand {
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
         String archive = Files.readString(input);
         try {
-            Map<String, Integer> imported = initAuthenticatedService(BackupService.class, host)
+            Map<String, Integer> imported = initAuthenticatedService(BackupService.class, barn.baseUri())
                     .importArchive(replace, archive)
                     .data();
             printer.printSuccessMessage("Imported %s".formatted(imported));

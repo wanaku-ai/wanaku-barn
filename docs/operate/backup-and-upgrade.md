@@ -31,6 +31,8 @@ wanaku backup export --output barn-backup.json
 
 Add `--no-audit` to leave out the audit events.
 
+The `wanaku backup` commands reach Barn through the Wanaku plugin proxy at `--host` (default `http://localhost:8080`). To call Barn directly, add `--direct-access` and set `--host` to the address of the Barn backend.
+
 The REST endpoint is `GET /api/v1/management/export?includeAudit=true`. The archive is in the `data` field of the response.
 
 The archive is a logical export. It does not depend on the Infinispan file format. It contains:
@@ -113,4 +115,5 @@ To restore over existing data, add `--replace`.
 ## Limits
 
 - Barn supports one process for each data directory. Do not start two Barn processes on the same directory.
+- Barn does not form a cluster. Barn processes on the same host or network do not discover each other.
 - The file store directory still uses the legacy `router` folder name. Issue #191 tracks the move to `${wanaku.home}/barn/`.

@@ -6,8 +6,18 @@
         tags: wanaku
         description: "{{tool.description}}"
         parameter.query: string
-        parameter.query.description: "The search query or vector data for similarity search"
+        parameter.query.description: "The text to search for similar content in Qdrant"
+        parameter.query.required: true
       steps:
+        - setBody:
+            simple: "${header.query}"
+        - to:
+            uri: "openai:embeddings"
+            parameters:
+              apiKey: "{{embedding.api.key}}"
+              baseUrl: "{{embedding.base.url}}"
+              embeddingModel: "{{embedding.model}}"
+              encodingFormat: float
         - setHeader:
             name: CamelQdrantAction
             constant: "SIMILARITY_SEARCH"
@@ -20,3 +30,6 @@
               host: "{{qdrant.host}}"
               port: "{{qdrant.port}}"
               apiKey: "{{qdrant.api.key}}"
+              maxResults: "{{qdrant.max.results}}"
+        - transformDataType:
+            toType: "qdrant:rag"
