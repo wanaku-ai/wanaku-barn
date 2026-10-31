@@ -1,6 +1,12 @@
-// Bring in all the styles for Carbon
+@use "./wanaku-look" as look;
+
+// Use the wanaku.ai website typefaces instead of IBM Plex. This must load before Carbon.
+@use "@carbon/type/scss/font-family" with (
+  $font-families: look.$font-families
+);
+
 @use "@carbon/react" with (
-  $font-path: "@ibm/plex"
+  $css--font-face: false
 );
 
 @use "@carbon/react/scss/reset";
@@ -20,6 +26,12 @@
     @include theme.theme(themes.$g100);
   }
 }
+
+:root {
+  @include look.tokens;
+}
+
+@include look.shapes;
 
 body {
   background: theme.$background;

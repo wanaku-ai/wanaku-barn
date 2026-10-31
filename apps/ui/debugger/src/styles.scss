@@ -1,8 +1,23 @@
+@use "./wanaku-look" as look;
+
+// Use the wanaku.ai website typefaces instead of IBM Plex. This must load before Carbon.
+@use "@carbon/type/scss/font-family" with (
+  $font-families: look.$font-families
+);
+
 @use "@carbon/react" with (
   $css--font-face: false
 );
 @use "@carbon/react/scss/spacing" as spacing;
 @use "@carbon/react/scss/theme" as theme;
+// Carbon sets component tokens on :root. Set them again so that the plugin
+// does not change the look of the host admin UI.
+:root {
+  @include look.tokens;
+}
+
+@include look.shapes;
+
 .wanaku-debugger {
   padding: spacing.$spacing-07;
   color: theme.$text-primary;
@@ -79,7 +94,7 @@
   padding: spacing.$spacing-05;
   background: theme.$layer-01;
   border: 1px solid theme.$border-subtle;
-  font-family: "IBM Plex Mono", monospace;
+  font-family: ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 0.875rem;
   line-height: 1.5;
   white-space: pre;
@@ -108,5 +123,5 @@
   li { margin-bottom: spacing.$spacing-03; }
   a { color: theme.$link-primary; }
   pre { background: theme.$layer-02; padding: spacing.$spacing-05; }
-  code { font-family: "IBM Plex Mono", monospace; }
+  code { font-family: ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 }
