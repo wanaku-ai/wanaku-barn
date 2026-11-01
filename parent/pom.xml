@@ -45,10 +45,10 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
 
         <!-- Deps -->
-        <quarkus.platform.version>3.33.4</quarkus.platform.version>
+        <quarkus.platform.version>3.33.4.1</quarkus.platform.version>
         <jackson.version>2.22.4</jackson.version>
         <junit-jupiter.version>6.1.2</junit-jupiter.version>
-        <quarkus-mcp-server.version>2.0.3</quarkus-mcp-server.version>
+        <quarkus-mcp-server.version>2.0.4</quarkus-mcp-server.version>
         <quarkus-oidc-proxy.version>0.5.0</quarkus-oidc-proxy.version>
         <camel.version>4.22.2</camel.version>
         <picocli.version>4.7.7</picocli.version>
