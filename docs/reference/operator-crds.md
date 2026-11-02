@@ -133,7 +133,7 @@ The headless variant keeps the management APIs, MCP, inference, A2A, persistence
 
 ### Server configuration
 
-The Wanaku Server reads its governance posture, forwards, credential bindings, LLM connections, evaluators and action policies from a `wanaku.yaml` file. Without a custom file, the Server uses the default posture: `mode: enforce`, `no_match: deny` and `on_failure: deny`. With this posture, the Server denies each `tools/call`, `resources/read` and `prompts/get` request that no evaluator matches. See [Governance posture](https://wanaku.ai/docs/next/govern/governance-posture).
+The Wanaku Server reads its governance posture, forwards, credential bindings, LLM connections, evaluators and action policies from a `wanaku.yaml` file. Without a custom file, the Server uses the default posture: `mode: enforce`, `no_match: deny` and `on_failure: deny`. With this posture, the Server denies each `tools/call`, `resources/read` and `prompts/get` request that no evaluator matches. See [Governance posture](https://github.com/wanaku-ai/wanaku/blob/main/docs/govern/governance-posture.md).
 
 To supply your own `wanaku.yaml`, put it in a ConfigMap in the namespace of the router:
 
