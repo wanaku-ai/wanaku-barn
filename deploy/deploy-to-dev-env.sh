@@ -58,32 +58,18 @@ done
 # --- Resolve OIDC configuration ---
 log_step "Resolving OIDC configuration"
 
-EXTERNAL_KEYCLOAK_HOST=""
 # the reachable host internal to kubernetes as set in svc/keycloak
 INTERNAL_KEYCLOAK_HOST="http://keycloak:8080"
 
-if [[ -n "${IS_OPENSHIFT}" ]]; then
-    EXTERNAL_KEYCLOAK_HOST=$(kubectl get route keycloak -o jsonpath='{.spec.host}') || {
-        log_error "Failed to get Keycloak route. Is Keycloak deployed?"
-        exit 1
-    }
-else
-    EXTERNAL_KEYCLOAK_HOST=$(kubectl get ingress keycloak -o jsonpath='{.spec.rules[0].host}') || {
-        log_error "Failed to get Keycloak route. Is Keycloak deployed?"
-        exit 1
-    }
-fi
+EXTERNAL_KEYCLOAK_HOST="https://"$(kubectl get ingress keycloak -o jsonpath='{.spec.rules[0].host}') || {
+    log_error "Failed to get Keycloak Ingress. Is Keycloak deployed?"
+    exit 1
+}
+log_info "Keycloak public URL: ${EXTERNAL_KEYCLOAK_HOST}"
 
 # keycloak address visible only in the cluster; the operator appends the realm path
 QUARKUS_OIDC_CLIENT_AUTH_SERVER="${INTERNAL_KEYCLOAK_HOST}"
 
-# detect if using https on external keycloak server
-if curl -k -s -f -o /dev/null "https://${EXTERNAL_KEYCLOAK_HOST}"; then
-    EXTERNAL_KEYCLOAK_HOST="https://${EXTERNAL_KEYCLOAK_HOST}"
-else
-    EXTERNAL_KEYCLOAK_HOST="http://${EXTERNAL_KEYCLOAK_HOST}"
-fi
-log_info "Keycloak public URL: ${EXTERNAL_KEYCLOAK_HOST}"
 
 out=$($WANAKU_KC_ADMIN_CLI credentials show --verbose --insecure \
     --keycloak-url "${EXTERNAL_KEYCLOAK_HOST}" \
@@ -104,11 +90,10 @@ if [[ -z "${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}" ]]; then
 fi
 log_info "OIDC client secret retrieved successfully"
 
+kubectl delete secret/wanaku-oauth2-proxy --ignore-not-found
 kubectl create secret generic wanaku-oauth2-proxy \
     --from-literal=client-secret="${QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET}" \
-    --from-literal=cookie-secret=$(openssl rand -hex 16) \
-    2>/dev/null \
-  || kubectl get secret wanaku-oauth2-proxy > /dev/null 2>&1
+    --from-literal=cookie-secret=$(openssl rand -hex 16)
 
 if ! kubectl get secret wanaku-oauth2-proxy > /dev/null 2>&1; then
   log_error "FAIL: could not create wanaku-oauth2-proxy secret"
@@ -152,7 +137,8 @@ log_info "Existing router removed"
 
 # --- Deploy router ---
 log_step "Deploying the router"
-sed -e "s|oidc-url-replace|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
+sed -e "s|public-oidc-url|${EXTERNAL_KEYCLOAK_HOST}|g" \
+    -e "s|internal-oidc-url|${QUARKUS_OIDC_CLIENT_AUTH_SERVER}|g" \
     -e "s|replace-wanaku-ingress-host|${WANAKU_INGRESS_HOST}|g" \
     -e "s|wanaku-image-replace|${WANAKU_ROUTER_IMAGE}|g" \
     "${REPO_ROOT}/deploy/kubernetes/wanaku-router.yaml" | kubectl apply -f - || {

@@ -183,7 +183,7 @@ class WanakuRouterServerConfigTest {
         barn.setEnabled(barnEnabled);
         router.getSpec().setBarn(barn);
         WanakuTypes.ExposureSpec exposure = new WanakuTypes.ExposureSpec();
-        exposure.setType("None");
+        exposure.setEnabled(false);
         router.getSpec().setExposure(exposure);
         WanakuTypes.ConfigMapKeyRef ref = new WanakuTypes.ConfigMapKeyRef();
         ref.setName(configMapName);

@@ -52,4 +52,8 @@ public final class StringHelper {
     public static boolean isBlank(String str) {
         return str == null || str.isBlank();
     }
+
+    public static String trimTrailing(String str, String end) {
+        return str != null && str.endsWith(end) ? str.substring(0, str.length() - end.length()) : str;
+    }
 }

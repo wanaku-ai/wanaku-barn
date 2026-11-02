@@ -219,7 +219,7 @@ class WanakuRouterBarnTest {
         barn.setEnabled(barnEnabled);
         router.getSpec().setBarn(barn);
         WanakuTypes.ExposureSpec exposure = new WanakuTypes.ExposureSpec();
-        exposure.setType("None");
+        exposure.setEnabled(false);
         router.getSpec().setExposure(exposure);
         return router;
     }

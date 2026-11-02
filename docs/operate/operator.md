@@ -30,7 +30,7 @@ When you create these custom resources, the operator automatically provisions:
 - Services for internal and external access
 - ConfigMaps for configuration
 - Secrets for OIDC credentials
-- Routes (OpenShift) or Ingress (Kubernetes)
+- Ingress resources, when `spec.exposure` is set and enabled
 - ServiceAccounts and RBAC policies
 
 For a `WanakuRouter` named `wanaku-dev`, the operator creates (among others) the
@@ -41,14 +41,14 @@ is `true`, and — when `spec.auth.enabled` is `true` — an
 router to have `spec.barn.enabled: true`, so that Wanaku Barn is deployed for the catalogs
 to register against.
 
-On OpenShift, the operator creates two Routes: `wanaku-dev` for the management API and
-`wanaku-dev-mcp` for the MCP endpoint. OpenShift generates a hostname for each Route.
-The MCP Route sends all paths to the MCP listener. MCP clients use these paths:
-`/<namespace>/mcp` (for example `/default/mcp`), and the OAuth discovery paths `/.well-known/*`, `/authorize`, `/token` and `/register`.
-Set `spec.exposure.host` to use one hostname for both Routes. This needs the
-`routes/custom-host` permission. On a shared hostname, the MCP Route receives `/default/mcp`.
-Other Wanaku namespaces and the OAuth discovery paths require a separate MCP hostname
+When `spec.exposure` is set, the operator creates Ingress resources, because `spec.exposure.enabled` defaults to `true`.
+Set `spec.exposure.enabled: false` to keep the router internal to the cluster. Without `spec.exposure`, the operator exposes nothing.
+With `spec.exposure.host`, the operator creates one Ingress named `wanaku-dev`. The management API uses the path `/`, and the MCP endpoint uses the path `/default/mcp`.
+Other Wanaku namespaces and the OAuth discovery paths (`/.well-known/*`, `/authorize`, `/token` and `/register`) require one hostname for each listener
 using `spec.exposure.listeners` (see [Exposure](../reference/operator-crds.md#exposure)).
+The operator does not create OpenShift Routes. On OpenShift, the Ingress controller creates the Routes from the Ingress resources.
+Earlier operator releases created Routes directly. Delete the Routes `wanaku-dev` and `wanaku-dev-mcp` manually after you upgrade.
+If you had `spec.exposure.type: None`, replace it with `spec.exposure.enabled: false`. The `type` field is no longer recognized, and `enabled` defaults to `true`.
 `status.host` contains the management URL.
 `status.streamableEndpoint` contains the default namespace MCP URL.
 `status.sseEndpoint` is deprecated and left empty because Wanaku Server has no SSE transport.
@@ -314,12 +314,6 @@ If `kubectl wait --for=condition=Ready` times out, do these steps:
 
    ```shell
    kubectl logs -n wanaku -l app.kubernetes.io/name=wanaku-operator | grep -iE 'forbidden|exception|error'
-   ```
-
-4. On OpenShift, if you set `spec.exposure.host`, make sure that the operator service account can set Route hosts:
-
-   ```shell
-   oc auth can-i create routes/custom-host -n wanaku --as=system:serviceaccount:wanaku:wanaku-operator
    ```
 
 An empty `status` usually means that the installed CRD and the operator image come from different releases.

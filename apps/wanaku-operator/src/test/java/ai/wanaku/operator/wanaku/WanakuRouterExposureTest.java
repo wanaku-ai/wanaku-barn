@@ -7,11 +7,7 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
-import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.api.model.RouteStatusBuilder;
-import io.fabric8.openshift.client.OpenShiftClient;
 import ai.wanaku.operator.util.OperatorUtil;
-import ai.wanaku.operator.util.RouterResourceFactory;
 import ai.wanaku.operator.util.ServerListener;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -33,30 +29,7 @@ class WanakuRouterExposureTest {
     }
 
     @Test
-    void routesWithoutExposureHostUseTheirGeneratedHosts() {
-        WanakuRouter router = createRouter(null);
-        // OpenShift assigns a host on creation; the mock API server does not, so pre-create the Routes
-        routes().resource(RouterResourceFactory.makeServerRoute(router, "wanaku.apps.example.com", false))
-                .create();
-        routes().resource(RouterResourceFactory.makeServerRoute(router, "wanaku-mcp.apps.example.com", true))
-                .create();
-
-        WanakuRouterReconciler.Exposure exposure = reconciler.reconcileExternalAccess(router, NAMESPACE);
-
-        assertThat(exposure.host).isEqualTo("wanaku.apps.example.com");
-        // The MCP Route keeps its own host: copying the management host needs routes/custom-host
-        Route mcp = route("wanaku-dev-mcp");
-        assertThat(mcp.getSpec().getHost()).isEqualTo("wanaku-mcp.apps.example.com");
-        // With its own host, the MCP Route also serves the OAuth discovery and namespace endpoints
-        assertThat(mcp.getSpec().getPath()).isEqualTo("/");
-        assertThat(exposure.hosts)
-                .containsOnly(
-                        Map.entry(ServerListener.MANAGEMENT, "wanaku.apps.example.com"),
-                        Map.entry(ServerListener.MCP, "wanaku-mcp.apps.example.com"));
-    }
-
-    @Test
-    void exposureHostIsSharedByBothRoutes() {
+    void sharedHostCreatesOneIngressForManagementAndMcp() {
         WanakuRouter router = createRouter(sharedExposure("wanaku.example.com"));
         WanakuRouterStatus status = new WanakuRouterStatus();
         status.setSseEndpoint("https://wanaku.example.com/mcp/sse");
@@ -64,10 +37,14 @@ class WanakuRouterExposureTest {
 
         reconciler.reconcile(router, null);
 
-        assertThat(route("wanaku-dev").getSpec().getHost()).isEqualTo("wanaku.example.com");
-        assertThat(route("wanaku-dev-mcp").getSpec().getHost()).isEqualTo("wanaku.example.com");
-        assertThat(route("wanaku-dev").getSpec().getPath()).isEqualTo("/");
-        assertThat(route("wanaku-dev-mcp").getSpec().getPath()).isEqualTo("/default/mcp");
+        assertThat(ingresses().list().getItems())
+                .extracting(i -> i.getMetadata().getName())
+                .containsExactly("wanaku-dev");
+        Ingress ingress = ingress("wanaku-dev");
+        assertThat(ingress.getSpec().getRules().getFirst().getHost()).isEqualTo("wanaku.example.com");
+        assertThat(ingress.getSpec().getRules().getFirst().getHttp().getPaths())
+                .extracting(p -> p.getPath())
+                .containsExactlyInAnyOrder("/", "/default/mcp");
         assertThat(router.getStatus().getStreamableEndpoint()).isEqualTo("https://wanaku.example.com/default/mcp");
         assertThat(router.getStatus().getEndpoints()).containsEntry("mcp", "https://wanaku.example.com/default/mcp");
         assertThat(router.getStatus().getSseEndpoint()).isNull();
@@ -80,37 +57,62 @@ class WanakuRouterExposureTest {
                         .getEnv())
                 .anyMatch(e -> "WANAKU_MCP_PUBLIC_URL".equals(e.getName())
                         && "https://wanaku.example.com".equals(e.getValue()));
+        assertThat(condition(router, "ExposureReady").getStatus()).isEqualTo("True");
+        assertThat(condition(router, "ExposureReady").getReason()).isEqualTo("Exposed");
     }
 
     @Test
-    void unchangedRoutesAreNotUpdated() {
-        WanakuRouter router = createRouter(sharedExposure("wanaku.apps.example.com"));
-        reconciler.reconcileExternalAccess(router, NAMESPACE);
-        String version = route("wanaku-dev").getMetadata().getResourceVersion();
+    void exposureIsEnabledByDefault() {
+        WanakuRouter router = createRouter(sharedExposure("wanaku.example.com"));
 
-        reconciler.reconcileExternalAccess(router, NAMESPACE);
+        WanakuRouterReconciler.Exposure exposure = reconciler.reconcileExternalAccess(router, NAMESPACE);
 
-        assertThat(route("wanaku-dev").getMetadata().getResourceVersion()).isEqualTo(version);
+        assertThat(exposure.host).isEqualTo("wanaku.example.com");
+        assertThat(ingress("wanaku-dev")).isNotNull();
     }
 
     @Test
-    void perListenerExposureCreatesOneRoutePerListenerAndPrunesSharedRoutes() {
+    void withoutExposureNothingIsCreated() {
+        WanakuRouter router = createRouter(null);
+
+        WanakuRouterReconciler.Exposure exposure = reconciler.reconcileExternalAccess(router, NAMESPACE);
+
+        assertThat(ingresses().list().getItems()).isEmpty();
+        assertThat(exposure.hosts).isEmpty();
+        assertThat(exposure.host).isEqualTo("server-wanaku-dev");
+    }
+
+    @Test
+    void unchangedIngressesAreNotUpdated() {
         WanakuRouter router = createRouter(sharedExposure("wanaku.apps.example.com"));
         reconciler.reconcileExternalAccess(router, NAMESPACE);
-        assertThat(route("wanaku-dev")).isNotNull();
+        String version = ingress("wanaku-dev").getMetadata().getResourceVersion();
+
+        reconciler.reconcileExternalAccess(router, NAMESPACE);
+
+        assertThat(ingress("wanaku-dev").getMetadata().getResourceVersion()).isEqualTo(version);
+    }
+
+    @Test
+    void perListenerExposureCreatesOneIngressPerListenerAndPrunesTheSharedIngress() {
+        WanakuRouter router = createRouter(sharedExposure("wanaku.apps.example.com"));
+        reconciler.reconcileExternalAccess(router, NAMESPACE);
+        assertThat(ingress("wanaku-dev")).isNotNull();
 
         router.getSpec().setExposure(listenerExposure("mgmt.example.com", "mcp.example.com", null, "a2a.example.com"));
         WanakuRouterReconciler.Exposure exposure = reconciler.reconcileExternalAccess(router, NAMESPACE);
 
-        assertThat(route("wanaku-dev")).isNull();
-        assertThat(routes().list().getItems())
-                .extracting(r -> r.getMetadata().getName())
+        assertThat(ingress("wanaku-dev")).isNull();
+        assertThat(ingresses().list().getItems())
+                .extracting(i -> i.getMetadata().getName())
                 .containsExactlyInAnyOrder("wanaku-dev-management", "wanaku-dev-mcp", "wanaku-dev-a2a");
-        Route a2a = route("wanaku-dev-a2a");
-        assertThat(a2a.getSpec().getHost()).isEqualTo("a2a.example.com");
-        assertThat(a2a.getSpec().getPath()).isEqualTo("/");
-        assertThat(a2a.getSpec().getPort().getTargetPort().getIntVal()).isEqualTo(8084);
-        assertThat(route("wanaku-dev-mcp").getSpec().getPath()).isEqualTo("/");
+        Ingress a2a = ingress("wanaku-dev-a2a");
+        assertThat(a2a.getSpec().getRules().getFirst().getHost()).isEqualTo("a2a.example.com");
+        assertThat(backend(a2a).getPort().getNumber()).isEqualTo(8084);
+        assertThat(backend(ingress("wanaku-dev-mcp")).getName()).isEqualTo("server-wanaku-dev");
+        assertThat(backend(ingress("wanaku-dev-mcp")).getPort().getNumber()).isEqualTo(8081);
+        assertThat(ingress("wanaku-dev-mcp").getSpec().getRules().getFirst().getHost())
+                .isEqualTo("mcp.example.com");
         assertThat(exposure.hosts)
                 .containsEntry(ServerListener.MANAGEMENT, "mgmt.example.com")
                 .containsEntry(ServerListener.A2A, "a2a.example.com")
@@ -118,60 +120,42 @@ class WanakuRouterExposureTest {
     }
 
     @Test
-    void disablingAListenerRemovesItsRoute() {
+    void disablingAListenerRemovesItsIngress() {
         WanakuRouter router =
                 createRouter(listenerExposure("mgmt.example.com", "mcp.example.com", "inf.example.com", null));
         reconciler.reconcileExternalAccess(router, NAMESPACE);
-        assertThat(route("wanaku-dev-inference")).isNotNull();
+        assertThat(ingress("wanaku-dev-inference")).isNotNull();
 
         router.getSpec().getExposure().getListeners().getInference().setEnabled(false);
         reconciler.reconcileExternalAccess(router, NAMESPACE);
 
-        assertThat(route("wanaku-dev-inference")).isNull();
-        assertThat(route("wanaku-dev-management")).isNotNull();
+        assertThat(ingress("wanaku-dev-inference")).isNull();
+        assertThat(ingress("wanaku-dev-management")).isNotNull();
     }
 
     @Test
-    void exposureTypeNoneRemovesEveryRoute() {
+    void disablingExposureRemovesEveryIngress() {
         WanakuRouter router = createRouter(sharedExposure("wanaku.apps.example.com"));
         reconciler.reconcileExternalAccess(router, NAMESPACE);
+        assertThat(ingresses().list().getItems()).hasSize(1);
 
-        router.getSpec().getExposure().setType(RouterResourceFactory.EXPOSURE_NONE);
+        router.getSpec().getExposure().setEnabled(false);
         WanakuRouterReconciler.Exposure exposure = reconciler.reconcileExternalAccess(router, NAMESPACE);
 
-        assertThat(routes().list().getItems()).isEmpty();
+        assertThat(ingresses().list().getItems()).isEmpty();
         assertThat(exposure.hosts).isEmpty();
         assertThat(exposure.host).isEqualTo("server-wanaku-dev");
     }
 
     @Test
-    void ingressTypeCreatesOneIngressPerListenerAndRemovesRoutes() {
+    void disabledPerListenerExposureCreatesNothing() {
         WanakuRouter router = createRouter(listenerExposure("mgmt.example.com", "mcp.example.com", null, null));
-        reconciler.reconcileExternalAccess(router, NAMESPACE);
+        router.getSpec().getExposure().setEnabled(false);
 
-        router.getSpec().getExposure().setType(RouterResourceFactory.EXPOSURE_INGRESS);
-        reconciler.reconcileExternalAccess(router, NAMESPACE);
+        WanakuRouterReconciler.Exposure exposure = reconciler.reconcileExternalAccess(router, NAMESPACE);
 
-        assertThat(routes().list().getItems()).isEmpty();
-        Ingress mcp = client.network()
-                .v1()
-                .ingresses()
-                .inNamespace(NAMESPACE)
-                .withName("wanaku-dev-mcp")
-                .get();
-        assertThat(mcp.getSpec().getRules().getFirst().getHost()).isEqualTo("mcp.example.com");
-        assertThat(mcp.getSpec()
-                        .getRules()
-                        .getFirst()
-                        .getHttp()
-                        .getPaths()
-                        .getFirst()
-                        .getBackend()
-                        .getService())
-                .satisfies(service -> {
-                    assertThat(service.getName()).isEqualTo("server-wanaku-dev");
-                    assertThat(service.getPort().getNumber()).isEqualTo(8081);
-                });
+        assertThat(ingresses().list().getItems()).isEmpty();
+        assertThat(exposure.hosts).isEmpty();
     }
 
     @Test
@@ -196,9 +180,9 @@ class WanakuRouterExposureTest {
 
         reconciler.reconcile(router, null);
 
-        Route a2a = route("wanaku-dev-a2a");
-        assertThat(a2a.getSpec().getTo().getName()).isEqualTo("oauth2-proxy-wanaku-dev");
-        assertThat(a2a.getSpec().getPort().getTargetPort().getIntVal()).isEqualTo(4184);
+        var a2a = backend(ingress("wanaku-dev-a2a"));
+        assertThat(a2a.getName()).isEqualTo("oauth2-proxy-wanaku-dev");
+        assertThat(a2a.getPort().getNumber()).isEqualTo(4184);
         Deployment proxy = deployment("wanaku-dev-oauth2-proxy");
         assertThat(proxy.getSpec().getTemplate().getSpec().getContainers())
                 .extracting(c -> c.getName())
@@ -232,7 +216,7 @@ class WanakuRouterExposureTest {
     }
 
     @Test
-    void disablingAuthRemovesTheProxyAndRoutesToTheServer() {
+    void disablingAuthRemovesTheProxyAndRetargetsIngressesToTheServer() {
         client.secrets()
                 .inNamespace(NAMESPACE)
                 .resource(new SecretBuilder()
@@ -262,50 +246,34 @@ class WanakuRouterExposureTest {
                         .withName("oauth2-proxy-wanaku-dev")
                         .get())
                 .isNull();
-        Route mcp = route("wanaku-dev-mcp");
-        assertThat(mcp.getSpec().getTo().getName()).isEqualTo("server-wanaku-dev");
-        assertThat(mcp.getSpec().getPort().getTargetPort().getIntVal()).isEqualTo(ServerListener.MCP.serverPort());
+        var mcp = backend(ingress("wanaku-dev-mcp"));
+        assertThat(mcp.getName()).isEqualTo("server-wanaku-dev");
+        assertThat(mcp.getPort().getNumber()).isEqualTo(ServerListener.MCP.serverPort());
         assertThat(condition(router, "AuthConfigured").getReason()).isEqualTo("AuthDisabled");
         assertThat(condition(router, "AuthProxyAvailable")).isNull();
     }
 
-    @Test
-    void routesWaitForAdmissionAndReportRejections() {
-        WanakuRouter router = createRouter(sharedExposure("wanaku.apps.example.com"));
-        reconciler.reconcile(router, null);
-        assertThat(condition(router, "ExposureReady").getReason()).isEqualTo("Progressing");
-
-        Route management = route("wanaku-dev");
-        management.setStatus(new RouteStatusBuilder()
-                .addNewIngress()
-                .addNewCondition()
-                .withType("Admitted")
-                .withStatus("False")
-                .withReason("HostAlreadyClaimed")
-                .withMessage("route wanaku-dev already exposes wanaku.apps.example.com")
-                .endCondition()
-                .endIngress()
-                .build());
-        routes().resource(management).updateStatus();
-        reconciler.reconcile(router, null);
-
-        assertThat(condition(router, "ExposureReady").getStatus()).isEqualTo("False");
-        assertThat(condition(router, "ExposureReady").getReason()).isEqualTo("RouteNotAdmitted");
-        assertThat(condition(router, "ExposureReady").getMessage()).contains("HostAlreadyClaimed");
-
-        WanakuRouterReadinessTest.admitRoutes(client);
-        reconciler.reconcile(router, null);
-        assertThat(condition(router, "ExposureReady").getStatus()).isEqualTo("True");
-    }
-
     private io.fabric8.kubernetes.client.dsl.NonNamespaceOperation<
-                    Route, io.fabric8.openshift.api.model.RouteList, io.fabric8.kubernetes.client.dsl.Resource<Route>>
-            routes() {
-        return client.adapt(OpenShiftClient.class).routes().inNamespace(NAMESPACE);
+                    Ingress,
+                    io.fabric8.kubernetes.api.model.networking.v1.IngressList,
+                    io.fabric8.kubernetes.client.dsl.Resource<Ingress>>
+            ingresses() {
+        return client.network().v1().ingresses().inNamespace(NAMESPACE);
     }
 
-    private Route route(String name) {
-        return routes().withName(name).get();
+    private Ingress ingress(String name) {
+        return ingresses().withName(name).get();
+    }
+
+    private static io.fabric8.kubernetes.api.model.networking.v1.IngressServiceBackend backend(Ingress ingress) {
+        return ingress.getSpec()
+                .getRules()
+                .getFirst()
+                .getHttp()
+                .getPaths()
+                .getFirst()
+                .getBackend()
+                .getService();
     }
 
     private Deployment deployment(String name) {

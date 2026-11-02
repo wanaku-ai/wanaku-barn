@@ -32,16 +32,16 @@ class WanakuRouterReconcilerTest {
     }
 
     @Test
-    void ingressTypeWithNullHostFailsValidation() {
+    void enabledExposureWithNullHostFailsValidation() {
         WanakuRouter resource = createRouterWithHost(null);
         WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
         assertFalse(result.valid);
         assertTrue(result.errorMessage.contains("host"));
-        assertTrue(result.errorMessage.contains("Ingress"));
+        assertTrue(result.errorMessage.contains("spec.exposure.enabled"));
     }
 
     @Test
-    void ingressTypeWithBlankHostFailsValidation() {
+    void enabledExposureWithBlankHostFailsValidation() {
         WanakuRouter resource = createRouterWithHost("   ");
         WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
         assertFalse(result.valid);
@@ -49,7 +49,7 @@ class WanakuRouterReconcilerTest {
     }
 
     @Test
-    void ingressTypeWithEmptyHostFailsValidation() {
+    void enabledExposureWithEmptyHostFailsValidation() {
         WanakuRouter resource = createRouterWithHost("");
         WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
         assertFalse(result.valid);
@@ -87,28 +87,17 @@ class WanakuRouterReconcilerTest {
         assertTrue(result.errorMessage.contains("secretName"));
     }
 
-    // ── exposure validation (the mocked cluster has no Route API) ─────────────
+    // ── exposure validation ───────────────────────────────────────────────────
 
     @Test
-    void unknownExposureTypeFailsValidation() {
-        WanakuRouter resource = createRouterWithHost("wanaku.example.com");
-        resource.getSpec().getExposure().setType("LoadBalancer");
-        WanakuRouterReconciler.ValidateSpecResult result = reconciler.validateSpec(resource);
-        assertFalse(result.valid);
-        assertTrue(result.errorMessage.contains("spec.exposure.type"));
+    void exposureIsEnabledByDefault() {
+        assertTrue(new WanakuTypes.ExposureSpec().isEnabled());
     }
 
     @Test
-    void routeExposureWithoutRouteApiFailsValidation() {
-        WanakuRouter resource = createRouterWithHost("wanaku.example.com");
-        resource.getSpec().getExposure().setType("Route");
-        assertFalse(reconciler.validateSpec(resource).valid);
-    }
-
-    @Test
-    void noneExposureNeedsNoHost() {
+    void disabledExposureNeedsNoHost() {
         WanakuRouter resource = createRouterWithHost(null);
-        resource.getSpec().getExposure().setType("None");
+        resource.getSpec().getExposure().setEnabled(false);
         assertTrue(reconciler.validateSpec(resource).valid);
     }
 

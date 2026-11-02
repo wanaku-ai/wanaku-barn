@@ -343,24 +343,7 @@ rules:
 ### Router TLS
 
 > [!IMPORTANT]
-> TLS configuration via the WanakuRouter CRD (`tls.enabled`, `tls.secretName`) is **planned for a future release** but is not yet available. For now, configure TLS at the **Ingress** (Kubernetes) or **Route** (OpenShift) level that fronts the Wanaku Router.
-
-Example OpenShift Route with TLS:
-
-```yaml
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: wanaku-router
-spec:
-  host: wanaku.example.com
-  to:
-    kind: Service
-    name: wanaku-router
-  tls:
-    termination: edge
-    insecureEdgeTerminationPolicy: Redirect
-```
+> TLS configuration via the WanakuRouter CRD (`spec.exposure.enabled`) is enable by default at the **Ingress** level that fronts the Wanaku Router. In Openshift it automatically creates the secure Openshift Route with TLS enabled.
 
 ### mTLS (Future)
 

@@ -8,7 +8,6 @@ import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
-import io.fabric8.openshift.api.model.Route;
 
 /**
  * Matching utilities to check if the desired resource matches the existing resource
@@ -107,30 +106,6 @@ public final class Matchers {
 
         return desired.getMetadata().getName().equals(existing.getMetadata().getName())
                 && OperatorUtil.sameDesiredHash(desired, existing);
-    }
-
-    public static boolean match(Route desiredRoute, Route existingRoute) {
-        if (existingRoute == null) {
-            return false;
-        }
-
-        if (!desiredRoute.getFullResourceName().equals(existingRoute.getFullResourceName())) {
-            return false;
-        }
-
-        var desiredSpec = desiredRoute.getSpec();
-        var existingSpec = existingRoute.getSpec();
-        if (desiredSpec == null || existingSpec == null) {
-            return Objects.equals(desiredSpec, existingSpec);
-        }
-        if (!Objects.equals(desiredSpec.getHost(), existingSpec.getHost())
-                || !Objects.equals(desiredSpec.getPath(), existingSpec.getPath())
-                || !Objects.equals(desiredSpec.getTo(), existingSpec.getTo())
-                || !Objects.equals(desiredSpec.getPort(), existingSpec.getPort())) {
-            return false;
-        }
-
-        return Objects.equals(desiredSpec.getTls(), existingSpec.getTls());
     }
 
     public static boolean match(Ingress desired, Ingress existing) {

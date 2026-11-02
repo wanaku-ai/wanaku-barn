@@ -345,38 +345,6 @@ class RouterResourceFactoryTest {
     // ── Server Ingress factory tests ─────────────────────────────────────────
 
     @Test
-    void serverRoutesExposeManagementAndMcpOnOneHost() {
-        WanakuRouter router = createRouter(null);
-        var routes = List.of(
-                RouterResourceFactory.makeServerRoute(router, "wanaku.example.com", false),
-                RouterResourceFactory.makeServerRoute(router, "wanaku.example.com", true));
-        assertEquals(
-                Map.of("/", 8080, "/default/mcp", 8081),
-                routes.stream()
-                        .collect(java.util.stream.Collectors.toMap(
-                                r -> r.getSpec().getPath(),
-                                r -> r.getSpec().getPort().getTargetPort().getIntVal())));
-        for (var route : routes) {
-            assertEquals("wanaku.example.com", route.getSpec().getHost());
-            assertEquals("server-test-router", route.getSpec().getTo().getName());
-            assertEquals("edge", route.getSpec().getTls().getTermination());
-            assertEquals("Redirect", route.getSpec().getTls().getInsecureEdgeTerminationPolicy());
-        }
-    }
-
-    @Test
-    void authenticatedRoutesTargetProxyPorts() {
-        WanakuRouter router = createRouterWithAuth();
-        var management = RouterResourceFactory.makeServerRoute(router, null, false);
-        var mcp = RouterResourceFactory.makeServerRoute(router, "wanaku.example.com", true);
-        assertNull(management.getSpec().getHost());
-        assertEquals(4181, management.getSpec().getPort().getTargetPort().getIntVal());
-        assertEquals(4180, mcp.getSpec().getPort().getTargetPort().getIntVal());
-        assertEquals("oauth2-proxy-test-router", management.getSpec().getTo().getName());
-        assertEquals("oauth2-proxy-test-router", mcp.getSpec().getTo().getName());
-    }
-
-    @Test
     void serverIngressTargetsPort8081() {
         WanakuRouter router = createRouter(null);
         Ingress ingress = RouterResourceFactory.makeServerIngress(router, "wanaku.example.com");

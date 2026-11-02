@@ -27,8 +27,6 @@ import io.fabric8.kubernetes.api.model.networking.v1.HTTPIngressPath;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressTLS;
-import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.api.model.RouteBuilder;
 import io.javaoperatorsdk.operator.ReconcilerUtilsInternal;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import ai.wanaku.core.util.StringHelper;
@@ -48,7 +46,6 @@ public final class RouterResourceFactory {
 
     public static final String BARN_DEPLOYMENT_FILE = "wanaku-barn-deployment.yaml";
     public static final String BARN_INTERNAL_SERVICE_FILE = "wanaku-barn-service-internal.yaml";
-    public static final String BARN_EXTERNAL_SERVICE_FILE = "wanaku-barn-service-external.yaml";
     public static final String SERVER_INGRESS_FILE = "wanaku-server-ingress.yaml";
     public static final String SERVER_DEPLOYMENT_FILE = "wanaku-server-deployment.yaml";
     public static final String SERVER_INTERNAL_SERVICE_FILE = "wanaku-server-service-internal.yaml";
@@ -124,54 +121,6 @@ public final class RouterResourceFactory {
         return service;
     }
 
-    /**
-     * Creates the management or the MCP Route. Without a host, OpenShift generates a separate host for each Route,
-     * so the MCP Route takes every path: MCP clients also need the OAuth discovery endpoints ({@code /.well-known/*},
-     * {@code /authorize}, {@code /token}, {@code /register}) and the namespace endpoints ({@code /<namespace>/mcp}).
-     * With a shared host, the MCP Route serves {@code /default/mcp}; other namespaces and OAuth discovery
-     * require a separate MCP host, because the management Route takes {@code /}.
-     */
-    public static Route makeServerRoute(WanakuRouter resource, String host, boolean mcp) {
-        String name = resource.getMetadata().getName();
-        boolean authEnabled = isAuthEnabled(resource);
-        String service = authEnabled ? oauth2ProxyServiceName(name) : "server-" + name;
-        int port = mcp ? (authEnabled ? 4180 : 8081) : authEnabled ? 4181 : 8080;
-        Route route = new RouteBuilder()
-                .withNewMetadata()
-                .withName(mcp ? name + "-mcp" : name)
-                .withNamespace(resource.getMetadata().getNamespace())
-                .addToLabels("app", serverName(name))
-                .addToLabels("component", "wanaku-server")
-                .endMetadata()
-                .withNewSpec()
-                .withHost(host)
-                .withPath(mcp && StringHelper.isNotEmpty(host) ? "/default/mcp" : "/")
-                .withNewTo()
-                .withKind("Service")
-                .withName(service)
-                .withWeight(100)
-                .endTo()
-                .withNewPort()
-                .withNewTargetPort(port)
-                .endPort()
-                .withNewTls()
-                .withTermination("edge")
-                .withInsecureEdgeTerminationPolicy("Redirect")
-                .endTls()
-                .withWildcardPolicy("None")
-                .endSpec()
-                .build();
-        if (resource.getSpec().getExposure() != null) {
-            route.getMetadata().setAnnotations(resource.getSpec().getExposure().getAnnotations());
-        }
-        route.addOwnerReference(resource);
-        return route;
-    }
-
-    public static final String EXPOSURE_AUTO = "Auto";
-    public static final String EXPOSURE_ROUTE = "Route";
-    public static final String EXPOSURE_INGRESS = "Ingress";
-    public static final String EXPOSURE_NONE = "None";
     public static final String LISTENER_LABEL = "wanaku.ai/listener";
 
     /** Where the Barn PVC is mounted; also the Barn persistence base folder. */
@@ -333,9 +282,10 @@ public final class RouterResourceFactory {
         return server != null && SERVER_VARIANT_HEADLESS.equals(server.getVariant());
     }
 
-    public static String exposureType(WanakuRouter resource) {
+    /** True when spec.exposure is set and enabled: the operator creates the Ingress resources. */
+    public static boolean isExposureEnabled(WanakuRouter resource) {
         final WanakuTypes.ExposureSpec exposure = resource.getSpec().getExposure();
-        return exposure != null && StringHelper.isNotEmpty(exposure.getType()) ? exposure.getType() : EXPOSURE_AUTO;
+        return exposure != null && exposure.isEnabled();
     }
 
     /** True when spec.exposure.listeners is set: each exposed listener gets its own host. */
@@ -344,10 +294,10 @@ public final class RouterResourceFactory {
         return exposure != null && exposure.getListeners() != null;
     }
 
-    /** The listeners exposed in per-listener mode, with their configured host (empty when generated). */
+    /** The listeners exposed in per-listener mode, with their configured host. */
     public static Map<ServerListener, String> exposedListeners(WanakuRouter resource) {
         final Map<ServerListener, String> exposed = new java.util.EnumMap<>(ServerListener.class);
-        if (!isPerListenerExposure(resource) || EXPOSURE_NONE.equals(exposureType(resource))) {
+        if (!isPerListenerExposure(resource) || !isExposureEnabled(resource)) {
             return exposed;
         }
         final WanakuTypes.ListenersSpec listeners =
@@ -368,41 +318,6 @@ public final class RouterResourceFactory {
         if (enabled) {
             exposed.put(listener, spec != null && spec.getHost() != null ? spec.getHost() : "");
         }
-    }
-
-    /** Builds the per-listener Route {@code <router>-<listener>} for the root path of its own host. */
-    public static Route makeListenerRoute(WanakuRouter resource, ServerListener listener, String host) {
-        final String name = resource.getMetadata().getName();
-        final boolean authEnabled = isAuthEnabled(resource);
-        Route route = new RouteBuilder()
-                .withNewMetadata()
-                .withName(name + "-" + listener.id())
-                .withNamespace(resource.getMetadata().getNamespace())
-                .addToLabels("app", serverName(name))
-                .addToLabels("component", "wanaku-server")
-                .addToLabels(LISTENER_LABEL, listener.id())
-                .endMetadata()
-                .withNewSpec()
-                .withHost(StringHelper.isNotEmpty(host) ? host : null)
-                .withPath("/")
-                .withNewTo()
-                .withKind("Service")
-                .withName(authEnabled ? oauth2ProxyServiceName(name) : "server-" + name)
-                .withWeight(100)
-                .endTo()
-                .withNewPort()
-                .withNewTargetPort(authEnabled ? listener.proxyPort() : listener.serverPort())
-                .endPort()
-                .withNewTls()
-                .withTermination("edge")
-                .withInsecureEdgeTerminationPolicy("Redirect")
-                .endTls()
-                .withWildcardPolicy("None")
-                .endSpec()
-                .build();
-        route.getMetadata().setAnnotations(resource.getSpec().getExposure().getAnnotations());
-        route.addOwnerReference(resource);
-        return route;
     }
 
     /** Builds the per-listener Ingress {@code <router>-<listener>} for the root path of its own host. */
@@ -1014,23 +929,24 @@ public final class RouterResourceFactory {
      * format, which named only the Keycloak base URL; the operator appends the {@code wanaku} realm to them.
      */
     public static String issuerUrl(WanakuRouterSpec.AuthSpec authSpec) {
-        final String issuer = trimTrailingSlash(authSpec.getIssuerUrl());
-        return isLegacyIssuerUrl(authSpec) ? issuer + LEGACY_REALM_PATH : issuer;
+        final String issuer = StringHelper.trimTrailing(authSpec.getIssuerUrl(), "/");
+        return isLegacyIssuerUrl(authSpec.getIssuerUrl()) ? issuer + LEGACY_REALM_PATH : issuer;
     }
 
-    public static boolean isLegacyIssuerUrl(WanakuRouterSpec.AuthSpec authSpec) {
-        return authSpec.getIssuerUrl() != null && !authSpec.getIssuerUrl().contains("/realms/");
+    public static boolean isLegacyIssuerUrl(String url) {
+        return url != null && !url.contains("/realms/");
     }
 
     /** Returns the in-cluster issuer URL, or the public issuer URL when no internal URL is set. */
     public static String internalIssuerUrl(WanakuRouterSpec.AuthSpec authSpec) {
-        return StringHelper.isNotEmpty(authSpec.getInternalIssuerUrl())
-                ? trimTrailingSlash(authSpec.getInternalIssuerUrl())
-                : issuerUrl(authSpec);
-    }
-
-    private static String trimTrailingSlash(String url) {
-        return url != null && url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+        if (StringHelper.isEmpty(authSpec.getInternalIssuerUrl())) {
+            return issuerUrl(authSpec);
+        }
+        String issuerInternal = StringHelper.trimTrailing(authSpec.getInternalIssuerUrl(), "/");
+        if (!issuerInternal.contains("/realms/")) {
+            issuerInternal += LEGACY_REALM_PATH;
+        }
+        return issuerInternal;
     }
 
     private static void addIfAbsent(List<EnvVar> envVars, EnvVar envVar) {

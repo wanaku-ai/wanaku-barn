@@ -30,7 +30,7 @@ import io.quarkiverse.operatorsdk.annotations.SharedCSVMetadata;
                 ## Features
 
                 - Single-namespace install (OwnNamespace and SingleNamespace modes)
-                - Creates Deployments, Services, PVCs, and Ingress or OpenShift Routes
+                - Creates Deployments, Services, PVCs, and Ingress resources
                 - Optional OIDC authentication via oauth2-proxy
                 - Service catalog lifecycle (deploy, restore on conflict, remove on delete)
                 - No cluster-wide permissions required
