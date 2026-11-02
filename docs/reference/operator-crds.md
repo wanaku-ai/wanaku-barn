@@ -50,8 +50,9 @@ host networking, so Wanaku Server reaches Barn at `http://localhost:8180`.
 | `spec.barn.env` | list | Extra environment variables for Wanaku Barn. See [Environment variables](#environment-variables) |
 | `spec.barn.storage` | object | `size` (default `5Gi`), `storageClassName` and `existingClaim` for the Barn data |
 | `spec.router` | object | Deprecated name of `spec.barn` (without `storage`). The operator reads it only when `spec.barn` is not set |
-| `spec.server` | object | The Wanaku router engine: `variant`, `image`, `env`, `imagePullPolicy` |
+| `spec.server` | object | The Wanaku router engine: `variant`, `image`, `env`, `imagePullPolicy`, `configMapRef` |
 | `spec.server.variant` | string | `standard` (default) or `headless`. See [Server variants](#server-variants) |
+| `spec.server.configMapRef` | object | `name` and `key` (default `wanaku.yaml`) of a ConfigMap key that holds a custom `wanaku.yaml`. See [Server configuration](#server-configuration) |
 | `spec.auth` | object | Authentication via oauth2-proxy instances placed in front of Wanaku |
 | `spec.auth.enabled` | bool | Whether the oauth2-proxies are deployed |
 | `spec.auth.issuerUrl` | string | Full public OIDC issuer URL, including the realm (for example, `https://keycloak.example.com/realms/wanaku`) |
@@ -130,6 +131,38 @@ The headless variant keeps the management APIs, MCP, inference, A2A, persistence
 - `status.endpoints.adminUi` is not set. The standard variant sets it when the management listener is exposed.
 - When authentication is enabled, the management proxy returns `401` for requests without a token on all paths, instead of a redirect to the login page.
 
+### Server configuration
+
+The Wanaku Server reads its governance posture, forwards, credential bindings, LLM connections, evaluators and action policies from a `wanaku.yaml` file. Without a custom file, the Server uses the default posture: `mode: enforce`, `no_match: deny` and `on_failure: deny`. With this posture, the Server denies each `tools/call`, `resources/read` and `prompts/get` request that no evaluator matches. See [Governance posture](https://wanaku.ai/docs/next/govern/governance-posture).
+
+To supply your own `wanaku.yaml`, put it in a ConfigMap in the namespace of the router:
+
+```shell
+kubectl create configmap wanaku-config --from-file=wanaku.yaml -n wanaku
+```
+
+Then reference the ConfigMap in `spec.server.configMapRef`:
+
+```yaml
+spec:
+  server:
+    configMapRef:
+      name: wanaku-config
+      key: wanaku.yaml
+```
+
+The operator uses these rules for the custom file:
+
+- It copies the file into the `<router>-server-config` ConfigMap and mounts it as `/etc/wanaku/wanaku.yaml` in the Wanaku Server.
+- When Barn is enabled, it adds the `wanaku-barn` plugin to the `plugins` list of the file. If the file already declares a plugin with the id `wanaku-barn`, the operator does not change the file.
+- It watches the referenced ConfigMap. When the content changes, the Server restarts with the new file.
+- It does not accept the name `<router>-server-config`, because the operator owns that ConfigMap.
+- If the ConfigMap or the key does not exist, or the file is not a YAML mapping, the `Reconciled` condition is `False` with the reason `InvalidServerConfig`. The message tells which part is missing or not valid. The operator does not change the Server until you correct the reference.
+
+The operator does not validate the Wanaku settings in the file. The Server validates them at startup. If a setting is not valid, the Server does not start. Use `kubectl logs deployment/<router>-server` to see the error.
+
+The Server reads secrets that the file names from environment variables. Set these variables in `spec.server.env`, with `valueFrom.secretKeyRef` to read them from a Secret. See [Environment variables](#environment-variables).
+
 ### Wanaku Barn
 
 Wanaku Barn is optional. Set `spec.barn.enabled: true` to deploy it:
@@ -146,7 +179,7 @@ When Barn is enabled, the operator does these steps:
 
 - It creates the `<router>-barn` Deployment, the `barn-<router>` Service and the Barn PVC. The probes use `/q/health/started`, `/q/health/ready` and `/q/health/live`.
 - It sets the Barn persistence folder to the PVC mount path. The data does not depend on the home directory of the container user.
-- It writes the `<router>-server-config` ConfigMap and mounts it as `/etc/wanaku/wanaku.yaml` in the Wanaku Server. The file points the `wanaku-barn` plugin service `wanaku-barn-api` at `http://barn-<router>:8080`. The Server then proxies `/api/plugins/wanaku-barn/wanaku-barn-api/...` to Barn. When the file changes, the Server restarts.
+- It writes the `<router>-server-config` ConfigMap and mounts it as `/etc/wanaku/wanaku.yaml` in the Wanaku Server. The file points the `wanaku-barn` plugin service `wanaku-barn-api` at `http://barn-<router>:8080`. The Server then proxies `/api/plugins/wanaku-barn/wanaku-barn-api/...` to Barn. When the file changes, the Server restarts. If you set `spec.server.configMapRef`, the operator adds the plugin to your file. See [Server configuration](#server-configuration).
 - It publishes the internal Barn URL in `status.barnUrl`. Other clients, for example the Camel Integration Capability (`REGISTRATION_URL`) and the semantic router (`WSR_BARN_URL`), use this URL.
 - It reports the Barn availability in the `BarnAvailable` condition. `Ready` requires it.
 

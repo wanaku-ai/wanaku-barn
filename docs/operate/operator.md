@@ -162,6 +162,46 @@ kubectl apply -f router-auth.yaml -n wanaku
 kubectl wait wanakurouter/wanaku-dev --for=condition=Ready --timeout=300s
 ```
 
+### Router with a custom wanaku.yaml
+
+Without a custom `wanaku.yaml`, the Wanaku Server denies tool calls, resource reads and prompt requests that no evaluator matches. To set your own governance posture, forwards and evaluators, put your `wanaku.yaml` in a ConfigMap. This example permits actions that no rule matches:
+
+```yaml
+# wanaku.yaml
+governance:
+  default:
+    mode: enforce
+    no_match: allow
+    on_failure: deny
+```
+
+```shell
+kubectl create configmap wanaku-config --from-file=wanaku.yaml -n wanaku
+```
+
+Reference the ConfigMap from the router:
+
+```yaml
+# router-config.yaml
+apiVersion: "wanaku.ai/v1alpha1"
+kind: WanakuRouter
+metadata:
+  name: wanaku-dev
+spec:
+  barn:
+    enabled: true
+  server:
+    configMapRef:
+      name: wanaku-config
+```
+
+```shell
+kubectl apply -f router-config.yaml -n wanaku
+kubectl wait wanakurouter/wanaku-dev --for=condition=Ready --timeout=300s
+```
+
+The operator adds the Barn plugin to the file and restarts the Server when the ConfigMap changes. See [Server configuration](../reference/operator-crds.md#server-configuration).
+
 ### Deploying Service Catalogs
 
 Package a catalog with the CLI, put it in a ConfigMap, then reference it:

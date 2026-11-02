@@ -168,6 +168,19 @@ public class WanakuRouterSpec {
         private String image;
         private List<WanakuTypes.EnvVar> env;
         private String imagePullPolicy;
+        private WanakuTypes.ConfigMapKeyRef configMapRef;
+
+        /**
+         * The ConfigMap key that holds a custom {@code wanaku.yaml} for the Server. The key defaults to
+         * {@code wanaku.yaml}. When Barn is enabled, the operator adds the Barn plugin to this file.
+         */
+        public WanakuTypes.ConfigMapKeyRef getConfigMapRef() {
+            return configMapRef;
+        }
+
+        public void setConfigMapRef(WanakuTypes.ConfigMapKeyRef configMapRef) {
+            this.configMapRef = configMapRef;
+        }
 
         /**
          * {@code standard} (default) serves the embedded admin UI; {@code headless} omits it. The variant

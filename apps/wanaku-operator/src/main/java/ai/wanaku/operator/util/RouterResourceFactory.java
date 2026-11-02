@@ -36,6 +36,12 @@ import ai.wanaku.operator.wanaku.WanakuRouter;
 import ai.wanaku.operator.wanaku.WanakuRouterReconciler;
 import ai.wanaku.operator.wanaku.WanakuRouterSpec;
 import ai.wanaku.operator.wanaku.WanakuTypes;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 
 public final class RouterResourceFactory {
     private static final Logger LOG = Logger.getLogger(RouterResourceFactory.class);
@@ -209,11 +215,88 @@ public final class RouterResourceFactory {
         return routerName + "-server-config";
     }
 
+    /** The default key of the custom {@code wanaku.yaml} in {@code spec.server.configMapRef}. */
+    public static final String SERVER_CONFIG_KEY = "wanaku.yaml";
+
+    private static final YAMLMapper YAML = YAMLMapper.builder()
+            .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
+            .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
+            .build();
+
+    /** Returns {@code spec.server.configMapRef}, or null when it is unset. */
+    public static WanakuTypes.ConfigMapKeyRef serverConfigRef(WanakuRouter resource) {
+        final WanakuRouterSpec.ServerSpec server =
+                resource.getSpec() != null ? resource.getSpec().getServer() : null;
+        return server != null ? server.getConfigMapRef() : null;
+    }
+
+    /** Returns the key of the custom {@code wanaku.yaml}: the configured key, or {@code wanaku.yaml}. */
+    public static String serverConfigKey(WanakuTypes.ConfigMapKeyRef ref) {
+        return StringHelper.isNotEmpty(ref.getKey()) ? ref.getKey() : SERVER_CONFIG_KEY;
+    }
+
     /**
-     * Builds the {@code wanaku.yaml} the Server reads at startup. It points the Barn plugin service at the
-     * Barn API, so the Server proxies {@code /api/plugins/wanaku-barn/wanaku-barn-api/...} to Barn.
+     * Builds the {@code wanaku.yaml} the Server reads at startup, or returns null when the Server needs
+     * none. The file is the custom configuration from {@code spec.server.configMapRef}, if any. When Barn
+     * is enabled, the file also points the Barn plugin service at the Barn API, so the Server proxies
+     * {@code /api/plugins/wanaku-barn/wanaku-barn-api/...} to Barn. A custom configuration that already
+     * declares the {@code wanaku-barn} plugin is used unchanged.
+     *
+     * @param customConfig the content of the custom {@code wanaku.yaml}, or null
+     * @throws IllegalArgumentException when the custom configuration is not a YAML mapping, or its
+     *     {@code plugins} key is not a list
      */
-    public static ConfigMap makeServerConfigMap(WanakuRouter resource) {
+    public static String serverConfig(WanakuRouter resource, String customConfig) {
+        final String routerName = resource.getMetadata().getName();
+        final boolean barn = isBarnEnabled(resource);
+        if (customConfig == null) {
+            return barn ? barnPluginConfig(routerName) : null;
+        }
+        final ObjectNode root = parseConfig(customConfig);
+        if (!barn) {
+            return customConfig;
+        }
+        final JsonNode plugins = root.get("plugins");
+        if (plugins != null && !plugins.isNull() && !plugins.isArray()) {
+            throw new IllegalArgumentException("the plugins key must be a list");
+        }
+        final ArrayNode pluginList = plugins instanceof ArrayNode list ? list : root.putArray("plugins");
+        for (JsonNode plugin : pluginList) {
+            if (BARN_PLUGIN_ID.equals(plugin.path("id").asText(null))) {
+                return customConfig;
+            }
+        }
+        pluginList
+                .addObject()
+                .put("id", BARN_PLUGIN_ID)
+                .putObject("services")
+                .putObject(BARN_PLUGIN_SERVICE)
+                .put("target", barnUrl(routerName));
+        try {
+            return YAML.writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("cannot write the file: " + e.getOriginalMessage(), e);
+        }
+    }
+
+    private static ObjectNode parseConfig(String content) {
+        final JsonNode root;
+        try {
+            root = YAML.readTree(content);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("invalid YAML: " + e.getOriginalMessage(), e);
+        }
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            return YAML.createObjectNode();
+        }
+        if (root instanceof ObjectNode mapping) {
+            return mapping;
+        }
+        throw new IllegalArgumentException("the root must be a YAML mapping");
+    }
+
+    /** Builds the {@code <router>-server-config} ConfigMap that holds the Server {@code wanaku.yaml}. */
+    public static ConfigMap makeServerConfigMap(WanakuRouter resource, String serverConfig) {
         final String name = resource.getMetadata().getName();
         final ConfigMap configMap = new ConfigMapBuilder()
                 .withNewMetadata()
@@ -222,14 +305,14 @@ public final class RouterResourceFactory {
                 .addToLabels("app", serverName(name))
                 .addToLabels("component", "wanaku-server")
                 .endMetadata()
-                .addToData("wanaku.yaml", serverConfig(name))
+                .addToData(SERVER_CONFIG_KEY, serverConfig)
                 .build();
         managed(configMap, configMap.getData());
         configMap.addOwnerReference(resource);
         return configMap;
     }
 
-    private static String serverConfig(String routerName) {
+    private static String barnPluginConfig(String routerName) {
         return """
                 plugins:
                   - id: %s
@@ -530,7 +613,8 @@ public final class RouterResourceFactory {
                 context,
                 null,
                 null,
-                serverClaimName(resource.getMetadata().getName()));
+                serverClaimName(resource.getMetadata().getName()),
+                serverConfig(resource, null));
     }
 
     /**
@@ -539,13 +623,15 @@ public final class RouterResourceFactory {
      * @param a2aPublicUrl the public URL of the A2A listener, advertised in agent proxy URLs (may be null)
      * @param mcpPublicUrl the public base URL of the MCP listener, shown by the admin UI (may be null)
      * @param claimName the PVC that holds the Wanaku Server registry
+     * @param serverConfig the {@code wanaku.yaml} from {@link #serverConfig}, or null when the Server has none
      */
     public static Deployment makeDesiredServerDeployment(
             WanakuRouter resource,
             Context<WanakuRouter> context,
             String a2aPublicUrl,
             String mcpPublicUrl,
-            String claimName) {
+            String claimName,
+            String serverConfig) {
         Deployment desiredDeployment = ReconcilerUtilsInternal.loadYaml(
                 Deployment.class, WanakuRouterReconciler.class, SERVER_DEPLOYMENT_FILE);
 
@@ -621,7 +707,7 @@ public final class RouterResourceFactory {
         }
         serverContainer.setEnv(envVars);
 
-        if (isBarnEnabled(resource)) {
+        if (serverConfig != null) {
             // Mount only the file: the image keeps its other files in /etc/wanaku
             serverContainer
                     .getVolumeMounts()
@@ -646,9 +732,7 @@ public final class RouterResourceFactory {
             if (serviceSpec.getTemplate().getMetadata().getAnnotations() != null) {
                 podAnnotations.putAll(serviceSpec.getTemplate().getMetadata().getAnnotations());
             }
-            podAnnotations.put(
-                    SERVER_CONFIG_HASH_ANNOTATION,
-                    Integer.toHexString(serverConfig(deploymentName).hashCode()));
+            podAnnotations.put(SERVER_CONFIG_HASH_ANNOTATION, Integer.toHexString(serverConfig.hashCode()));
             serviceSpec.getTemplate().getMetadata().setAnnotations(podAnnotations);
         }
 

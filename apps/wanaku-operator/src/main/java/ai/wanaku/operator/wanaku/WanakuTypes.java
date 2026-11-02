@@ -187,6 +187,28 @@ public final class WanakuTypes {
         }
     }
 
+    /** A key in a ConfigMap. */
+    public static class ConfigMapKeyRef {
+        private String name;
+        private String key;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+    }
+
     /**
      * Route files in a ConfigMap. Without {@code items}, every key is a file in one directory and
      * {@code main} names the key of the main route file. With {@code items}, each key is placed at its

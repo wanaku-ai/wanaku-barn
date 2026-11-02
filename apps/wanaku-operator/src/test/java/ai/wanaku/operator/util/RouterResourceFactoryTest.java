@@ -15,9 +15,110 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RouterResourceFactoryTest {
+
+    @Test
+    void theServerHasNoConfigWithoutBarnOrCustomConfig() {
+        assertNull(RouterResourceFactory.serverConfig(createRouter(null), null));
+    }
+
+    @Test
+    void aCustomConfigWithoutBarnIsUsedUnchanged() {
+        String custom = "# my posture\ngovernance:\n  default:\n    no_match: allow\n";
+
+        assertEquals(custom, RouterResourceFactory.serverConfig(createRouter(null), custom));
+    }
+
+    @Test
+    void barnAddsItsPluginToACustomConfig() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+        String custom =
+                """
+                governance:
+                  default:
+                    no_match: allow
+                plugins:
+                  - id: other
+                    services:
+                      api:
+                        target: http://other:8080
+                """;
+
+        String config = RouterResourceFactory.serverConfig(router, custom);
+
+        assertTrue(config.contains("no_match: allow"), config);
+        assertTrue(config.contains("other"), config);
+        assertTrue(config.contains("wanaku-barn-api"), config);
+        assertTrue(config.contains("http://barn-test-router:8080"), config);
+    }
+
+    @Test
+    void barnAddsAPluginsListWhenTheCustomConfigHasNone() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+
+        String config = RouterResourceFactory.serverConfig(router, "governance:\n  default:\n    mode: audit\n");
+
+        assertTrue(config.contains("mode: audit"), config);
+        assertTrue(config.contains("wanaku-barn-api"), config);
+    }
+
+    @Test
+    void aCustomConfigThatDeclaresTheBarnPluginIsUsedUnchanged() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+        String custom =
+                """
+                plugins:
+                  - id: wanaku-barn
+                    services:
+                      wanaku-barn-api:
+                        target: http://my-barn:8080
+                """;
+
+        assertEquals(custom, RouterResourceFactory.serverConfig(router, custom));
+    }
+
+    @Test
+    void anInvalidCustomConfigIsRejected() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+
+        assertThrows(IllegalArgumentException.class, () -> RouterResourceFactory.serverConfig(router, "governance: ["));
+        assertThrows(
+                IllegalArgumentException.class, () -> RouterResourceFactory.serverConfig(router, "- not a mapping"));
+        assertThrows(
+                IllegalArgumentException.class, () -> RouterResourceFactory.serverConfig(router, "plugins: wrong"));
+    }
+
+    @Test
+    void theServerMountsACustomConfigWithoutBarn() {
+        WanakuRouter router = createRouter(null);
+        String custom = "governance:\n  default:\n    no_match: allow\n";
+
+        Deployment server =
+                RouterResourceFactory.makeDesiredServerDeployment(router, null, null, null, "claim", custom);
+
+        assertTrue(server.getSpec().getTemplate().getSpec().getVolumes().stream()
+                .anyMatch(v -> "server-config".equals(v.getName())));
+        assertEquals(
+                Integer.toHexString(custom.hashCode()),
+                server.getSpec()
+                        .getTemplate()
+                        .getMetadata()
+                        .getAnnotations()
+                        .get(RouterResourceFactory.SERVER_CONFIG_HASH_ANNOTATION));
+    }
+
+    private static WanakuRouterSpec.BarnSpec enabledBarn() {
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(true);
+        return barn;
+    }
 
     @Test
     void backendDeploymentHasNoAuthEnvVars() {
@@ -109,7 +210,8 @@ class RouterResourceFactoryTest {
         WanakuRouter withBarn = createRouter(null);
         withBarn.getSpec().setBarn(barn);
 
-        var config = RouterResourceFactory.makeServerConfigMap(withBarn);
+        var config =
+                RouterResourceFactory.makeServerConfigMap(withBarn, RouterResourceFactory.serverConfig(withBarn, null));
         Deployment server = RouterResourceFactory.makeDesiredServerDeployment(withBarn, null);
         Deployment plainServer = RouterResourceFactory.makeDesiredServerDeployment(withoutBarn, null);
 
