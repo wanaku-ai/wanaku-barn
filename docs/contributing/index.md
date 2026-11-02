@@ -147,12 +147,6 @@ Requirements:
 REGISTRY="$(kubectl get route/default-route -n openshift-image-registry -o=jsonpath='{.spec.host}')"
 ```
 
-1. Log in with podman:
-
-```shell
-podman login -u $(oc whoami) -p $(oc whoami -t) --tls-verify=false $REGISTRY
-```
-
 1. Build all container images
 
 ```shell

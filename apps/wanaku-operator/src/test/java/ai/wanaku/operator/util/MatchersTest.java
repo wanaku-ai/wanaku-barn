@@ -15,8 +15,6 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressBuilder;
-import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.api.model.RouteBuilder;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -149,105 +147,6 @@ class MatchersTest {
                         .withHosts("example.com")
                         .build()));
         assertTrue(Matchers.match(desired, existing));
-    }
-
-    // ---- Route tests ----
-
-    @Test
-    void testMatchRouteWhenExistingIsNull() {
-        Route desired = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .build();
-
-        assertFalse(Matchers.match(desired, null));
-    }
-
-    @Test
-    void testMatchRouteWhenFullyMatches() {
-        Route desired = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .build();
-        Route existing = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .build();
-
-        assertTrue(Matchers.match(desired, existing));
-    }
-
-    @Test
-    void testMatchRouteWhenTlsTerminationDiffers() {
-        Route desired = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .withNewSpec()
-                .withNewTls()
-                .withTermination("edge")
-                .endTls()
-                .endSpec()
-                .build();
-        Route existing = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .withNewSpec()
-                .withNewTls()
-                .withTermination("passthrough")
-                .endTls()
-                .endSpec()
-                .build();
-        assertFalse(Matchers.match(desired, existing));
-    }
-
-    @Test
-    void testMatchRouteWhenTlsTerminationMatches() {
-        Route desired = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .withNewSpec()
-                .withNewTls()
-                .withTermination("edge")
-                .endTls()
-                .endSpec()
-                .build();
-        Route existing = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .withNewSpec()
-                .withNewTls()
-                .withTermination("edge")
-                .endTls()
-                .endSpec()
-                .build();
-        assertTrue(Matchers.match(desired, existing));
-    }
-
-    @Test
-    void testMatchRouteWhenTlsAddedToExisting() {
-        Route desired = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .withNewSpec()
-                .withNewTls()
-                .withTermination("edge")
-                .endTls()
-                .endSpec()
-                .build();
-        Route existing = new RouteBuilder()
-                .withNewMetadata()
-                .withName("test-route")
-                .endMetadata()
-                .build();
-        assertFalse(Matchers.match(desired, existing));
     }
 
     // ---- Job helpers & tests ----

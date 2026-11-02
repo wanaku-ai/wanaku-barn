@@ -27,9 +27,6 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.Replaceable;
-import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.api.model.RouteIngressCondition;
-import io.fabric8.openshift.client.OpenShiftClient;
 import io.javaoperatorsdk.operator.api.config.informer.Informer;
 import io.javaoperatorsdk.operator.api.config.informer.InformerEventSourceConfiguration;
 import io.javaoperatorsdk.operator.api.reconciler.Constants;
@@ -84,22 +81,6 @@ import static ai.wanaku.operator.util.Matchers.match;
             RBACVerbs.DELETE
         })
 @RBACRule(
-        apiGroups = "route.openshift.io",
-        resources = {"routes"},
-        verbs = {
-            RBACVerbs.GET,
-            RBACVerbs.LIST,
-            RBACVerbs.WATCH,
-            RBACVerbs.CREATE,
-            RBACVerbs.UPDATE,
-            RBACVerbs.PATCH,
-            RBACVerbs.DELETE
-        })
-@RBACRule(
-        apiGroups = "route.openshift.io",
-        resources = {"routes/custom-host"},
-        verbs = {RBACVerbs.CREATE, RBACVerbs.UPDATE})
-@RBACRule(
         apiGroups = "",
         resources = {"pods"},
         verbs = {RBACVerbs.GET, RBACVerbs.LIST, RBACVerbs.WATCH})
@@ -141,11 +122,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
     private static final Pattern BASE64_TEXT = Pattern.compile("^[A-Za-z0-9+/_-]+$");
 
     private static final Duration NOT_READY_RECHECK = Duration.ofSeconds(30);
-    private static final List<String> EXPOSURE_TYPES = List.of(
-            RouterResourceFactory.EXPOSURE_AUTO,
-            RouterResourceFactory.EXPOSURE_ROUTE,
-            RouterResourceFactory.EXPOSURE_INGRESS,
-            RouterResourceFactory.EXPOSURE_NONE);
 
     @Inject
     KubernetesClient kubernetesClient;
@@ -328,7 +304,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                     null);
         }
         final String version = secret.getMetadata().getResourceVersion();
-        if (RouterResourceFactory.isLegacyIssuerUrl(auth)) {
+        if (RouterResourceFactory.isLegacyIssuerUrl(auth.getIssuerUrl())) {
             return new AuthCheck(
                     true,
                     "DeprecatedIssuerFormat",
@@ -495,17 +471,17 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 .filter(l -> l == ServerListener.INFERENCE || l == ServerListener.A2A)
                 .toList();
         if (authEnabled) {
-            // The service must exist before the Route/Ingress that targets it
+            // The service must exist before the Ingress that targets it
             deployOauth2ProxyService(resource, namespace, extraProxied);
         }
 
         final Exposure exposure = reconcileExternalAccess(resource, namespace);
         if (!authEnabled) {
-            // Removed after the Routes/Ingresses are retargeted to the server, so traffic is not dropped
+            // Removed after the Ingresses are retargeted to the server, so traffic is not dropped
             removeOauth2Proxy(resource, namespace);
         }
 
-        // The A2A and MCP public URLs are only known once their Routes or Ingresses exist
+        // The A2A and MCP public URLs are only known once its Ingress exists
         final String a2aHost = exposure.hosts.get(ServerListener.A2A);
         final String mcpHost = exposure.hosts.get(ServerListener.MCP);
         // The ConfigMap must exist before the Deployment that mounts it
@@ -843,50 +819,31 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         }
     }
 
-    /** The public hosts the operator exposed, and the Routes whose admission decides ExposureReady. */
+    /** The public hosts the operator exposed. */
     static final class Exposure {
         /** Public host of each exposed listener. */
         final Map<ServerListener, String> hosts = new EnumMap<>(ServerListener.class);
 
-        final List<Route> routes = new ArrayList<>();
         /** The management host, or the internal Service name when nothing is exposed. */
         String host;
     }
 
     Exposure reconcileExternalAccess(WanakuRouter resource, String namespace) {
         final String name = resource.getMetadata().getName();
-        final String type = RouterResourceFactory.exposureType(resource);
-        final boolean routeApi = kubernetesClient.supports(Route.class);
-        final boolean useRoutes = RouterResourceFactory.EXPOSURE_ROUTE.equals(type)
-                || (RouterResourceFactory.EXPOSURE_AUTO.equals(type) && routeApi);
         final Exposure exposure = new Exposure();
         final Set<String> desired = new HashSet<>();
 
-        if (RouterResourceFactory.EXPOSURE_NONE.equals(type)) {
+        if (!RouterResourceFactory.isExposureEnabled(resource)) {
             exposure.host = internalHost(resource);
         } else if (RouterResourceFactory.isPerListenerExposure(resource)) {
             for (Map.Entry<ServerListener, String> entry :
                     RouterResourceFactory.exposedListeners(resource).entrySet()) {
                 final ServerListener listener = entry.getKey();
                 desired.add(name + "-" + listener.id());
-                if (useRoutes) {
-                    final Route route = reconcileRoute(
-                            kubernetesClient.adapt(OpenShiftClient.class),
-                            RouterResourceFactory.makeListenerRoute(resource, listener, entry.getValue()));
-                    exposure.routes.add(route);
-                    exposure.hosts.put(listener, route.getSpec().getHost());
-                } else {
-                    reconcileIngress(RouterResourceFactory.makeListenerIngress(resource, listener, entry.getValue()));
-                    exposure.hosts.put(listener, entry.getValue());
-                }
+                reconcileIngress(RouterResourceFactory.makeListenerIngress(resource, listener, entry.getValue()));
+                exposure.hosts.put(listener, entry.getValue());
             }
             exposure.host = exposure.hosts.getOrDefault(ServerListener.MANAGEMENT, internalHost(resource));
-        } else if (useRoutes) {
-            desired.add(name);
-            desired.add(name + "-mcp");
-            createRoutesAndGetHost(resource, exposure);
-        } else if (resource.getSpec().getExposure() == null) {
-            exposure.host = internalHost(resource);
         } else {
             desired.add(name);
             exposure.host = createIngressAndGetHost(resource);
@@ -894,7 +851,7 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
             exposure.hosts.put(ServerListener.MCP, exposure.host);
         }
 
-        pruneExposure(resource, namespace, desired, routeApi);
+        pruneExposure(resource, namespace, desired);
         return exposure;
     }
 
@@ -905,113 +862,33 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                 : "server-" + name;
     }
 
-    /** Deletes the Routes and Ingresses of this router that are no longer selected by the spec. */
-    private void pruneExposure(WanakuRouter resource, String namespace, Set<String> desired, boolean routeApi) {
+    /** Deletes the Ingresses of this router that are no longer selected by the spec. */
+    private void pruneExposure(WanakuRouter resource, String namespace, Set<String> desired) {
         final Map<String, String> selector =
                 Map.of("app", resource.getMetadata().getName() + "-server", "component", "wanaku-server");
-        final List<HasMetadata> existing = new ArrayList<>();
-        if (routeApi) {
-            existing.addAll(kubernetesClient
-                    .adapt(OpenShiftClient.class)
-                    .routes()
-                    .inNamespace(namespace)
-                    .withLabels(selector)
-                    .list()
-                    .getItems());
-        }
-        existing.addAll(kubernetesClient
+        final List<Ingress> existing = kubernetesClient
                 .network()
                 .v1()
                 .ingresses()
                 .inNamespace(namespace)
                 .withLabels(selector)
                 .list()
-                .getItems());
-        for (HasMetadata object : existing) {
+                .getItems();
+        for (Ingress object : existing) {
             final boolean owned = nullSafe(object.getMetadata().getOwnerReferences()).stream()
                     .anyMatch(ref ->
                             Objects.equals(ref.getUid(), resource.getMetadata().getUid()));
-            final boolean keep = desired.contains(object.getMetadata().getName())
-                    && object.getKind().equals(desiredKind(resource, routeApi));
-            if (owned && !keep) {
+            if (owned && !desired.contains(object.getMetadata().getName())) {
                 LOG.infof(
-                        "Deleting %s %s in %s: the listener is no longer exposed",
-                        object.getKind(), object.getMetadata().getName(), namespace);
+                        "Deleting Ingress %s in %s: the listener is no longer exposed",
+                        object.getMetadata().getName(), namespace);
                 kubernetesClient.resource(object).delete();
             }
         }
     }
 
-    private static String desiredKind(WanakuRouter resource, boolean routeApi) {
-        final String type = RouterResourceFactory.exposureType(resource);
-        final boolean useRoutes = RouterResourceFactory.EXPOSURE_ROUTE.equals(type)
-                || (RouterResourceFactory.EXPOSURE_AUTO.equals(type) && routeApi);
-        return useRoutes ? "Route" : "Ingress";
-    }
-
-    /**
-     * Creates the management and MCP Routes. Without {@code spec.exposure.host}, OpenShift generates a
-     * separate hostname for each Route: setting {@code spec.host} needs the {@code routes/custom-host}
-     * permission, so the operator sets it only when the user asks for a shared hostname.
-     */
-    private void createRoutesAndGetHost(WanakuRouter resource, Exposure exposure) {
-        OpenShiftClient client = kubernetesClient.adapt(OpenShiftClient.class);
-        var exposureSpec = resource.getSpec().getExposure();
-        String host = exposureSpec != null ? exposureSpec.getHost() : null;
-        Route management = reconcileRoute(client, RouterResourceFactory.makeServerRoute(resource, host, false));
-        Route mcp = reconcileRoute(client, RouterResourceFactory.makeServerRoute(resource, host, true));
-        exposure.routes.add(management);
-        exposure.routes.add(mcp);
-        exposure.host = assignedHost(management, "management");
-        exposure.hosts.put(ServerListener.MANAGEMENT, exposure.host);
-        exposure.hosts.put(ServerListener.MCP, assignedHost(mcp, "MCP"));
-    }
-
-    private static String assignedHost(Route route, String kind) {
-        String host = route.getSpec().getHost();
-        if (StringHelper.isBlank(host)) {
-            throw new IllegalStateException(
-                    "OpenShift did not assign a hostname to the Wanaku %s Route".formatted(kind));
-        }
-        return host;
-    }
-
     Condition exposureCondition(Exposure exposure, Long generation, List<Condition> previous) {
         final Condition previousCondition = OperatorUtil.findCondition(previous, EXPOSURE_READY_CONDITION);
-        for (Route route : exposure.routes) {
-            final List<RouteIngressCondition> admission = route.getStatus() == null
-                    ? List.of()
-                    : nullSafe(route.getStatus().getIngress()).stream()
-                            .flatMap(ingress -> nullSafe(ingress.getConditions()).stream())
-                            .filter(c -> "Admitted".equals(c.getType()))
-                            .toList();
-            final Optional<RouteIngressCondition> rejected = admission.stream()
-                    .filter(c -> "False".equals(c.getStatus()))
-                    .findFirst();
-            if (rejected.isPresent()) {
-                return OperatorUtil.condition(
-                        EXPOSURE_READY_CONDITION,
-                        false,
-                        "RouteNotAdmitted",
-                        "Route %s: %s: %s"
-                                .formatted(
-                                        route.getMetadata().getName(),
-                                        rejected.get().getReason(),
-                                        rejected.get().getMessage()),
-                        generation,
-                        previousCondition);
-            }
-            if (admission.stream().noneMatch(c -> "True".equals(c.getStatus()))) {
-                return OperatorUtil.condition(
-                        EXPOSURE_READY_CONDITION,
-                        false,
-                        "Progressing",
-                        "Route %s is waiting for router admission"
-                                .formatted(route.getMetadata().getName()),
-                        generation,
-                        previousCondition);
-            }
-        }
         final boolean exposed = !exposure.hosts.isEmpty();
         return OperatorUtil.condition(
                 EXPOSURE_READY_CONDITION,
@@ -1025,21 +902,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                         : "No listener is exposed outside the cluster",
                 generation,
                 previousCondition);
-    }
-
-    private Route reconcileRoute(OpenShiftClient client, Route desired) {
-        var routes = client.routes().inNamespace(desired.getMetadata().getNamespace());
-        Route existing = routes.withName(desired.getMetadata().getName()).get();
-        if (existing != null && StringHelper.isBlank(desired.getSpec().getHost())) {
-            desired.getSpec().setHost(existing.getSpec().getHost());
-        }
-        if (match(desired, existing)) {
-            return existing;
-        }
-        LOG.infof(
-                "Creating or updating Route %s in %s",
-                desired.getMetadata().getName(), desired.getMetadata().getNamespace());
-        return routes.resource(desired).createOr(Replaceable::update);
     }
 
     private String createIngressAndGetHost(WanakuRouter resource) {
@@ -1117,19 +979,8 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         WanakuTypes.ExposureSpec exposureSpec =
                 resource.getSpec() != null ? resource.getSpec().getExposure() : null;
 
-        if (exposureSpec != null) {
-            final String type = RouterResourceFactory.exposureType(resource);
-            if (!EXPOSURE_TYPES.contains(type)) {
-                return ValidateSpecResult.invalid("spec.exposure.type must be one of %s".formatted(EXPOSURE_TYPES));
-            }
-            final boolean routeApi = kubernetesClient.supports(Route.class);
-            if (RouterResourceFactory.EXPOSURE_ROUTE.equals(type) && !routeApi) {
-                return ValidateSpecResult.invalid(
-                        "spec.exposure.type is Route, but the cluster does not serve the OpenShift Route API");
-            }
-            final boolean ingress = RouterResourceFactory.EXPOSURE_INGRESS.equals(type)
-                    || (RouterResourceFactory.EXPOSURE_AUTO.equals(type) && !routeApi);
-            if (ingress && RouterResourceFactory.isPerListenerExposure(resource)) {
+        if (exposureSpec != null && exposureSpec.isEnabled()) {
+            if (RouterResourceFactory.isPerListenerExposure(resource)) {
                 for (Map.Entry<ServerListener, String> entry :
                         RouterResourceFactory.exposedListeners(resource).entrySet()) {
                     if (StringHelper.isBlank(entry.getValue())) {
@@ -1138,8 +989,8 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                                         .formatted(entry.getKey().id()));
                     }
                 }
-            } else if (ingress && StringHelper.isBlank(exposureSpec.getHost())) {
-                return ValidateSpecResult.invalid("spec.exposure.host is required when spec.exposure.type is Ingress");
+            } else if (StringHelper.isBlank(exposureSpec.getHost())) {
+                return ValidateSpecResult.invalid("spec.exposure.host is required when spec.exposure.enabled is true");
             }
         }
 

@@ -202,27 +202,28 @@ The admin UI plugin archive is a separate installation step (`POST /api/v1/plugi
 
 | Field | Description |
 |-------|-------------|
-| `type` | `Auto` (default), `Route`, `Ingress` or `None`. `Auto` uses OpenShift Routes when the cluster serves the Route API, and an Ingress otherwise. `None` removes all external access. |
+| `enabled` | Creates the Ingress resources. The default is `true`. When `false`, the operator removes the Ingresses that it created and exposes nothing. |
 | `listeners` | The listeners to expose, each on its own host. See below. |
 | `host` | Shared host for the management and MCP listeners. The operator uses it only when `listeners` is not set. |
-| `ingressClassName` | Ingress class (Ingress only). |
-| `annotations` | Annotations for every generated Route or Ingress. |
+| `ingressClassName` | Ingress class. |
+| `annotations` | Annotations for every generated Ingress. |
 
 The operator supports two exposure modes:
 
-- **Shared host** (`listeners` is not set): when `host` is set, both listeners use that host. The management listener uses the path `/`, and the MCP listener uses the path `/default/mcp`. Only the default Wanaku namespace is reachable through MCP; use one host per listener for other namespaces and OAuth discovery. On OpenShift without `host`, OpenShift generates a different host for each of the two Routes, and the MCP Route uses the path `/`, so all MCP paths are reachable. Inference and A2A are not exposed. On Kubernetes without `spec.exposure`, the operator exposes nothing.
-- **One host per listener** (`listeners` is set): each exposed listener gets its own Route or Ingress, named `<router>-<listener>`, for the path `/`. All MCP endpoints, including `/<namespace>/mcp`, are reachable.
+- **Shared host** (`listeners` is not set): when `host` is set, both listeners use that host. The management listener uses the path `/`, and the MCP listener uses the path `/default/mcp`. Only the default Wanaku namespace is reachable through MCP; use one host per listener for other namespaces and OAuth discovery. The `host` is required. Inference and A2A are not exposed. Without `spec.exposure`, the operator exposes nothing.
+- **One host per listener** (`listeners` is set): each exposed listener gets its own Ingress, named `<router>-<listener>`, for the path `/`. All MCP endpoints, including `/<namespace>/mcp`, are reachable.
 
 Each entry in `listeners` (`management`, `mcp`, `inference`, `a2a`) has these fields:
 
 | Field | Description |
 |-------|-------------|
 | `enabled` | Exposes the listener. The default is `true` for `management` and `mcp`, and `false` for `inference` and `a2a`. |
-| `host` | Public host. On OpenShift, leave it empty to let the router generate a host. An Ingress requires a host. |
+| `host` | Public host. Required for every exposed listener. |
 
 ```yaml
 spec:
   exposure:
+    enabled: true
     listeners:
       management: {}
       mcp:
@@ -236,11 +237,10 @@ The operator uses these rules:
 - When authentication is enabled, each exposed listener goes through its oauth2-proxy port. Inference and A2A accept only bearer tokens; requests without a token get `401`. A2A agent cards (`/<namespace>/a2a/<agent>/.well-known/...`) do not require a token.
 - When the A2A listener is exposed, the operator sets `WANAKU_A2A_PUBLIC_URL` on the Server. Agent proxy URLs then use the public host.
 - When the MCP listener is exposed, the operator sets `WANAKU_MCP_PUBLIC_URL` on the Server to `https://<MCP host>`. The admin UI then shows the public MCP address of each namespace. A value in `spec.server.env` takes precedence.
-- When you disable a listener, change the mode or set `type: None`, the operator deletes the Routes and Ingresses that are no longer necessary.
-- To set a Route host, the operator service account needs the `create` verb on `routes/custom-host`. The Helm chart grants it.
+- When you disable a listener, change the mode or set `enabled: false`, the operator deletes the Ingresses that are no longer necessary.
 
 `status.endpoints` contains the public URL of each exposed listener, for example `https://mcp.wanaku.example.com/default/mcp`.
-The `ExposureReady` condition is `True` when the OpenShift router admits all Routes. When a Route is rejected (for example, because another Route already uses the host), the reason is `RouteNotAdmitted` and the message contains the router message.
+The `ExposureReady` condition is `True` with the reason `Exposed` when the operator created the Ingresses, and with the reason `NotExposed` when nothing is exposed.
 
 ## WanakuServiceCatalog (`wanaku.ai/v1alpha1`)
 
@@ -363,7 +363,7 @@ The operator records the observed generation in `status.observedGeneration` and 
 |-----------|---------------------------|----------------------|
 | `Reconciled` | Always | Spec validation failed (`ValidationError`) or a Kubernetes API call failed (`ReconcileError`). The message contains the error. |
 | `ServerAvailable` | Always | The `<router>-server` Deployment is not available. |
-| `ExposureReady` | Always | A Route is not yet admitted, or the OpenShift router rejected it. See [Exposure](#exposure). |
+| `ExposureReady` | Always | `Exposed` when the operator created the Ingresses, `NotExposed` when nothing is exposed. See [Exposure](#exposure). |
 | `AuthConfigured` | Always | The authentication configuration is not valid. See [Authentication](#authentication). |
 | `AuthProxyAvailable` | `spec.auth.enabled: true` | The `<router>-oauth2-proxy` Deployment is not available. |
 | `BarnAvailable` | `spec.barn.enabled: true` | The `<router>-barn` Deployment is not available. |

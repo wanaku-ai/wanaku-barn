@@ -9,7 +9,10 @@ spec:
   # Requires a Secret with the keys `client-secret` and `cookie-secret`.
   auth:
     enabled: true
-    issuerUrl: oidc-url-replace
+    # public OIDC url to interactively log in the browser
+    issuerUrl: public-oidc-url
+    # internal url non public for non interactive use
+    internalIssuerUrl: internal-oidc-url
     clientId: wanaku-mcp-router
     secretName: wanaku-oauth2-proxy
     # env:
@@ -18,10 +21,11 @@ spec:
     #   - name: OAUTH2_PROXY_OIDC_ISSUER_URL
     #     value: keycloak.192.168.49.2.nip.io/realms/wanaku
   exposure:
+    enabled: true
     host: replace-wanaku-ingress-host
-    # annotations to set in the ingress resource
+    # annotations to set in the Ingress resource
     # annotations:
-    #   haproxy.router.openshift.io/timeout: 5s
+    #   nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
   barn:
     enabled: true
     image: wanaku-image-replace

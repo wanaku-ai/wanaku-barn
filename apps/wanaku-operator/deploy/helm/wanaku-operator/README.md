@@ -12,7 +12,7 @@ The following table lists the configurable parameters and their default values.
 | `app.envs.QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_ROUTER_NAMESPACES` |   | JOSDK_WATCH_CURRENT |
 | `app.envs.QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_SEMANTIC_ROUTER_NAMESPACES` |   | JOSDK_WATCH_CURRENT |
 | `app.envs.QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_SERVICE_CATALOG_NAMESPACES` |   | JOSDK_WATCH_CURRENT |
-| `app.envs.olm.createdAt` |   | 2026-01-01T00:00:00Z |
+| `app.envs.olm.createdAt` |   | 2026-10-22T10:00:00Z |
 | `app.envs.project.version` |   |   |
 | `app.image` | The container image to use. | quay.io/wanaku/wanaku-operator:latest |
 | `app.imagePullPolicy` |   | IfNotPresent |

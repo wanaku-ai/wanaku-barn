@@ -82,6 +82,8 @@ wanaku-keycloak-admin realm create
 This imports the default realm configuration from `deploy/auth/wanaku-config.json`. You can specify a custom configuration file with `--config /path/to/realm.json` and a custom Keycloak URL with `--keycloak-url`.
 Also, in case the keycloak server is in https with a self-signed certificate, then you have to import the realm config file with the Keycloak UI or execute the `deploy/auth/configure-auth.sh` script.
 
+NOTE: The secret for `wanaku-mcp-router` client is `changeme`, you must change it before importing it, or after import, you have to re-generate it with `wanaku-keycloak-admin credentials regenerate`.
+
 To get the keycloak server:
 
 - Minikube : `echo "https://"$(kubectl get ingress keycloak -o jsonpath='{.spec.rules[0].host}')`

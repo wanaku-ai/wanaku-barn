@@ -51,19 +51,19 @@ public final class WanakuTypes {
     }
 
     public static class ExposureSpec {
-        private String type;
+        private boolean enabled = true;
         private ListenersSpec listeners;
         private String host;
         private String ingressClassName;
         private Map<String, String> annotations;
 
-        /** Auto (default), Route, Ingress or None. */
-        public String getType() {
-            return type;
+        /** Creates the Ingress resources. Defaults to true; set to false to keep the router internal to the cluster. */
+        public boolean isEnabled() {
+            return enabled;
         }
 
-        public void setType(String type) {
-            this.type = type;
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
 
         /**
@@ -155,7 +155,7 @@ public final class WanakuTypes {
             this.enabled = enabled;
         }
 
-        /** Public host. On OpenShift, an empty host lets the router generate one. */
+        /** Public host. An Ingress requires it. */
         public String getHost() {
             return host;
         }

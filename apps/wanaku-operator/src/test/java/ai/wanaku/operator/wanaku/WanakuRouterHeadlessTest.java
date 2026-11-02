@@ -95,7 +95,7 @@ class WanakuRouterHeadlessTest {
         server.setImage(image);
         router.getSpec().setServer(server);
         WanakuTypes.ExposureSpec exposure = new WanakuTypes.ExposureSpec();
-        exposure.setType("Ingress");
+        exposure.setEnabled(true);
         exposure.setHost("wanaku.example.com");
         router.getSpec().setExposure(exposure);
         return router;

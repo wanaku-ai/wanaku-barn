@@ -7,21 +7,24 @@ spec:
 # Valid values: Always, IfNotPresent, Never
 # Default: IfNotPresent
 #  imagePullPolicy: IfNotPresent
-# Exposure configuration for external access (see docs/operate/operator.md#exposure)
-# type: Auto (default: Routes on OpenShift, Ingress elsewhere), Route, Ingress or None
-# Shared host: management on "/" and MCP on "/mcp" (Ingress requires the host)
+# Exposure configuration for external access through Ingress (see docs/reference/operator-crds.md#exposure)
+# enabled: true (default) creates the Ingress resources; set it to false to keep the router internal
+# Shared host: management on "/" and MCP on "/default/mcp" (the host is required)
 #  exposure:
 #    host: wanaku.example.com
-# One host per listener: OpenShift generates empty hosts; Ingress requires them
+# One host per listener (every exposed listener requires a host)
 #  exposure:
 #    listeners:
-#      management: {}
+#      management:
+#        host: mgmt.wanaku.example.com
 #      mcp:
 #        host: mcp.wanaku.example.com
 #      inference:
 #        enabled: true
+#        host: inference.wanaku.example.com
 #      a2a:
 #        enabled: true
+#        host: a2a.wanaku.example.com
 # Wanaku Server settings (Rust MCP engine) - always deployed
   server: {}
 #    image: quay.io/wanaku/wanaku-server:latest
