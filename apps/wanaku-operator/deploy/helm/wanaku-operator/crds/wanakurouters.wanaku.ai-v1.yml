@@ -170,6 +170,13 @@ spec:
                 type: "object"
               server:
                 properties:
+                  configMapRef:
+                    properties:
+                      key:
+                        type: "string"
+                      name:
+                        type: "string"
+                    type: "object"
                   env:
                     items:
                       properties:

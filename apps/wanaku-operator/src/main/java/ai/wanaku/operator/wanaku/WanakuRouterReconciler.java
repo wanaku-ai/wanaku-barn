@@ -169,7 +169,24 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                         .map(ResourceID::fromResource)
                         .collect(Collectors.toSet()))
                 .build();
-        return List.of(new InformerEventSource<>(deployments, context), new InformerEventSource<>(secrets, context));
+        // Re-reconcile when the custom wanaku.yaml ConfigMap changes, to rebuild the Server configuration
+        var configMaps = InformerEventSourceConfiguration.from(ConfigMap.class, WanakuRouter.class)
+                .withSecondaryToPrimaryMapper(configMap -> context.getPrimaryCache()
+                        .list(router -> Objects.equals(
+                                        router.getMetadata().getNamespace(),
+                                        configMap.getMetadata().getNamespace())
+                                && RouterResourceFactory.serverConfigRef(router) != null
+                                && Objects.equals(
+                                        RouterResourceFactory.serverConfigRef(router)
+                                                .getName(),
+                                        configMap.getMetadata().getName()))
+                        .map(ResourceID::fromResource)
+                        .collect(Collectors.toSet()))
+                .build();
+        return List.of(
+                new InformerEventSource<>(deployments, context),
+                new InformerEventSource<>(secrets, context),
+                new InformerEventSource<>(configMaps, context));
     }
 
     @Override
@@ -183,9 +200,16 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         }
 
         final String namespace = resource.getMetadata().getNamespace();
+        final String serverConfig;
+        try {
+            serverConfig = resolveServerConfig(resource, namespace);
+        } catch (IllegalArgumentException e) {
+            return setErrorStatus(resource, "InvalidServerConfig", e.getMessage());
+        }
+
         final WanakuRouterStatus wanakuStatus = new WanakuRouterStatus();
         final AuthCheck authCheck = checkAuth(resource, namespace);
-        final Exposure exposure = deployRouter(resource, context, namespace, wanakuStatus, authCheck);
+        final Exposure exposure = deployRouter(resource, context, namespace, wanakuStatus, authCheck, serverConfig);
 
         final List<Condition> previous = previousConditions(resource);
         final Long generation = resource.getMetadata().getGeneration();
@@ -412,12 +436,57 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         Events.warn(kubernetesClient, resource, after.getReason(), after.getMessage());
     }
 
+    /**
+     * Reads {@code spec.server.configMapRef} and builds the Server {@code wanaku.yaml}.
+     *
+     * @return the file content, or null when the Server needs no {@code wanaku.yaml}
+     * @throws IllegalArgumentException with an actionable message when the reference is not usable
+     */
+    private String resolveServerConfig(WanakuRouter resource, String namespace) {
+        final WanakuTypes.ConfigMapKeyRef ref = RouterResourceFactory.serverConfigRef(resource);
+        if (ref == null) {
+            return RouterResourceFactory.serverConfig(resource, null);
+        }
+        if (StringHelper.isBlank(ref.getName())) {
+            throw new IllegalArgumentException("spec.server.configMapRef.name is required");
+        }
+        final String managedName =
+                RouterResourceFactory.serverConfigMapName(resource.getMetadata().getName());
+        if (managedName.equals(ref.getName())) {
+            throw new IllegalArgumentException(
+                    "spec.server.configMapRef.name must not be %s: the operator owns that ConfigMap"
+                            .formatted(managedName));
+        }
+        final String key = RouterResourceFactory.serverConfigKey(ref);
+        final ConfigMap configMap = kubernetesClient
+                .configMaps()
+                .inNamespace(namespace)
+                .withName(ref.getName())
+                .get();
+        if (configMap == null) {
+            throw new IllegalArgumentException("ConfigMap %s does not exist".formatted(ref.getName()));
+        }
+        final String content = configMap.getData() != null ? configMap.getData().get(key) : null;
+        if (content == null) {
+            throw new IllegalArgumentException("ConfigMap %s has no key %s".formatted(ref.getName(), key));
+        }
+        try {
+            return RouterResourceFactory.serverConfig(resource, content);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "The %s key of ConfigMap %s is not a valid wanaku.yaml: %s"
+                            .formatted(key, ref.getName(), e.getMessage()),
+                    e);
+        }
+    }
+
     private Exposure deployRouter(
             WanakuRouter resource,
             Context<WanakuRouter> context,
             String namespace,
             WanakuRouterStatus wanakuStatus,
-            AuthCheck authCheck) {
+            AuthCheck authCheck,
+            String serverConfig) {
 
         final String serverClaimName = deployServerStorageAndService(resource, namespace);
 
@@ -439,13 +508,16 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         // The A2A and MCP public URLs are only known once their Routes or Ingresses exist
         final String a2aHost = exposure.hosts.get(ServerListener.A2A);
         final String mcpHost = exposure.hosts.get(ServerListener.MCP);
+        // The ConfigMap must exist before the Deployment that mounts it
+        deployServerConfig(resource, namespace, serverConfig);
         deployServerDeployment(
                 resource,
                 context,
                 namespace,
                 a2aHost != null ? "https://%s/".formatted(a2aHost) : null,
                 StringHelper.isNotEmpty(mcpHost) ? "https://%s".formatted(mcpHost) : null,
-                serverClaimName);
+                serverClaimName,
+                serverConfig);
 
         // A proxy without a valid Secret cannot start, so wait until AuthConfigured is True
         if (authEnabled && authCheck.configured) {
@@ -546,23 +618,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
             }
         }
 
-        final ConfigMap serverConfig = RouterResourceFactory.makeServerConfigMap(resource);
-        final ConfigMap existingConfig = kubernetesClient
-                .configMaps()
-                .inNamespace(namespace)
-                .withName(serverConfig.getMetadata().getName())
-                .get();
-        if (existingConfig == null || !OperatorUtil.sameDesiredHash(serverConfig, existingConfig)) {
-            LOG.infof(
-                    "Creating or updating ConfigMap %s in %s",
-                    serverConfig.getMetadata().getName(), namespace);
-            kubernetesClient
-                    .configMaps()
-                    .inNamespace(namespace)
-                    .resource(serverConfig)
-                    .createOr(Replaceable::update);
-        }
-
         final Service desiredInternalService = RouterResourceFactory.makeBarnInternalService(resource);
         Service existingInternalService = kubernetesClient
                 .services()
@@ -638,12 +693,6 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
                         .services()
                         .inNamespace(namespace)
                         .withName("barn-" + name)
-                        .get())
-                .ifPresent(barnObjects::add);
-        Optional.ofNullable(kubernetesClient
-                        .configMaps()
-                        .inNamespace(namespace)
-                        .withName(RouterResourceFactory.serverConfigMapName(name))
                         .get())
                 .ifPresent(barnObjects::add);
         deleteOwned(resource, namespace, barnObjects, "Barn is disabled");
@@ -739,15 +788,42 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
         return claimName;
     }
 
+    /** Creates or updates the Server {@code wanaku.yaml} ConfigMap, or removes it when the Server needs none. */
+    private void deployServerConfig(WanakuRouter resource, String namespace, String serverConfig) {
+        final String name =
+                RouterResourceFactory.serverConfigMapName(resource.getMetadata().getName());
+        final ConfigMap existingConfig = kubernetesClient
+                .configMaps()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+        if (serverConfig == null) {
+            if (existingConfig != null) {
+                deleteOwned(resource, namespace, List.of(existingConfig), "the Server needs no wanaku.yaml");
+            }
+            return;
+        }
+        final ConfigMap desiredConfig = RouterResourceFactory.makeServerConfigMap(resource, serverConfig);
+        if (existingConfig == null || !OperatorUtil.sameDesiredHash(desiredConfig, existingConfig)) {
+            LOG.infof("Creating or updating ConfigMap %s in %s", name, namespace);
+            kubernetesClient
+                    .configMaps()
+                    .inNamespace(namespace)
+                    .resource(desiredConfig)
+                    .createOr(Replaceable::update);
+        }
+    }
+
     private void deployServerDeployment(
             WanakuRouter resource,
             Context<WanakuRouter> context,
             String namespace,
             String a2aPublicUrl,
             String mcpPublicUrl,
-            String claimName) {
+            String claimName,
+            String serverConfig) {
         final Deployment desiredDeployment = RouterResourceFactory.makeDesiredServerDeployment(
-                resource, context, a2aPublicUrl, mcpPublicUrl, claimName);
+                resource, context, a2aPublicUrl, mcpPublicUrl, claimName, serverConfig);
         Deployment existingDeployment = kubernetesClient
                 .apps()
                 .deployments()
