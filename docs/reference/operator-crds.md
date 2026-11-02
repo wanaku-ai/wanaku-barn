@@ -202,6 +202,7 @@ The operator uses these rules:
 
 - When authentication is enabled, each exposed listener goes through its oauth2-proxy port. Inference and A2A accept only bearer tokens; requests without a token get `401`. A2A agent cards (`/<namespace>/a2a/<agent>/.well-known/...`) do not require a token.
 - When the A2A listener is exposed, the operator sets `WANAKU_A2A_PUBLIC_URL` on the Server. Agent proxy URLs then use the public host.
+- When the MCP listener is exposed, the operator sets `WANAKU_MCP_PUBLIC_URL` on the Server to `https://<MCP host>`. The admin UI then shows the public MCP address of each namespace. A value in `spec.server.env` takes precedence.
 - When you disable a listener, change the mode or set `type: None`, the operator deletes the Routes and Ingresses that are no longer necessary.
 - To set a Route host, the operator service account needs the `create` verb on `routes/custom-host`. The Helm chart grants it.
 

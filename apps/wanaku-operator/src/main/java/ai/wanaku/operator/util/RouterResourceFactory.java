@@ -526,17 +526,26 @@ public final class RouterResourceFactory {
 
     public static Deployment makeDesiredServerDeployment(WanakuRouter resource, Context<WanakuRouter> context) {
         return makeDesiredServerDeployment(
-                resource, context, null, serverClaimName(resource.getMetadata().getName()));
+                resource,
+                context,
+                null,
+                null,
+                serverClaimName(resource.getMetadata().getName()));
     }
 
     /**
      * Builds the Wanaku Server Deployment.
      *
      * @param a2aPublicUrl the public URL of the A2A listener, advertised in agent proxy URLs (may be null)
+     * @param mcpPublicUrl the public base URL of the MCP listener, shown by the admin UI (may be null)
      * @param claimName the PVC that holds the Wanaku Server registry
      */
     public static Deployment makeDesiredServerDeployment(
-            WanakuRouter resource, Context<WanakuRouter> context, String a2aPublicUrl, String claimName) {
+            WanakuRouter resource,
+            Context<WanakuRouter> context,
+            String a2aPublicUrl,
+            String mcpPublicUrl,
+            String claimName) {
         Deployment desiredDeployment = ReconcilerUtilsInternal.loadYaml(
                 Deployment.class, WanakuRouterReconciler.class, SERVER_DEPLOYMENT_FILE);
 
@@ -586,6 +595,10 @@ public final class RouterResourceFactory {
 
         if (a2aPublicUrl != null) {
             addIfAbsent(envVars, envVar("WANAKU_A2A_PUBLIC_URL", a2aPublicUrl));
+        }
+
+        if (mcpPublicUrl != null) {
+            addIfAbsent(envVars, envVar("WANAKU_MCP_PUBLIC_URL", mcpPublicUrl));
         }
 
         if (isAuthEnabled(resource)) {
