@@ -13,7 +13,7 @@ This rule file contains project-specific metadata used by OSS Helper. Commands d
   - `wanaku-ai/wanaku` - Wanaku Governed Action Proxy
   - `wanaku-ai/wanaku-capabilities-java-sdk` - Capabilities SDK
   - `wanaku-ai/camel-integration-capability` - Camel integration
-  - `wanaku-ai/camel-code-execution-engine` (optional) - experimental Camel code execution engine integration
+  - `wanaku-ai/wanaku-semantic-router` - Wanaku Semantic Router
 - **Create-issue supported:** yes
 
 ## Version
