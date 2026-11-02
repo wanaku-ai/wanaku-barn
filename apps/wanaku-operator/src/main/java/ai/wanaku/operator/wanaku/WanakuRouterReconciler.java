@@ -436,13 +436,15 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
             removeOauth2Proxy(resource, namespace);
         }
 
-        // The A2A public URL is only known once its Route or Ingress exists
+        // The A2A and MCP public URLs are only known once their Routes or Ingresses exist
         final String a2aHost = exposure.hosts.get(ServerListener.A2A);
+        final String mcpHost = exposure.hosts.get(ServerListener.MCP);
         deployServerDeployment(
                 resource,
                 context,
                 namespace,
                 a2aHost != null ? "https://%s/".formatted(a2aHost) : null,
+                StringHelper.isNotEmpty(mcpHost) ? "https://%s".formatted(mcpHost) : null,
                 serverClaimName);
 
         // A proxy without a valid Secret cannot start, so wait until AuthConfigured is True
@@ -742,9 +744,10 @@ public class WanakuRouterReconciler implements Reconciler<WanakuRouter> {
             Context<WanakuRouter> context,
             String namespace,
             String a2aPublicUrl,
+            String mcpPublicUrl,
             String claimName) {
-        final Deployment desiredDeployment =
-                RouterResourceFactory.makeDesiredServerDeployment(resource, context, a2aPublicUrl, claimName);
+        final Deployment desiredDeployment = RouterResourceFactory.makeDesiredServerDeployment(
+                resource, context, a2aPublicUrl, mcpPublicUrl, claimName);
         Deployment existingDeployment = kubernetesClient
                 .apps()
                 .deployments()

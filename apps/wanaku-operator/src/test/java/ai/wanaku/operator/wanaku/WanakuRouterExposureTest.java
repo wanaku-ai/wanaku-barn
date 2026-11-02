@@ -71,6 +71,15 @@ class WanakuRouterExposureTest {
         assertThat(router.getStatus().getStreamableEndpoint()).isEqualTo("https://wanaku.example.com/default/mcp");
         assertThat(router.getStatus().getEndpoints()).containsEntry("mcp", "https://wanaku.example.com/default/mcp");
         assertThat(router.getStatus().getSseEndpoint()).isNull();
+        assertThat(deployment("wanaku-dev-server")
+                        .getSpec()
+                        .getTemplate()
+                        .getSpec()
+                        .getContainers()
+                        .getFirst()
+                        .getEnv())
+                .anyMatch(e -> "WANAKU_MCP_PUBLIC_URL".equals(e.getName())
+                        && "https://wanaku.example.com".equals(e.getValue()));
     }
 
     @Test
@@ -211,7 +220,9 @@ class WanakuRouterExposureTest {
                         .getFirst()
                         .getEnv())
                 .anyMatch(e ->
-                        "WANAKU_A2A_PUBLIC_URL".equals(e.getName()) && "https://a2a.example.com/".equals(e.getValue()));
+                        "WANAKU_A2A_PUBLIC_URL".equals(e.getName()) && "https://a2a.example.com/".equals(e.getValue()))
+                .anyMatch(e ->
+                        "WANAKU_MCP_PUBLIC_URL".equals(e.getName()) && "https://mcp.example.com".equals(e.getValue()));
         assertThat(router.getStatus().getEndpoints())
                 .containsEntry("management", "https://mgmt.example.com/")
                 .containsEntry("mcp", "https://mcp.example.com/default/mcp")
