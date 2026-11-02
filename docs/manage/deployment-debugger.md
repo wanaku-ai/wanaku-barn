@@ -31,6 +31,11 @@ Set endpoint base URLs; the plugin adds namespace and protocol paths to them. A 
 
 For listeners on a different origin, set `WANAKU_CORS_ORIGIN` to allow the UI origin. Allow `POST`, `GET`, and browser `OPTIONS` preflight requests, and request headers `Authorization`, `Content-Type`, `A2A-Version`, `x-request-id`, and any custom forwarding headers. Configure `WANAKU_FORWARD_HEADERS` or `wanaku.forward_headers` when testing forwarding. For Ollama, also set `OLLAMA_ORIGINS`. Browser CORS errors can prevent JavaScript from reading an otherwise valid server response; inspect the browser network panel to verify the deployment configuration.
 
+> [!WARNING]
+> Known limitation in 0.3.0: the Deployment Debugger does not work when authentication (Keycloak or OIDC) is enabled.
+> Use the debugger on a deployment that runs without authentication.
+> See [wanaku-barn#278](https://github.com/wanaku-ai/wanaku-barn/issues/278).
+
 Paste a bearer token issued for the MCP server when authentication is required. Tokens are held in memory by default. Enabling **Remember settings and token in this browser** stores the settings, headers, and token in local storage; disabling it removes the stored settings. Clear the token after debugging. Do not embed tokens in endpoint URLs.
 
 ## Build
