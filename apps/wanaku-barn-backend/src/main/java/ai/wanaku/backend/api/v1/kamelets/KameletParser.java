@@ -174,17 +174,21 @@ public class KameletParser {
         for (JsonNode property : configuration.path("properties")) {
             if (secretParameter(property)) ((ObjectNode) property).put("x-secret-reference", true);
         }
-        action.configurationSchema = mapper.convertValue(configuration, new TypeReference<Map<String, Object>>() {});
+        action.configurationSchema = mapper.convertValue(configuration, new TypeReference<>() {
+        });
         if ("sink".equals(definition.type)) {
             action.inputSchema = Map.of("type", "string");
             action.outputSchema = Map.of("type", "string");
         } else {
             action.inputSchema = mapper.convertValue(
-                    spec.path("types").path("in").path("schema"), new TypeReference<Map<String, Object>>() {});
+                    spec.path("types").path("in").path("schema"), new TypeReference<>() {
+                    });
             action.outputSchema = mapper.convertValue(
-                    spec.path("types").path("out").path("schema"), new TypeReference<Map<String, Object>>() {});
+                    spec.path("types").path("out").path("schema"), new TypeReference<>() {
+                    });
         }
-        action.dependencies = mapper.convertValue(spec.path("dependencies"), new TypeReference<List<String>>() {});
+        action.dependencies = mapper.convertValue(spec.path("dependencies"), new TypeReference<>() {
+        });
         return action;
     }
 
