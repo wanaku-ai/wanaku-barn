@@ -3,6 +3,7 @@ package ai.wanaku.backend.common.util;
 import java.util.function.Predicate;
 import ai.wanaku.capabilities.sdk.api.types.LabelsAwareEntity;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -32,7 +33,7 @@ class LabelExpressionParserTest {
         }
 
         @Override
-        public void setId(String id) {
+        public void setId(@NonNull String id) {
             this.id = id;
         }
     }

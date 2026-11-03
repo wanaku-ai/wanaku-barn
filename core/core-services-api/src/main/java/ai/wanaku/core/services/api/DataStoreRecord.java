@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Objects;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
+import org.jspecify.annotations.NonNull;
 
 /**
  * A stored data store entry with server-managed record metadata.
