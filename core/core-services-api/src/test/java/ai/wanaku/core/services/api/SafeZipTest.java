@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SafeZipTest {
 
     @Test
-    void decodeArchiveAcceptsSmallPayload() throws Exception {
+    void decodeArchiveAcceptsSmallPayload() {
         byte[] data = "hello world".getBytes();
         assertArrayEquals(data, SafeZip.decodeArchive(Base64.getEncoder().encodeToString(data)));
     }
@@ -46,7 +46,7 @@ class SafeZipTest {
     }
 
     @Test
-    void decodeArchiveAcceptsBase64WithNewlines() throws Exception {
+    void decodeArchiveAcceptsBase64WithNewlines() {
         byte[] data = "hello world".getBytes();
         String encoded = Base64.getEncoder().encodeToString(data);
         // Simulate line-wrapped base64 output (e.g. from 'base64' command with default 76-char wrapping)
@@ -55,7 +55,7 @@ class SafeZipTest {
     }
 
     @Test
-    void decodeArchiveAcceptsBase64WithMimeLineWrapping() throws Exception {
+    void decodeArchiveAcceptsBase64WithMimeLineWrapping() {
         // Create data large enough to produce multi-line base64 output (>76 chars)
         byte[] data = new byte[100];
         for (int i = 0; i < data.length; i++) {

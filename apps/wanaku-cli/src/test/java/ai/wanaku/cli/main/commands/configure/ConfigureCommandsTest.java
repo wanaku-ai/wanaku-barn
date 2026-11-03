@@ -202,7 +202,7 @@ class ConfigureCommandsTest {
     }
 
     @Test
-    void configureShouldRejectUnsupportedTransport() throws Exception {
+    void configureShouldRejectUnsupportedTransport() {
         Path configPath = tempDir.resolve("mcp.json");
         ConfigureCursor cmd = new ConfigureCursor(configPath);
         cmd.transport = "stdio";
@@ -215,7 +215,7 @@ class ConfigureCommandsTest {
     }
 
     @Test
-    void claudeCodeConfigureShouldPrintAddCommandWithDefaultHost() throws Exception {
+    void claudeCodeConfigureShouldPrintAddCommandWithDefaultHost() {
         ConfigureClaudeCode cmd = new ConfigureClaudeCode();
 
         int result = cmd.doCall(terminal, printer);
@@ -226,7 +226,7 @@ class ConfigureCommandsTest {
     }
 
     @Test
-    void claudeCodeConfigureShouldPrintAddCommandWithCustomHost() throws Exception {
+    void claudeCodeConfigureShouldPrintAddCommandWithCustomHost() {
         ConfigureClaudeCode cmd = new ConfigureClaudeCode();
         cmd.host = "wanaku.example.com";
         cmd.port = 9090;
@@ -239,7 +239,7 @@ class ConfigureCommandsTest {
     }
 
     @Test
-    void claudeCodeConfigureShouldRejectHostWithScheme() throws Exception {
+    void claudeCodeConfigureShouldRejectHostWithScheme() {
         ConfigureClaudeCode cmd = new ConfigureClaudeCode();
         cmd.host = "http://example.com";
 
@@ -251,7 +251,7 @@ class ConfigureCommandsTest {
     }
 
     @Test
-    void claudeCodeConfigureShouldRejectHostWithPort() throws Exception {
+    void claudeCodeConfigureShouldRejectHostWithPort() {
         ConfigureClaudeCode cmd = new ConfigureClaudeCode();
         cmd.host = "example.com:9090";
 

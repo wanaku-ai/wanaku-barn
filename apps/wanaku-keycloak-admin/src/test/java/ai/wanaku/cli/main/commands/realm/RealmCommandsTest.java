@@ -74,7 +74,7 @@ class RealmCommandsTest {
     }
 
     @Test
-    void realmCreateShouldReturnErrorOnMissingFile() throws Exception {
+    void realmCreateShouldReturnErrorOnMissingFile() {
         RealmCreate cmd = new RealmCreate(adminClient, "/nonexistent/path/realm.json");
         int result = cmd.doCall(terminal, printer);
 
@@ -83,7 +83,7 @@ class RealmCommandsTest {
     }
 
     @Test
-    void realmCreateWithDefaultConfigShouldReturnErrorWhenFileMissing() throws Exception {
+    void realmCreateWithDefaultConfigShouldReturnErrorWhenFileMissing() {
         RealmCreate cmd = new RealmCreate(adminClient);
         int result = cmd.doCall(terminal, printer);
 

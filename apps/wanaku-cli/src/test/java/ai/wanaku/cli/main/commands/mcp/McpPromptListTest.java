@@ -41,7 +41,7 @@ class McpPromptListTest {
 
     @Test
     @DisplayName("Should list prompts from MCP server")
-    void shouldListPrompts() throws Exception {
+    void shouldListPrompts() {
         dev.langchain4j.mcp.client.McpPrompt prompt1 =
                 new dev.langchain4j.mcp.client.McpPrompt("greeting", "A greeting prompt", null);
         dev.langchain4j.mcp.client.McpPrompt prompt2 =
@@ -65,7 +65,7 @@ class McpPromptListTest {
 
     @Test
     @DisplayName("Should show info when no prompts found")
-    void shouldShowInfoWhenEmpty() throws Exception {
+    void shouldShowInfoWhenEmpty() {
         when(mcpClient.listPrompts()).thenReturn(Collections.emptyList());
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -77,7 +77,7 @@ class McpPromptListTest {
 
     @Test
     @DisplayName("Should return error on exception")
-    void shouldReturnErrorOnException() throws Exception {
+    void shouldReturnErrorOnException() {
         when(mcpClient.listPrompts()).thenThrow(new RuntimeException("connection refused"));
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -89,7 +89,7 @@ class McpPromptListTest {
 
     @Test
     @DisplayName("Should forward auth token to MCP client")
-    void shouldForwardAuthToken() throws Exception {
+    void shouldForwardAuthToken() {
         McpClient tokenClient = mock(McpClient.class);
         when(tokenClient.listPrompts()).thenReturn(Collections.emptyList());
 

@@ -46,7 +46,7 @@ class AuthTokenTest {
     @ParameterizedTest
     @ValueSource(
             strings = {"missing", "expired", "refresh-failure", "success", "refresh-success", "insecure", "masked"})
-    void tokenRetrievalKeepsStdoutMachineReadable(String scenario) throws Exception {
+    void tokenRetrievalKeepsStdoutMachineReadable(String scenario) {
         TokenRefresher refresher = mock(TokenRefresher.class);
         boolean expired = scenario.equals("expired") || scenario.startsWith("refresh-");
         if (!scenario.equals("missing")) {

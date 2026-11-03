@@ -49,7 +49,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldAddAuthorizationHeaderWhenTokenExists() throws Exception {
+    void shouldAddAuthorizationHeaderWhenTokenExists() {
         String token = "test-api-token";
         credentialStore.storeApiToken(token);
         credentialStore.storeAuthMode("token");
@@ -61,7 +61,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldAddAuthorizationHeaderEvenWhenWellKnownEndpointIsUnreachable() throws Exception {
+    void shouldAddAuthorizationHeaderEvenWhenWellKnownEndpointIsUnreachable() {
         // Simulates a router behind an external auth proxy (e.g. oauth2-proxy) where
         // /.well-known/oauth-authorization-server is blocked or absent: the stored
         // token must be sent regardless.
@@ -76,7 +76,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldNotAddHeaderWhenAuthModeIsNone() throws Exception {
+    void shouldNotAddHeaderWhenAuthModeIsNone() {
         credentialStore.storeApiToken("test-token");
         credentialStore.storeAuthMode("none");
 
@@ -86,14 +86,14 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldNotAddHeaderWhenNoCredentialsExist() throws Exception {
+    void shouldNotAddHeaderWhenNoCredentialsExist() {
         interceptor.filter(requestContext);
 
         assertNull(headers.getFirst(HttpHeaders.AUTHORIZATION));
     }
 
     @Test
-    void shouldNotAddHeaderWhenTokenIsEmpty() throws Exception {
+    void shouldNotAddHeaderWhenTokenIsEmpty() {
         credentialStore.storeApiToken("");
         credentialStore.storeAuthMode("token");
 
@@ -103,7 +103,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldNotAddHeaderWhenTokenIsWhitespace() throws Exception {
+    void shouldNotAddHeaderWhenTokenIsWhitespace() {
         credentialStore.storeApiToken("   ");
         credentialStore.storeAuthMode("token");
 
@@ -113,7 +113,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldRefreshTokenWhenExpired() throws Exception {
+    void shouldRefreshTokenWhenExpired() {
         String oldToken = "old-token";
         String newToken = "new-token";
         String refreshToken = "refresh-token";
@@ -145,7 +145,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldRefreshTokenWithRealmWhenExpired() throws Exception {
+    void shouldRefreshTokenWithRealmWhenExpired() {
         String oldToken = "old-token";
         String newToken = "new-token";
         String refreshToken = "refresh-token";
@@ -178,7 +178,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldNotRefreshTokenWhenNotExpired() throws Exception {
+    void shouldNotRefreshTokenWhenNotExpired() {
         String token = "valid-token";
         credentialStore.storeApiToken(token);
         credentialStore.storeAuthMode("token");
@@ -195,7 +195,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldUseExistingTokenWhenRefreshFails() throws Exception {
+    void shouldUseExistingTokenWhenRefreshFails() {
         String oldToken = "old-token";
         String refreshToken = "refresh-token";
         String authServerUrl = "http://localhost:8080";
@@ -223,7 +223,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldNotRefreshWhenNoExpiryStored() throws Exception {
+    void shouldNotRefreshWhenNoExpiryStored() {
         String token = "legacy-token";
         credentialStore.storeApiToken(token);
         credentialStore.storeAuthMode("token");
@@ -239,7 +239,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldRefreshTokenWhenAboutToExpire() throws Exception {
+    void shouldRefreshTokenWhenAboutToExpire() {
         String oldToken = "old-token";
         String newToken = "new-token";
         String refreshToken = "refresh-token";
@@ -269,7 +269,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldPassStoredClientSecretWhenRefreshingConfidentialClient() throws Exception {
+    void shouldPassStoredClientSecretWhenRefreshingConfidentialClient() {
         String refreshToken = "refresh-token";
         String authServerUrl = "http://localhost:8543";
         String clientId = "wanaku-mcp-router";
@@ -296,7 +296,7 @@ class AuthenticationInterceptorTest {
     }
 
     @Test
-    void shouldNotFallBackToLegacyClientIdWhenNoneIsStored() throws Exception {
+    void shouldNotFallBackToLegacyClientIdWhenNoneIsStored() {
         credentialStore.storeApiToken("old-token");
         credentialStore.storeRefreshToken("refresh-token");
         credentialStore.storeAuthServerUrl("http://localhost:8543");

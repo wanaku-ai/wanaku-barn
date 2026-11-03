@@ -45,7 +45,7 @@ class McpToolListTest {
 
     @Test
     @DisplayName("Should list tools from MCP server")
-    void shouldListTools() throws Exception {
+    void shouldListTools() {
         ToolSpecification tool1 = ToolSpecification.builder()
                 .name("echo")
                 .description("Echoes the input")
@@ -73,7 +73,7 @@ class McpToolListTest {
 
     @Test
     @DisplayName("Should show info when no tools found")
-    void shouldShowInfoWhenEmpty() throws Exception {
+    void shouldShowInfoWhenEmpty() {
         when(mcpClient.listTools()).thenReturn(Collections.emptyList());
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -85,7 +85,7 @@ class McpToolListTest {
 
     @Test
     @DisplayName("Should return error on exception")
-    void shouldReturnErrorOnException() throws Exception {
+    void shouldReturnErrorOnException() {
         when(mcpClient.listTools()).thenThrow(new RuntimeException("connection refused"));
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -97,7 +97,7 @@ class McpToolListTest {
 
     @Test
     @DisplayName("Should show user-friendly message for wrapped ConnectException")
-    void shouldShowFriendlyMessageForConnectException() throws Exception {
+    void shouldShowFriendlyMessageForConnectException() {
         java.net.ConnectException cause = new java.net.ConnectException("Connection refused");
         RuntimeException ex = new RuntimeException("java.net.ConnectException: Connection refused", cause);
         when(mcpClient.listTools()).thenThrow(ex);
@@ -124,7 +124,7 @@ class McpToolListTest {
                 "http://localhost:4180/"
             })
     @DisplayName("Should forward auth token and endpoint unchanged to MCP client")
-    void shouldForwardAuthTokenAndEndpointUnchanged(String address) throws Exception {
+    void shouldForwardAuthTokenAndEndpointUnchanged(String address) {
         McpClient tokenClient = mock(McpClient.class);
         when(tokenClient.listTools()).thenReturn(Collections.emptyList());
 

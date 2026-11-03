@@ -37,7 +37,7 @@ class AuthCommandsTest {
     }
 
     @Test
-    void authLogoutShouldClearCredentials() throws Exception {
+    void authLogoutShouldClearCredentials() {
         AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
         store.storeApiToken("test-token");
 
@@ -49,7 +49,7 @@ class AuthCommandsTest {
     }
 
     @Test
-    void authLogoutShouldHandleNoCredentials() throws Exception {
+    void authLogoutShouldHandleNoCredentials() {
         AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
         AuthLogout authLogout = new AuthLogout(store);
         int result = authLogout.doCall(terminal, printer);
@@ -59,7 +59,7 @@ class AuthCommandsTest {
     }
 
     @Test
-    void storeRealmShouldClearOnBlankValue() throws Exception {
+    void storeRealmShouldClearOnBlankValue() {
         AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
         store.storeRealm("wanaku");
         assertEquals("wanaku", store.getRealm());
@@ -69,7 +69,7 @@ class AuthCommandsTest {
     }
 
     @Test
-    void storeRealmShouldNotPersistWhitespaceOnlyValue() throws Exception {
+    void storeRealmShouldNotPersistWhitespaceOnlyValue() {
         AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
         store.storeRealm("wanaku");
         assertEquals("wanaku", store.getRealm());
@@ -79,7 +79,7 @@ class AuthCommandsTest {
     }
 
     @Test
-    void authStatusShouldDisplayStatus() throws Exception {
+    void authStatusShouldDisplayStatus() {
         AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
         store.storeApiToken("test-token-123456789");
         store.storeAuthMode("token");
@@ -95,7 +95,7 @@ class AuthCommandsTest {
     }
 
     @Test
-    void emptyAuthStatusMessage() throws Exception {
+    void emptyAuthStatusMessage() {
         AuthCredentialStore store = new AuthCredentialStore(credentialsFile.toUri());
         store.storeApiToken("");
         store.storeAuthMode("token");

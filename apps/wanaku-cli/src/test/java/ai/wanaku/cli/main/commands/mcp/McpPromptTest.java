@@ -49,7 +49,7 @@ class McpPromptTest {
 
     @Test
     @DisplayName("Should get prompt and print messages")
-    void shouldGetPromptAndPrintMessages() throws Exception {
+    void shouldGetPromptAndPrintMessages() {
         McpPromptMessage message = mock(McpPromptMessage.class);
         when(message.toString()).thenReturn("Hello Alice!");
         McpGetPromptResult promptResult = mock(McpGetPromptResult.class);
@@ -71,7 +71,7 @@ class McpPromptTest {
 
     @Test
     @DisplayName("Should show info when prompt returns no messages")
-    void shouldShowInfoWhenEmpty() throws Exception {
+    void shouldShowInfoWhenEmpty() {
         McpGetPromptResult emptyResult = mock(McpGetPromptResult.class);
         when(emptyResult.messages()).thenReturn(Collections.emptyList());
 
@@ -86,7 +86,7 @@ class McpPromptTest {
 
     @Test
     @DisplayName("Should return error on exception")
-    void shouldReturnErrorOnException() throws Exception {
+    void shouldReturnErrorOnException() {
         when(mcpClient.getPrompt(eq("greeting"), any())).thenThrow(new RuntimeException("not found"));
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -98,7 +98,7 @@ class McpPromptTest {
 
     @Test
     @DisplayName("Should forward auth token to MCP client")
-    void shouldForwardAuthToken() throws Exception {
+    void shouldForwardAuthToken() {
         McpClient tokenClient = mock(McpClient.class);
         McpGetPromptResult emptyResult = mock(McpGetPromptResult.class);
         when(emptyResult.messages()).thenReturn(Collections.emptyList());
