@@ -32,9 +32,9 @@ public class McpResourceList extends BaseCommand {
             }
 
             for (dev.langchain4j.mcp.client.McpResource resource : resources) {
-                System.out.println(String.format(
-                        "%-30s %-40s %s",
-                        nullSafe(resource.name()), nullSafe(resource.uri()), nullSafe(resource.mimeType())));
+                System.out.printf(
+                        "%-30s %-40s %s%n",
+                        nullSafe(resource.name()), nullSafe(resource.uri()), nullSafe(resource.mimeType()));
             }
 
             return EXIT_OK;
