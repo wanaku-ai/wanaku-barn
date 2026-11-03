@@ -75,7 +75,7 @@ class McpPlainHttpTokenWarningTest {
 
     @Test
     @DisplayName("wanaku mcp tool list should warn when --token is used with a remote http:// URI")
-    void shouldWarnFromCommand() throws Exception {
+    void shouldWarnFromCommand() {
         String address = "http://wanaku.example.com/mcp/";
         McpClient client = mock(McpClient.class);
         when(client.listTools()).thenReturn(Collections.emptyList());

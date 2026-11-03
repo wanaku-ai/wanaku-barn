@@ -31,7 +31,7 @@ class NamespaceOptionsTest {
     }
 
     @Test
-    void getNamespaceReturnsNullWhenNotSet() throws Exception {
+    void getNamespaceReturnsNullWhenNotSet() {
         NamespaceOptions options = new NamespaceOptions();
 
         assertNull(options.getNamespace());

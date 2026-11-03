@@ -53,7 +53,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should call tool and print result")
-    void shouldCallToolAndPrintResult() throws Exception {
+    void shouldCallToolAndPrintResult() {
         when(mcpClient.executeTool(any(ToolExecutionRequest.class)))
                 .thenReturn(ToolExecutionResult.builder()
                         .resultText("hello world")
@@ -74,7 +74,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should return error when tool execution fails")
-    void shouldReturnErrorWhenToolFails() throws Exception {
+    void shouldReturnErrorWhenToolFails() {
         when(mcpClient.executeTool(any(ToolExecutionRequest.class)))
                 .thenReturn(ToolExecutionResult.builder()
                         .resultText("tool failed")
@@ -90,7 +90,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should return error on exception")
-    void shouldReturnErrorOnException() throws Exception {
+    void shouldReturnErrorOnException() {
         when(mcpClient.executeTool(any(ToolExecutionRequest.class)))
                 .thenThrow(new RuntimeException("connection refused"));
 
@@ -103,7 +103,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should show user-friendly message for invalid URI")
-    void shouldShowFriendlyMessageForInvalidUri() throws Exception {
+    void shouldShowFriendlyMessageForInvalidUri() {
         command.uri = "not-a-valid-uri";
         when(mcpClient.executeTool(any(ToolExecutionRequest.class)))
                 .thenThrow(new IllegalArgumentException("URI with undefined scheme"));
@@ -174,7 +174,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should send typed arguments using the tool input schema")
-    void shouldSendTypedArgumentsFromSchema() throws Exception {
+    void shouldSendTypedArgumentsFromSchema() {
         command.name = "get-sum";
         command.params = new LinkedHashMap<>(Map.of("a", "1"));
         command.arguments = "{\"b\": 2, \"a\": \"ignored\"}";
@@ -205,7 +205,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should return error when --arguments is not a JSON object")
-    void shouldReturnErrorOnInvalidArguments() throws Exception {
+    void shouldReturnErrorOnInvalidArguments() {
         command.arguments = "[1, 2]";
         WanakuPrinter printer = mock(WanakuPrinter.class);
 
@@ -217,7 +217,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should return error when uri is missing")
-    void shouldReturnErrorWhenUriMissing() throws Exception {
+    void shouldReturnErrorWhenUriMissing() {
         command.uri = null;
         WanakuPrinter printer = mock(WanakuPrinter.class);
         Integer result = command.doCall(null, printer);
@@ -227,7 +227,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should return error when name is missing")
-    void shouldReturnErrorWhenNameMissing() throws Exception {
+    void shouldReturnErrorWhenNameMissing() {
         command.name = null;
         WanakuPrinter printer = mock(WanakuPrinter.class);
         Integer result = command.doCall(null, printer);
@@ -237,7 +237,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should return error on ToolArgumentsException for invalid tool name")
-    void shouldReturnErrorOnToolArgumentsException() throws Exception {
+    void shouldReturnErrorOnToolArgumentsException() {
         when(mcpClient.executeTool(any(ToolExecutionRequest.class)))
                 .thenThrow(new ToolArgumentsException("Invalid tool name: nonexistent", -32602));
 
@@ -253,7 +253,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should return error on ToolExecutionException")
-    void shouldReturnErrorOnToolExecutionException() throws Exception {
+    void shouldReturnErrorOnToolExecutionException() {
         when(mcpClient.executeTool(any(ToolExecutionRequest.class)))
                 .thenThrow(new ToolExecutionException("Tool execution failed", -32603));
 
@@ -266,7 +266,7 @@ class McpToolTest {
 
     @Test
     @DisplayName("Should forward auth token to MCP client")
-    void shouldForwardAuthToken() throws Exception {
+    void shouldForwardAuthToken() {
         McpClient tokenClient = mock(McpClient.class);
         when(tokenClient.executeTool(any(ToolExecutionRequest.class)))
                 .thenReturn(ToolExecutionResult.builder()

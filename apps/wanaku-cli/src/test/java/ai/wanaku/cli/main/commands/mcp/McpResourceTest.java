@@ -44,7 +44,7 @@ class McpResourceTest {
 
     @Test
     @DisplayName("Should read resource and print content")
-    void shouldReadResourceAndPrintContent() throws Exception {
+    void shouldReadResourceAndPrintContent() {
         McpTextResourceContents textContent =
                 new McpTextResourceContents("file:///test.txt", "Hello from resource", "text/plain");
         McpReadResourceResult readResult = new McpReadResourceResult(List.of(textContent));
@@ -65,7 +65,7 @@ class McpResourceTest {
 
     @Test
     @DisplayName("Should show info when resource returns no content")
-    void shouldShowInfoWhenEmpty() throws Exception {
+    void shouldShowInfoWhenEmpty() {
         McpReadResourceResult emptyResult = new McpReadResourceResult(Collections.emptyList());
         when(mcpClient.readResource("file:///test.txt")).thenReturn(emptyResult);
 
@@ -78,7 +78,7 @@ class McpResourceTest {
 
     @Test
     @DisplayName("Should return error on exception")
-    void shouldReturnErrorOnException() throws Exception {
+    void shouldReturnErrorOnException() {
         when(mcpClient.readResource("file:///test.txt")).thenThrow(new RuntimeException("not found"));
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -90,7 +90,7 @@ class McpResourceTest {
 
     @Test
     @DisplayName("Should forward auth token to MCP client")
-    void shouldForwardAuthToken() throws Exception {
+    void shouldForwardAuthToken() {
         McpClient tokenClient = mock(McpClient.class);
         McpReadResourceResult emptyResult = new McpReadResourceResult(Collections.emptyList());
         when(tokenClient.readResource("file:///test.txt")).thenReturn(emptyResult);

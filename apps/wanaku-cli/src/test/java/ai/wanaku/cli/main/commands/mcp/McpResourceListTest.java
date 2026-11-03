@@ -41,7 +41,7 @@ class McpResourceListTest {
 
     @Test
     @DisplayName("Should list resources from MCP server")
-    void shouldListResources() throws Exception {
+    void shouldListResources() {
         dev.langchain4j.mcp.client.McpResource res1 =
                 new dev.langchain4j.mcp.client.McpResource("file:///data.csv", "data.csv", "A data file", "text/csv");
         dev.langchain4j.mcp.client.McpResource res2 = new dev.langchain4j.mcp.client.McpResource(
@@ -65,7 +65,7 @@ class McpResourceListTest {
 
     @Test
     @DisplayName("Should show info when no resources found")
-    void shouldShowInfoWhenEmpty() throws Exception {
+    void shouldShowInfoWhenEmpty() {
         when(mcpClient.listResources()).thenReturn(Collections.emptyList());
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -77,7 +77,7 @@ class McpResourceListTest {
 
     @Test
     @DisplayName("Should return error on exception")
-    void shouldReturnErrorOnException() throws Exception {
+    void shouldReturnErrorOnException() {
         when(mcpClient.listResources()).thenThrow(new RuntimeException("connection refused"));
 
         WanakuPrinter printer = mock(WanakuPrinter.class);
@@ -89,7 +89,7 @@ class McpResourceListTest {
 
     @Test
     @DisplayName("Should forward auth token to MCP client")
-    void shouldForwardAuthToken() throws Exception {
+    void shouldForwardAuthToken() {
         McpClient tokenClient = mock(McpClient.class);
         when(tokenClient.listResources()).thenReturn(Collections.emptyList());
 

@@ -103,30 +103,35 @@ public class CloudRunIntegration extends CloudCommand {
             }
             final String ns = support.namespace(target);
             support.requireReadyRouter(ns, target.getRouter());
+            cleanupDuplicatedCode result = new cleanupDuplicatedCode(resourceName, target, support, ns);
 
             final String fileName = file.getFileName().toString();
             final ConfigMap files = new ConfigMapBuilder()
                     .withNewMetadata()
-                    .withName(resourceName + "-routes")
-                    .withNamespace(ns)
+                    .withName(result.resourceName() + "-routes")
+                    .withNamespace(result.ns())
                     .addToLabels("app.kubernetes.io/managed-by", "wanaku-cli")
                     .endMetadata()
                     .addToData(fileName, routes)
                     .build();
-            final GenericKubernetesResource submitted = support.submit(
-                    RuntimeKind.INTEGRATION, ns, files, integration(resourceName, ns, target.getRouter(), fileName));
+            final GenericKubernetesResource submitted = result.support().submit(
+                    RuntimeKind.INTEGRATION,
+                    result.ns(), files, integration(result.resourceName(), result.ns(), result.target().getRouter(), fileName));
             printer.printInfoMessage("Submitted WanakuIntegration %s in namespace %s"
-                    .formatted(submitted.getMetadata().getName(), ns));
+                    .formatted(submitted.getMetadata().getName(), result.ns()));
 
             if (!wait) {
-                printer.printInfoMessage("Follow it with: wanaku cloud status integration " + resourceName);
+                printer.printInfoMessage("Follow it with: wanaku cloud status integration " + result.resourceName());
                 return EXIT_OK;
             }
-            return support.waitForReady(RuntimeKind.INTEGRATION, ns, resourceName, Duration.ofSeconds(timeoutSeconds));
+            return result.support().waitForReady(RuntimeKind.INTEGRATION, result.ns(), result.resourceName(), Duration.ofSeconds(timeoutSeconds));
         } catch (CloudRunSupport.CloudException e) {
             printer.printErrorMessage(e.getMessage());
             return e.exitCode();
         }
+    }
+
+    private record cleanupDuplicatedCode(String resourceName, CloudTargetConfig target, CloudRunSupport support, String ns) {
     }
 
     private GenericKubernetesResource integration(String resourceName, String ns, String router, String fileName) {
