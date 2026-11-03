@@ -1,5 +1,6 @@
 package ai.wanaku.operator.wanaku;
 
+import io.fabric8.kubernetes.api.model.Container;
 import java.util.Map;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
@@ -201,7 +202,7 @@ class WanakuRouterExposureTest {
         assertThat(a2a.getSpec().getPort().getTargetPort().getIntVal()).isEqualTo(4184);
         Deployment proxy = deployment("wanaku-dev-oauth2-proxy");
         assertThat(proxy.getSpec().getTemplate().getSpec().getContainers())
-                .extracting(c -> c.getName())
+                .extracting(Container::getName)
                 .contains("oauth2-proxy-a2a")
                 .doesNotContain("oauth2-proxy-inference");
         assertThat(client.services()
