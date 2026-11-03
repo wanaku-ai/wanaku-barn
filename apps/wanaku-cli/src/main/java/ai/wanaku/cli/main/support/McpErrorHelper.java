@@ -163,13 +163,16 @@ public final class McpErrorHelper {
     }
 
     private static String unknownHostMessage(String host) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Unable to resolve host: ").append(host);
-        sb.append("\n\nPossible causes:\n");
-        sb.append("  - Invalid hostname in --uri option\n");
-        sb.append("  - DNS resolution failure\n");
-        sb.append("  - Network connectivity issues");
-        return sb.toString();
+        String sb =
+                """
+                        Unable to resolve host: %s
+                        
+                        Possible causes:
+                          - Invalid hostname in --uri option
+                          - DNS resolution failure
+                          - Network connectivity issues""".formatted(
+                        host);
+        return sb;
     }
 
     private static String timeoutMessage(String uri) {
