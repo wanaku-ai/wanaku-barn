@@ -112,8 +112,8 @@ The Wanaku Server has two container images:
 
 | Variant | Default image | Admin UI |
 |---------|---------------|----------|
-| `standard` | `quay.io/wanaku/wanaku-server:latest` | Embedded at `/admin/` |
-| `headless` | `quay.io/wanaku/wanaku-server-headless:latest` | None |
+| `standard` | `quay.io/wanaku/wanaku-server:0.3.0` | Embedded at `/admin/` |
+| `headless` | `quay.io/wanaku/wanaku-server-headless:0.3.0` | None |
 
 To deploy the headless variant, set `spec.server.variant: headless`:
 
@@ -268,7 +268,7 @@ The referenced ConfigMap must contain the packaged catalog (`catalog.zip`), crea
 | `spec.forward.namespace` | string | Wanaku namespace of the forward. The default is `default` |
 | `spec.dependencies` | list | Extra Maven dependencies (`group:artifact:version`) |
 | `spec.wanakuTokenSecretRef`, `spec.barnTokenSecretRef` | object | Secret `name` and `key` (default `token`) of a bearer token for the router management API or for Barn |
-| `spec.image`, `spec.imagePullPolicy` | string | Runtime image (default `quay.io/wanaku/wanaku-semantic-router:latest`) and pull policy |
+| `spec.image`, `spec.imagePullPolicy` | string | Runtime image (default `quay.io/wanaku/wanaku-semantic-router:0.3.0`) and pull policy |
 | `spec.env` | list | Extra environment variables, for example the expert provider credentials. See [Environment variables](#environment-variables) |
 | `spec.properties` | map | Deployment and Camel component properties. The operator passes each entry to the runtime as `-p KEY=VALUE` |
 
@@ -326,7 +326,7 @@ When you delete the resource, Kubernetes stops the runtime. The runtime removes 
 | `spec.registration.enabled` | bool | Registers the runtime with the router (default `true`) |
 | `spec.registration.name`, `spec.registration.namespace` | string | Forward name (default: the resource name) and Wanaku namespace (default `default`) |
 | `spec.registration.tokenSecretRef` | object | Secret `name` and `key` (default `token`) of a bearer token for the router management API |
-| `spec.image`, `spec.imagePullPolicy`, `spec.env` | mixed | Runtime image (default `quay.io/wanaku/camel-integration-capability:latest`) and configuration |
+| `spec.image`, `spec.imagePullPolicy`, `spec.env` | mixed | Runtime image (default `quay.io/wanaku/camel-integration-capability:0.3.0`) and configuration |
 
 Set exactly one routes source. `datastore://` references and service catalogs need Wanaku Barn on the router (`spec.barn.enabled: true`).
 

@@ -21,7 +21,7 @@ import static ai.wanaku.operator.util.RuntimeWorkloads.value;
 
 /** Builds the workload of a Wanaku Semantic Router (WSR) runtime. */
 public final class SemanticRouterResourceFactory {
-    public static final String DEFAULT_IMAGE = "quay.io/wanaku/wanaku-semantic-router:latest";
+    public static final String DEFAULT_IMAGE = "quay.io/wanaku/wanaku-semantic-router:0.3.0";
     public static final int MCP_PORT = 8090;
     public static final int STATUS_PORT = 8091;
     public static final String COMPONENT = "wanaku-semantic-router";
