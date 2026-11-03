@@ -24,7 +24,7 @@ class ServiceCatalogIndexTest {
         assertEquals("testservice", index.getName());
         assertEquals("A test service", index.getDescription());
         assertEquals(1, index.getServiceNames().size());
-        assertEquals("sys1", index.getServiceNames().get(0));
+        assertEquals("sys1", index.getServiceNames().getFirst());
         assertEquals("sys1/sys1.camel.yaml", index.getRoutesFile("sys1"));
         assertEquals("sys1/sys1.wanaku-rules.yaml", index.getRulesFile("sys1"));
         assertNull(index.getDependenciesFile("sys1"));

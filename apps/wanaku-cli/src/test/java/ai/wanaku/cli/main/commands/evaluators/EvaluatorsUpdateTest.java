@@ -73,7 +73,7 @@ public class EvaluatorsUpdateTest {
         EvaluatorsUpdateRequest request = captor.getValue();
         assertEquals(3L, request.getExpectedRevision());
         assertEquals(1, request.getEvaluators().size());
-        assertEquals("safety-gate", request.getEvaluators().get(0).get("name"));
+        assertEquals("safety-gate", request.getEvaluators().getFirst().get("name"));
     }
 
     @Test
@@ -122,7 +122,7 @@ public class EvaluatorsUpdateTest {
         assertEquals(0, result);
         ArgumentCaptor<EvaluatorsUpdateRequest> captor = ArgumentCaptor.forClass(EvaluatorsUpdateRequest.class);
         verify(evaluatorsService).update(captor.capture());
-        assertEquals("safety-gate", captor.getValue().getEvaluators().get(0).get("name"));
+        assertEquals("safety-gate", captor.getValue().getEvaluators().getFirst().get("name"));
     }
 
     @Test

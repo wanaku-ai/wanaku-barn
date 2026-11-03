@@ -83,7 +83,7 @@ class ServiceCatalogResourceTest {
         assertNotNull(response);
         assertEquals(1, response.data().size());
 
-        Map<String, Object> summary = response.data().get(0);
+        Map<String, Object> summary = response.data().getFirst();
         assertEquals("testservice", summary.get("name"));
         assertEquals("A test service", summary.get("description"));
     }

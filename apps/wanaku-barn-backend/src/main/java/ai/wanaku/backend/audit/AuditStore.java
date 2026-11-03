@@ -170,7 +170,7 @@ public class AuditStore {
         Query<AuditEvent> query = events().query("from %s e where e.eventId = :id".formatted(EVENT_TYPE));
         query.setParameter("id", eventId);
         List<AuditEvent> found = query.execute().list();
-        return found.isEmpty() ? null : found.get(0);
+        return found.isEmpty() ? null : found.getFirst();
     }
 
     /** Returns all retained events in sequence order, for an export. */

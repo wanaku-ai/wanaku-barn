@@ -54,6 +54,6 @@ public class EvaluatorsWireFormatTest {
         assertEquals("2026-08-26T16:58:34Z", revision.getRevision().getCreatedAt());
         assertNull(revision.getRevision().getActivatedAt());
         assertEquals("api", revision.getRevision().getOrigin());
-        assertEquals("a", revision.getEvaluators().get(0).get("name"));
+        assertEquals("a", revision.getEvaluators().getFirst().get("name"));
     }
 }

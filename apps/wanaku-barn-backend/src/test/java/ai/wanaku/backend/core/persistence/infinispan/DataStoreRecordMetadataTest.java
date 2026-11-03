@@ -98,8 +98,8 @@ class DataStoreRecordMetadataTest {
         DataStore created = repository.persist(new DataStore(null, "meta", "original"));
 
         repository.findById(created.getId()).setData("changed outside the repository");
-        repository.listAll().get(0).getLabels().put("leaked", "true");
-        repository.findByName("meta").get(0).setName("renamed");
+        repository.listAll().getFirst().getLabels().put("leaked", "true");
+        repository.findByName("meta").getFirst().setName("renamed");
 
         DataStoreRecord current = (DataStoreRecord) repository.findById(created.getId());
         assertEquals("original", current.getData());
