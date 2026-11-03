@@ -19,7 +19,7 @@ import static ai.wanaku.operator.util.RuntimeWorkloads.value;
 
 /** Builds the workload of a Camel Integration Capability (CIC) runtime. */
 public final class IntegrationResourceFactory {
-    public static final String DEFAULT_IMAGE = "quay.io/wanaku/camel-integration-capability:latest";
+    public static final String DEFAULT_IMAGE = "quay.io/wanaku/camel-integration-capability:0.3.0";
     public static final int DEFAULT_MCP_PORT = 9090;
     public static final String COMPONENT = "camel-integration-capability";
     public static final String ROUTES_PATH = "/opt/cic/routes";
