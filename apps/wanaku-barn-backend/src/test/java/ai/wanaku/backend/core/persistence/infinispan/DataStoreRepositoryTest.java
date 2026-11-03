@@ -75,7 +75,7 @@ public class DataStoreRepositoryTest {
         assertNotNull(found, "Result list should not be null");
         assertFalse(found.isEmpty(), "Should find at least one data store");
         assertEquals(1, found.size(), "Should find exactly one data store");
-        assertEquals("test-data", found.get(0).getName(), "Name should match");
+        assertEquals("test-data", found.getFirst().getName(), "Name should match");
     }
 
     @Order(4)

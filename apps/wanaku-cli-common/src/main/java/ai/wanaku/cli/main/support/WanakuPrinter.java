@@ -550,7 +550,7 @@ public class WanakuPrinter extends DefaultPrinter {
         if (columns != null && columns.length > 0) {
             cols = Arrays.asList(columns);
         } else if (!rows.isEmpty()) {
-            cols = List.copyOf(rows.get(0).keySet());
+            cols = List.copyOf(rows.getFirst().keySet());
         } else {
             return;
         }

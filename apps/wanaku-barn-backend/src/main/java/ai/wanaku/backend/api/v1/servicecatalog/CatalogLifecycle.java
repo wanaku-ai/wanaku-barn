@@ -174,7 +174,7 @@ public class CatalogLifecycle {
      */
     public DataStore find(String type, String name) {
         List<DataStore> found = repository.findByTypeAndCatalogName(type, name);
-        return found.isEmpty() ? null : found.get(0);
+        return found.isEmpty() ? null : found.getFirst();
     }
 
     /**

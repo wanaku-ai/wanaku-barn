@@ -60,7 +60,7 @@ class DeploymentInstructionsBeanTest {
         assertNotNull(instructions);
         assertEquals(1, instructions.systems().size());
 
-        String instruction = instructions.systems().get(0).instruction();
+        String instruction = instructions.systems().getFirst().instruction();
         assertTrue(instruction.contains("--service-catalog testcatalog"), "Instructions should name the catalog");
         assertTrue(instruction.contains("--service-catalog-system sys1"), "Instructions should name the system");
         assertTrue(instruction.contains("--mcp-port <mcp-port>"), "Instructions should set the MCP port");
@@ -85,7 +85,7 @@ class DeploymentInstructionsBeanTest {
         DeploymentInstructions instructions = bean.generateInstructions("testcatalog", "docker");
         assertNotNull(instructions);
 
-        String instruction = instructions.systems().get(0).instruction();
+        String instruction = instructions.systems().getFirst().instruction();
         assertTrue(instruction.contains("-p <mcp-port>:9090"), "Instructions should map the MCP port");
         assertTrue(instruction.contains("SERVICE_CATALOG_SYSTEM=sys1"), "Instructions should name the system");
         assertTrue(instruction.contains("WANAKU_REGISTER=true"), "The capability should register itself");

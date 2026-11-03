@@ -160,7 +160,7 @@ public class LabelFilteringIntegrationTest {
     public void testVersionFiltering() {
         List<DataStore> v2 = dataStoreRepository.findAllFilterByLabelExpression("version=2.0");
         assertEquals(1, v2.size());
-        assertEquals("weather-forecast-2", v2.get(0).getId());
+        assertEquals("weather-forecast-2", v2.getFirst().getId());
     }
 
     @Test
@@ -169,7 +169,7 @@ public class LabelFilteringIntegrationTest {
         List<DataStore> specific =
                 dataStoreRepository.findAllFilterByLabelExpression("category=weather & action=forecast & version=1.0");
         assertEquals(1, specific.size());
-        assertEquals("weather-forecast-1", specific.get(0).getId());
+        assertEquals("weather-forecast-1", specific.getFirst().getId());
     }
 
     @Test
@@ -178,7 +178,7 @@ public class LabelFilteringIntegrationTest {
         List<DataStore> result =
                 dataStoreRepository.findAllFilterByLabelExpression("environment=production & !deprecated=true");
         assertEquals(1, result.size());
-        assertEquals("entry-prod-1", result.get(0).getId());
+        assertEquals("entry-prod-1", result.getFirst().getId());
     }
 
     @Test
@@ -230,7 +230,7 @@ public class LabelFilteringIntegrationTest {
     public void testStatusFiltering() {
         List<DataStore> stableEntries = dataStoreRepository.findAllFilterByLabelExpression("status=stable");
         assertEquals(1, stableEntries.size());
-        assertEquals("entry-prod-1", stableEntries.get(0).getId());
+        assertEquals("entry-prod-1", stableEntries.getFirst().getId());
     }
 
     @AfterAll

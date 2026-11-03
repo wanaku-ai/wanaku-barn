@@ -292,7 +292,7 @@ public class MarkdownRenderer {
             }
 
             // Calculate column widths
-            int numColumns = tableRows.get(0).size();
+            int numColumns = tableRows.getFirst().size();
             int[] columnWidths = new int[numColumns];
 
             for (List<String> row : tableRows) {
@@ -309,7 +309,7 @@ public class MarkdownRenderer {
 
             // Header row (first row)
             if (!tableRows.isEmpty()) {
-                renderRow(tableRows.get(0), columnWidths, true);
+                renderRow(tableRows.getFirst(), columnWidths, true);
 
                 // Header separator
                 renderBorder(columnWidths, "├", "┼", "┤");

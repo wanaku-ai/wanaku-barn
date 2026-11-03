@@ -89,7 +89,7 @@ public class DataStoresGet extends BaseCommand {
                             String.format("Multiple data stores found with name '%s', using the first one", name));
                 }
 
-                dataStore = dataStores.get(0);
+                dataStore = dataStores.getFirst();
             }
 
             if (dataStore == null) {

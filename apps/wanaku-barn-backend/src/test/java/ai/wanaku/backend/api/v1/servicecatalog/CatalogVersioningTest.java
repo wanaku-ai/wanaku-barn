@@ -189,7 +189,7 @@ class CatalogVersioningTest {
 
         List<CatalogVersion> history = lifecycle.versions("catalog", "frozen");
         assertThat(history).extracting(CatalogVersion::getStatus).containsExactly("rejected", "active");
-        assertThat(history.get(0).getFailureReason()).isEqualTo("immutable");
+        assertThat(history.getFirst().getFailureReason()).isEqualTo("immutable");
         given().get("/api/v1/service-catalog/{name}/versions/{version}/download", "frozen", 2)
                 .then()
                 .statusCode(422);
@@ -223,8 +223,8 @@ class CatalogVersioningTest {
 
         List<CatalogVersion> history = lifecycle.versions("catalog", "legacy");
         assertThat(history).hasSize(1);
-        assertThat(history.get(0).getOrigin()).isEqualTo("legacy");
-        assertThat(history.get(0).getStatus()).isEqualTo("active");
+        assertThat(history.getFirst().getOrigin()).isEqualTo("legacy");
+        assertThat(history.getFirst().getStatus()).isEqualTo("active");
         assertThat(catalogs.get("legacy").getId()).isEqualTo(id);
     }
 
@@ -241,7 +241,7 @@ class CatalogVersioningTest {
                 .then()
                 .statusCode(200);
 
-        assertThat(lifecycle.versions("catalog", "from-template").get(0).getOrigin())
+        assertThat(lifecycle.versions("catalog", "from-template").getFirst().getOrigin())
                 .isEqualTo("instantiate");
     }
 

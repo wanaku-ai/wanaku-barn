@@ -58,7 +58,7 @@ class NamespaceListTest {
         verify(printer).printTable(captor.capture(), eq("name"), eq("address"), eq("labels"));
         List<?> printed = captor.getValue();
         assertEquals(1, printed.size());
-        assertEquals("http://localhost:8081/my-ns/mcp", ((NamespaceList.NamespaceRow) printed.get(0)).getAddress());
+        assertEquals("http://localhost:8081/my-ns/mcp", ((NamespaceList.NamespaceRow) printed.getFirst()).getAddress());
     }
 
     @SuppressWarnings("unchecked")
@@ -79,7 +79,7 @@ class NamespaceListTest {
         verify(printer).printTable(captor.capture(), eq("name"), eq("address"), eq("labels"));
         assertEquals(
                 "https://mcp.example.com/my-ns/mcp",
-                ((NamespaceList.NamespaceRow) captor.getValue().get(0)).getAddress());
+                ((NamespaceList.NamespaceRow) captor.getValue().getFirst()).getAddress());
     }
 
     @SuppressWarnings("unchecked")

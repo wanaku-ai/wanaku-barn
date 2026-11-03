@@ -102,7 +102,7 @@ class BackupResourceTest {
         given().get("/api/v1/service-catalog/{name}", "after-export").then().statusCode(404);
         // Version numbers continue from the imported counters
         deploy("backup-catalog", "v3 again");
-        assertThat(lifecycle.versions("catalog", "backup-catalog").get(0).getVersion())
+        assertThat(lifecycle.versions("catalog", "backup-catalog").getFirst().getVersion())
                 .isEqualTo(3);
 
         // The audit trail is the imported one, followed by the import event
@@ -112,7 +112,7 @@ class BackupResourceTest {
                 .extract()
                 .jsonPath();
         assertThat(imported.getLong("data.events[0].sequence")).isEqualTo(auditSequence + 1);
-        assertThat(auditStore.allEvents().get(0).getTimestamp())
+        assertThat(auditStore.allEvents().getFirst().getTimestamp())
                 .isEqualTo(exported.get("auditEvents").get(0).get("timestamp").asText());
     }
 

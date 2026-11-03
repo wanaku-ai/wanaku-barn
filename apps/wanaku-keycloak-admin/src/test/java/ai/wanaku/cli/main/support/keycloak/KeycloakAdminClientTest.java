@@ -87,7 +87,7 @@ class KeycloakAdminClientTest {
         List<Map<String, Object>> users = adminClient.listUsers(REALM);
 
         assertEquals(1, users.size());
-        assertEquals("admin", users.get(0).get("username"));
+        assertEquals("admin", users.getFirst().get("username"));
 
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(httpClient).send(captor.capture(), any());
@@ -171,7 +171,7 @@ class KeycloakAdminClientTest {
         List<Map<String, Object>> clients = adminClient.listClients(REALM);
 
         assertEquals(1, clients.size());
-        assertEquals("my-service", clients.get(0).get("clientId"));
+        assertEquals("my-service", clients.getFirst().get("clientId"));
     }
 
     @SuppressWarnings("unchecked")

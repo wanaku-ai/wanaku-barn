@@ -211,7 +211,7 @@ public class KeycloakAdminClient {
             throw new KeycloakAdminException("User '" + username + "' not found");
         }
 
-        return (String) users.get(0).get("id");
+        return (String) users.getFirst().get("id");
     }
 
     private String resolveClientInternalId(String realm, String clientId) throws KeycloakAdminException {
@@ -228,7 +228,7 @@ public class KeycloakAdminClient {
             throw new KeycloakAdminException("Client '" + clientId + "' not found");
         }
 
-        return (String) clients.get(0).get("id");
+        return (String) clients.getFirst().get("id");
     }
 
     private String extractSecret(String body) throws KeycloakAdminException {

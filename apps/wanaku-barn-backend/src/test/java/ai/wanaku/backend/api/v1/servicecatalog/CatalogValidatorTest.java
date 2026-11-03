@@ -78,7 +78,7 @@ class CatalogValidatorTest {
 
         assertFalse(result.valid());
         assertEquals(1, result.errors().size());
-        assertEquals("data", result.errors().get(0).path());
+        assertEquals("data", result.errors().getFirst().path());
     }
 
     @Test

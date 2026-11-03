@@ -43,7 +43,7 @@ class AuditRetentionTest {
         store.record(AuditEvent.administrative("retention.6", AuditEvent.DECISION_ALLOW, "completed", "done"));
         assertThat(store.query(new AuditFilterCriteria(null, null, null, null, null, null, null, null, 0, 1))
                         .getEvents()
-                        .get(0)
+                        .getFirst()
                         .getSequence())
                 .isEqualTo(6L);
     }

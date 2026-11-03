@@ -33,13 +33,13 @@ public final class Matchers {
                             .getTemplate()
                             .getSpec()
                             .getContainers()
-                            .get(0)
+                            .getFirst()
                             .getImage()
                             .equals(existing.getSpec()
                                     .getTemplate()
                                     .getSpec()
                                     .getContainers()
-                                    .get(0)
+                                    .getFirst()
                                     .getImage());
         }
     }
@@ -54,26 +54,26 @@ public final class Matchers {
                             .getTemplate()
                             .getSpec()
                             .getContainers()
-                            .get(0)
+                            .getFirst()
                             .getImage()
                             .equals(existing.getSpec()
                                     .getTemplate()
                                     .getSpec()
                                     .getContainers()
-                                    .get(0)
+                                    .getFirst()
                                     .getImage())
                     && matchEnvVars(
                             desired.getSpec()
                                     .getTemplate()
                                     .getSpec()
                                     .getContainers()
-                                    .get(0)
+                                    .getFirst()
                                     .getEnv(),
                             existing.getSpec()
                                     .getTemplate()
                                     .getSpec()
                                     .getContainers()
-                                    .get(0)
+                                    .getFirst()
                                     .getEnv());
         }
     }

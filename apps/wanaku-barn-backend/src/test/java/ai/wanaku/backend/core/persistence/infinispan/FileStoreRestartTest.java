@@ -98,7 +98,7 @@ class FileStoreRestartTest {
                     .execute()
                     .list();
             assertThat(events).hasSize(1);
-            assertThat(events.get(0).getAttributes()).containsEntry("revision", "2");
+            assertThat(events.getFirst().getAttributes()).containsEntry("revision", "2");
         }
     }
 }
