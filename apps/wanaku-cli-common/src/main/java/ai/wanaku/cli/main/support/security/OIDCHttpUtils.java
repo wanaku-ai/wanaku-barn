@@ -31,7 +31,6 @@ public class OIDCHttpUtils {
                     + ": Status code " + httpResponse.getStatusCode());
         }
         JSONObject jsonObject = httpResponse.getBodyAsJSONObject();
-        OIDCProviderMetadata resolvedOp = OIDCProviderMetadata.parse(jsonObject);
-        return resolvedOp;
+        return OIDCProviderMetadata.parse(jsonObject);
     }
 }
