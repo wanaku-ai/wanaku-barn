@@ -10,7 +10,7 @@ import picocli.CommandLine;
 @CommandLine.Command(name = "status", description = "Show current authentication status")
 public class AuthStatus extends BaseCommand {
 
-    private AuthCredentialStore credentialStore;
+    private final AuthCredentialStore credentialStore;
 
     public AuthStatus() {
         this(new AuthCredentialStore());

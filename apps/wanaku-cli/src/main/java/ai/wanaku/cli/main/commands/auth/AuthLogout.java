@@ -9,7 +9,7 @@ import picocli.CommandLine;
 @CommandLine.Command(name = "logout", description = "Clear stored authentication credentials")
 public class AuthLogout extends BaseCommand {
 
-    private AuthCredentialStore credentialStore;
+    private final AuthCredentialStore credentialStore;
 
     public AuthLogout() {
         this(new AuthCredentialStore());
