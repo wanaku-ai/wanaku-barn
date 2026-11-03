@@ -148,6 +148,16 @@ public class KameletBean {
         KameletDefinition checked = parser.parse(definition.yaml, definition.source);
         if (!checked.name.equals(definition.name) || !checked.sha256.equals(definition.sha256))
             throw new IllegalStateException("Kamelet revision bytes do not match their metadata");
+        DataStore entry = createEntry(definition);
+        DataStore previous = repository.persistIfAbsent(entry);
+        if (previous != null) {
+            KameletDefinition existing = verified(previous, definition.name, definition.sha256);
+            if (!existing.yaml.equals(definition.yaml))
+                throw new IllegalStateException("Immutable Kamelet content conflict");
+        }
+    }
+
+    private static DataStore createEntry(KameletDefinition definition) {
         DataStore entry = new DataStore();
         entry.setId(revisionId(definition.name, definition.sha256));
         entry.setName(entry.getId());
@@ -163,12 +173,7 @@ public class KameletBean {
                 "kamelet.immutable",
                 "true"));
         entry.setData(definition.yaml);
-        DataStore previous = repository.persistIfAbsent(entry);
-        if (previous != null) {
-            KameletDefinition existing = verified(previous, definition.name, definition.sha256);
-            if (!existing.yaml.equals(definition.yaml))
-                throw new IllegalStateException("Immutable Kamelet content conflict");
-        }
+        return entry;
     }
 
     /** Removes only the current uploaded selection, retaining historical bytes.
