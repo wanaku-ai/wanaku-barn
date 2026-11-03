@@ -566,7 +566,7 @@ public class WanakuPrinter extends DefaultPrinter {
                 Object value = row.get(cols.get(i));
                 sb.append(Objects.toString(value, ""));
             }
-            writer.println(sb.toString());
+            writer.println(sb);
         }
         terminal.flush();
     }
