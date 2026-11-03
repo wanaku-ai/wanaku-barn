@@ -49,9 +49,14 @@ class KameletParserTest {
     void acceptsNativeDashedPropertiesAndPreservesArbitraryParameterKeys() {
         String nativeAliases = yaml.replace(
                         "        - setBody:",
-                        "        - setHeader:\n            name: Trace-Id\n            constant: original\n"
-                                + "        - transformDataType:\n            to-type: java:java.lang.String\n"
-                                + "        - setBody:")
+                        """
+                                        - setHeader:
+                                            name: Trace-Id
+                                            constant: original
+                                        - transformDataType:
+                                            to-type: java:java.lang.String
+                                        - setBody:\
+                                """)
                 .replace(
                         "uri: kamelet:source",
                         "uri: kamelet:source\n      parameters:\n        foo-bar: original\n        fooBar: preserved");

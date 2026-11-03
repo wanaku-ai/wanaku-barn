@@ -12,13 +12,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public final class ResponseHelper {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    static final String AUTH_HINT = "Possible causes:\n"
-            + "  - No credentials stored: run 'wanaku auth login' (or pass --token)\n"
-            + "  - The token expired and could not be refreshed: run 'wanaku auth login' again\n"
-            + "  - The token was issued for a client the auth proxy does not accept: log in with\n"
-            + "    --client-id wanaku-mcp-router --client-secret <secret> (or another client the proxy trusts)\n"
-            + "  - The user lacks the role required by the management proxy (e.g. 'admin')\n"
-            + "  - The server runs without authentication: use --no-auth";
+    static final String AUTH_HINT = """
+            Possible causes:
+              - No credentials stored: run 'wanaku auth login' (or pass --token)
+              - The token expired and could not be refreshed: run 'wanaku auth login' again
+              - The token was issued for a client the auth proxy does not accept: log in with
+                --client-id wanaku-mcp-router --client-secret <secret> (or another client the proxy trusts)
+              - The user lacks the role required by the management proxy (e.g. 'admin')
+              - The server runs without authentication: use --no-auth""";
 
     private ResponseHelper() {}
 

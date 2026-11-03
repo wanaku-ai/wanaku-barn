@@ -251,9 +251,17 @@ class CatalogValidatorTest {
 
     @Test
     void testLegacySemanticQuestionIsRejected() throws java.io.IOException {
-        byte[] yaml = ("- semantic:\n    question:\n      department:\n        type: choice\n"
-                        + "        expert: supportExpert\n        state: ${body}\n"
-                        + "        instructions: Classify\n        criteria:\n          no_match: Other\n")
+        byte[] yaml = ("""
+                - semantic:
+                    question:
+                      department:
+                        type: choice
+                        expert: supportExpert
+                        state: ${body}
+                        instructions: Classify
+                        criteria:
+                          no_match: Other
+                """)
                 .getBytes(StandardCharsets.UTF_8);
         assertFalse(ai.wanaku.backend.api.v1.semanticrouter.SemanticYamlValidator.validate(yaml)
                 .isEmpty());
