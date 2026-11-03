@@ -69,8 +69,7 @@ class ServiceTemplateResourceTest {
                     props.setProperty("catalog.routes." + sys, routesPath);
 
                     zos.putNextEntry(new ZipEntry(routesPath));
-                    zos.write((""
-                                    + "- route:\n"
+                    zos.write(("- route:\n"
                                     + "    id: " + sys + "-route\n"
                                     + "    from:\n"
                                     + "      uri: direct:" + sys + "\n")

@@ -39,7 +39,7 @@ class DataStoreMarshallerCompatibilityTest {
         legacy.setLabels(new HashMap<>(Map.of("wanaku.type", "catalog")));
         byte[] bytes = ProtobufUtil.toWrappedByteArray(legacyContext(), legacy);
 
-        StoredDataStore loaded = (StoredDataStore) ProtobufUtil.fromWrappedByteArray(currentContext(), bytes);
+        StoredDataStore loaded = ProtobufUtil.fromWrappedByteArray(currentContext(), bytes);
 
         assertEquals("legacy-id", loaded.getId());
         assertEquals("legacy", loaded.getName());
