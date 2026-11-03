@@ -353,15 +353,7 @@ public class AuthCredentialStore {
             // read for "everyone"), so we surface a warning rather than failing the command.
             boolean ownerExecutable =
                     PosixFilePermissions.fromString(posixPermissions).contains(PosixFilePermission.OWNER_EXECUTE);
-            File file = path.toFile();
-            boolean restricted = file.setReadable(false, false);
-            restricted = file.setReadable(true, true) && restricted;
-            restricted = file.setWritable(false, false) && restricted;
-            restricted = file.setWritable(true, true) && restricted;
-            if (ownerExecutable) {
-                restricted = file.setExecutable(false, false) && restricted;
-                restricted = file.setExecutable(true, true) && restricted;
-            }
+            boolean restricted = isRestricted(path, ownerExecutable);
             if (!restricted) {
                 LOG.warnf(
                         "Could not fully restrict permissions on %s; it may be accessible to other users "
@@ -369,6 +361,19 @@ public class AuthCredentialStore {
                         path);
             }
         }
+    }
+
+    private static boolean isRestricted(Path path, boolean ownerExecutable) {
+        File file = path.toFile();
+        boolean restricted = file.setReadable(false, false);
+        restricted = file.setReadable(true, true) && restricted;
+        restricted = file.setWritable(false, false) && restricted;
+        restricted = file.setWritable(true, true) && restricted;
+        if (ownerExecutable) {
+            restricted = file.setExecutable(false, false) && restricted;
+            restricted = file.setExecutable(true, true) && restricted;
+        }
+        return restricted;
     }
 
     private static URI resolveCredentialsPath(String credentialsPath) {
