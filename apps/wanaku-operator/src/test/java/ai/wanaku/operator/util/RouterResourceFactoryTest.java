@@ -1,5 +1,8 @@
 package ai.wanaku.operator.util;
 
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
+import io.fabric8.kubernetes.api.model.ServicePort;
 import java.util.List;
 import java.util.Map;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -286,11 +289,11 @@ class RouterResourceFactoryTest {
         assertEquals(
                 expected,
                 container.getPorts().stream()
-                        .collect(java.util.stream.Collectors.toMap(p -> p.getName(), p -> p.getContainerPort())));
+                        .collect(java.util.stream.Collectors.toMap(ContainerPort::getName, ContainerPort::getContainerPort)));
         assertEquals(
                 expected,
                 service.getSpec().getPorts().stream()
-                        .collect(java.util.stream.Collectors.toMap(p -> p.getName(), p -> p.getPort())));
+                        .collect(java.util.stream.Collectors.toMap(ServicePort::getName, ServicePort::getPort)));
         for (var port : service.getSpec().getPorts()) {
             assertEquals(port.getName(), port.getTargetPort().getStrVal());
         }
@@ -456,7 +459,7 @@ class RouterResourceFactoryTest {
         Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         List<String> names = deployment.getSpec().getTemplate().getSpec().getContainers().stream()
-                .map(c -> c.getName())
+                .map(Container::getName)
                 .toList();
         assertEquals(List.of("oauth2-proxy-mcp", "oauth2-proxy-mgmt"), names);
     }
@@ -641,7 +644,7 @@ class RouterResourceFactoryTest {
 
         assertEquals("oauth2-proxy-test-router", service.getMetadata().getName());
         List<Integer> ports =
-                service.getSpec().getPorts().stream().map(p -> p.getPort()).toList();
+                service.getSpec().getPorts().stream().map(ServicePort::getPort).toList();
         assertEquals(List.of(4180, 4181), ports);
     }
 
