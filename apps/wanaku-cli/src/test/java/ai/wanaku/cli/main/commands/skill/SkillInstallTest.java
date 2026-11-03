@@ -21,6 +21,7 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -58,7 +59,7 @@ class SkillInstallTest {
     void registersInstallUnderSkill() {
         CommandLine root = new CommandLine(new CliMain());
         CommandLine.ParseResult result = root.parseArgs("skill", "install", "--codex");
-        assertTrue(result.subcommand().subcommand().commandSpec().userObject() instanceof SkillInstall);
+        assertInstanceOf(SkillInstall.class, result.subcommand().subcommand().commandSpec().userObject());
     }
 
     @Test
