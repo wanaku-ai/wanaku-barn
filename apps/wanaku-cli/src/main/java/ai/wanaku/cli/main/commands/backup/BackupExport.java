@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.BackupService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,12 +18,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.commonResponseErrorHandl
 @CommandLine.Command(name = "export", description = "Export the Barn data to a JSON file")
 public class BackupExport extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--output"},
@@ -39,7 +36,8 @@ public class BackupExport extends BaseCommand {
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
         String response;
         try {
-            response = initAuthenticatedService(BackupService.class, host).export(!noAudit);
+            response = initAuthenticatedService(BackupService.class, barn.baseUri())
+                    .export(!noAudit);
         } catch (WebApplicationException ex) {
             commonResponseErrorHandler(ex.getResponse());
             return EXIT_ERROR;

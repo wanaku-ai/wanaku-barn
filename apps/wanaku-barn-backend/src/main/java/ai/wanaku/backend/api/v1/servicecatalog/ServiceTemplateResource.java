@@ -398,7 +398,7 @@ public class ServiceTemplateResource {
         auditContext.setTarget(request.getTemplateName());
 
         if (StringHelper.isBlank(request.getTemplateName())) {
-            throw new WanakuException("Template name is required");
+            throw new IllegalArgumentException("Template name is required");
         }
 
         DataStore catalog = serviceTemplateBean.instantiate(

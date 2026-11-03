@@ -40,6 +40,7 @@ public class McpResource extends BaseCommand {
             printer.printErrorMessage("Missing required option: --resource-uri");
             return EXIT_ERROR;
         }
+        Mcp.warnIfTokenOverPlainHttp(printer, uri, getAuthTokenOverride());
         try (McpClient client = resolveClient()) {
             McpReadResourceResult result = client.readResource(resourceUri);
             List<McpResourceContents> contents = result.contents();
@@ -62,7 +63,7 @@ public class McpResource extends BaseCommand {
             printer.printErrorMessage(message);
             return EXIT_ERROR;
         } catch (Exception e) {
-            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri));
+            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri, getAuthTokenOverride()));
             return EXIT_ERROR;
         }
     }

@@ -5,7 +5,7 @@ metadata:
   annotations:
     # env.wanaku.ai/QUARKUS_TLS_TRUST_ALL: "false"
 spec:
-  # Optional: protect Praxis with oauth2-proxy (MCP on port 4180, management on 4181).
+  # Optional: protect Wanaku Server with oauth2-proxy (MCP on port 4180, management on 4181).
   # Requires a Secret with the keys `client-secret` and `cookie-secret`.
   auth:
     enabled: true
@@ -22,9 +22,9 @@ spec:
     # annotations to set in the ingress resource
     # annotations:
     #   haproxy.router.openshift.io/timeout: 5s
-  router:
+  barn:
     enabled: true
     image: wanaku-image-replace
     imagePullPolicy: Always
-  # praxis:
+  # server:
   #   image: quay.io/wanaku/wanaku-server:latest

@@ -8,6 +8,8 @@ on:
     paths-ignore:
       - .github/**
       - docs/**
+      - design/**
+      - '**/*.md'
       - artwork/**
       - README.md
       - docker-*
@@ -22,7 +24,6 @@ on:
       - SECURITY.md
       - get-wanaku.sh
       - javadoc-warm.sh
-      - tests/plans/**
       - .*
   push:
     branches:
@@ -32,6 +33,8 @@ on:
     paths-ignore:
       - .github/**
       - docs/**
+      - design/**
+      - '**/*.md'
       - artwork/**
       - README.md
       - docker-*
@@ -46,7 +49,6 @@ on:
       - SECURITY.md
       - get-wanaku.sh
       - javadoc-warm.sh
-      - tests/plans/**
       - .*
 
 permissions:
@@ -101,6 +103,12 @@ jobs:
         node-version: 'lts/*'
         cache: 'yarn'
         cache-dependency-path: tests/e2e/ui/yarn.lock
+
+    - name: Test admin UI
+      working-directory: apps/ui/admin
+      run: |
+        yarn install --frozen-lockfile
+        yarn test
 
     - name: Install Playwright dependencies
       working-directory: tests/e2e/ui

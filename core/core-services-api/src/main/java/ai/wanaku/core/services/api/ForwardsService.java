@@ -12,6 +12,7 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 import java.util.List;
+import java.util.Map;
 import ai.wanaku.capabilities.sdk.api.types.ForwardReference;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 
@@ -33,12 +34,14 @@ public interface ForwardsService {
      * capabilities to a remote server or service.
      *
      * @param reference the forward reference to register
-     * @return a {@link WanakuResponse} indicating the result of the add operation
+     * @return a {@link WanakuResponse} with the discovery result: the stored {@code forward} (including
+     *         {@code available} and {@code statusMessage}) and the {@code tools_discovered},
+     *         {@code resources_discovered} and {@code prompts_discovered} counts
      */
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    WanakuResponse<Void> addForward(ForwardReference reference);
+    WanakuResponse<Map<String, Object>> addForward(ForwardReference reference);
 
     /**
      * Removes a forward reference from the system.

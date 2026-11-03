@@ -12,19 +12,226 @@ import ai.wanaku.operator.wanaku.WanakuTypes;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RouterResourceFactoryTest {
 
     @Test
+    void theServerHasNoConfigWithoutBarnOrCustomConfig() {
+        assertNull(RouterResourceFactory.serverConfig(createRouter(null), null));
+    }
+
+    @Test
+    void aCustomConfigWithoutBarnIsUsedUnchanged() {
+        String custom = "# my posture\ngovernance:\n  default:\n    no_match: allow\n";
+
+        assertEquals(custom, RouterResourceFactory.serverConfig(createRouter(null), custom));
+    }
+
+    @Test
+    void barnAddsItsPluginToACustomConfig() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+        String custom =
+                """
+                governance:
+                  default:
+                    no_match: allow
+                plugins:
+                  - id: other
+                    services:
+                      api:
+                        target: http://other:8080
+                """;
+
+        String config = RouterResourceFactory.serverConfig(router, custom);
+
+        assertTrue(config.contains("no_match: allow"), config);
+        assertTrue(config.contains("other"), config);
+        assertTrue(config.contains("wanaku-barn-api"), config);
+        assertTrue(config.contains("http://barn-test-router:8080"), config);
+    }
+
+    @Test
+    void barnAddsAPluginsListWhenTheCustomConfigHasNone() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+
+        String config = RouterResourceFactory.serverConfig(router, "governance:\n  default:\n    mode: audit\n");
+
+        assertTrue(config.contains("mode: audit"), config);
+        assertTrue(config.contains("wanaku-barn-api"), config);
+    }
+
+    @Test
+    void aCustomConfigThatDeclaresTheBarnPluginIsUsedUnchanged() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+        String custom =
+                """
+                plugins:
+                  - id: wanaku-barn
+                    services:
+                      wanaku-barn-api:
+                        target: http://my-barn:8080
+                """;
+
+        assertEquals(custom, RouterResourceFactory.serverConfig(router, custom));
+    }
+
+    @Test
+    void anInvalidCustomConfigIsRejected() {
+        WanakuRouter router = createRouter(null);
+        router.getSpec().setBarn(enabledBarn());
+
+        assertThrows(IllegalArgumentException.class, () -> RouterResourceFactory.serverConfig(router, "governance: ["));
+        assertThrows(
+                IllegalArgumentException.class, () -> RouterResourceFactory.serverConfig(router, "- not a mapping"));
+        assertThrows(
+                IllegalArgumentException.class, () -> RouterResourceFactory.serverConfig(router, "plugins: wrong"));
+    }
+
+    @Test
+    void theServerMountsACustomConfigWithoutBarn() {
+        WanakuRouter router = createRouter(null);
+        String custom = "governance:\n  default:\n    no_match: allow\n";
+
+        Deployment server =
+                RouterResourceFactory.makeDesiredServerDeployment(router, null, null, null, "claim", custom);
+
+        assertTrue(server.getSpec().getTemplate().getSpec().getVolumes().stream()
+                .anyMatch(v -> "server-config".equals(v.getName())));
+        assertEquals(
+                Integer.toHexString(custom.hashCode()),
+                server.getSpec()
+                        .getTemplate()
+                        .getMetadata()
+                        .getAnnotations()
+                        .get(RouterResourceFactory.SERVER_CONFIG_HASH_ANNOTATION));
+    }
+
+    private static WanakuRouterSpec.BarnSpec enabledBarn() {
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(true);
+        return barn;
+    }
+
+    @Test
     void backendDeploymentHasNoAuthEnvVars() {
         WanakuRouter router = createRouter(null);
-        Deployment deployment = RouterResourceFactory.makeDesiredRouterBackendDeployment(router, null);
+        Deployment deployment = RouterResourceFactory.makeDesiredBarnDeployment(router, null);
 
         assertNull(getEnvValue(deployment, "AUTH_SERVER"));
         assertNull(getEnvValue(deployment, "AUTH_PROXY"));
         assertNull(getEnvValue(deployment, "AUTH_REALM"));
+    }
+
+    @Test
+    void barnDeploymentUsesMatchingServiceAndStorage() {
+        WanakuRouter router = createRouter(null);
+        Deployment deployment = RouterResourceFactory.makeDesiredBarnDeployment(router, null);
+        var service = RouterResourceFactory.makeBarnInternalService(router);
+        var pvc = RouterResourceFactory.makeBarnVolumePVC(router);
+        var pod = deployment.getSpec().getTemplate();
+
+        assertEquals("test-router-barn", deployment.getMetadata().getName());
+        assertEquals("wanaku-barn", pod.getSpec().getContainers().getFirst().getName());
+        assertEquals("barn-test-router", service.getMetadata().getName());
+        assertEquals(
+                8180, service.getSpec().getPorts().getFirst().getTargetPort().getIntVal());
+        assertEquals(service.getSpec().getSelector(), pod.getMetadata().getLabels());
+        assertEquals(
+                service.getSpec().getSelector(),
+                deployment.getSpec().getSelector().getMatchLabels());
+        assertEquals("test-router-barn-data", pvc.getMetadata().getName());
+        assertEquals(
+                pvc.getMetadata().getName(),
+                pod.getSpec().getVolumes().getFirst().getPersistentVolumeClaim().getClaimName());
+    }
+
+    @Test
+    void barnStorageSettingsApplyToThePvc() {
+        WanakuRouter router = createRouter(null);
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(true);
+        WanakuRouterSpec.StorageSpec storage = new WanakuRouterSpec.StorageSpec();
+        storage.setSize("20Gi");
+        storage.setStorageClassName("fast");
+        barn.setStorage(storage);
+        router.getSpec().setBarn(barn);
+
+        var pvc = RouterResourceFactory.makeBarnVolumePVC(router, "custom-claim");
+        Deployment deployment = RouterResourceFactory.makeDesiredBarnDeployment(router, null, "custom-claim");
+
+        assertEquals("custom-claim", pvc.getMetadata().getName());
+        assertEquals(
+                "20Gi",
+                pvc.getSpec().getResources().getRequests().get("storage").toString());
+        assertEquals("fast", pvc.getSpec().getStorageClassName());
+        assertEquals(
+                "custom-claim",
+                deployment
+                        .getSpec()
+                        .getTemplate()
+                        .getSpec()
+                        .getVolumes()
+                        .getFirst()
+                        .getPersistentVolumeClaim()
+                        .getClaimName());
+        assertEquals(
+                RouterResourceFactory.BARN_DATA_PATH + "/",
+                getEnvValue(deployment, "WANAKU_PERSISTENCE_INFINISPAN_BASE_FOLDER"));
+    }
+
+    @Test
+    void barnSpecTakesPrecedenceOverDeprecatedRouterSpec() {
+        WanakuRouterSpec.RouterSpec legacy = new WanakuRouterSpec.RouterSpec();
+        legacy.setEnabled(true);
+        legacy.setImage("quay.io/wanaku/legacy:1");
+        WanakuRouter router = createRouter(legacy);
+        assertTrue(RouterResourceFactory.isBarnEnabled(router));
+
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(false);
+        router.getSpec().setBarn(barn);
+
+        assertFalse(RouterResourceFactory.isBarnEnabled(router));
+    }
+
+    @Test
+    void serverReadsBarnPluginConfigOnlyWhenBarnIsEnabled() {
+        WanakuRouter withoutBarn = createRouter(null);
+        WanakuRouterSpec.BarnSpec barn = new WanakuRouterSpec.BarnSpec();
+        barn.setEnabled(true);
+        WanakuRouter withBarn = createRouter(null);
+        withBarn.getSpec().setBarn(barn);
+
+        var config =
+                RouterResourceFactory.makeServerConfigMap(withBarn, RouterResourceFactory.serverConfig(withBarn, null));
+        Deployment server = RouterResourceFactory.makeDesiredServerDeployment(withBarn, null);
+        Deployment plainServer = RouterResourceFactory.makeDesiredServerDeployment(withoutBarn, null);
+
+        assertEquals("test-router-server-config", config.getMetadata().getName());
+        assertTrue(config.getData().get("wanaku.yaml").contains("id: wanaku-barn"));
+        assertTrue(config.getData().get("wanaku.yaml").contains("wanaku-barn-api:"));
+        assertTrue(config.getData().get("wanaku.yaml").contains("target: http://barn-test-router:8080"));
+        var mount = server.getSpec().getTemplate().getSpec().getContainers().getFirst().getVolumeMounts().stream()
+                .filter(m -> "server-config".equals(m.getName()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("/etc/wanaku/wanaku.yaml", mount.getMountPath());
+        assertEquals("wanaku.yaml", mount.getSubPath());
+        assertNotNull(server.getSpec()
+                .getTemplate()
+                .getMetadata()
+                .getAnnotations()
+                .get(RouterResourceFactory.SERVER_CONFIG_HASH_ANNOTATION));
+        assertTrue(plainServer.getSpec().getTemplate().getSpec().getVolumes().stream()
+                .noneMatch(v -> "server-config".equals(v.getName())));
     }
 
     @Test
@@ -36,17 +243,152 @@ class RouterResourceFactoryTest {
         routerSpec.setEnv(List.of(customVar));
 
         WanakuRouter router = createRouter(routerSpec);
-        Deployment deployment = RouterResourceFactory.makeDesiredRouterBackendDeployment(router, null);
+        Deployment deployment = RouterResourceFactory.makeDesiredBarnDeployment(router, null);
 
         assertEquals("my_value", getEnvValue(deployment, "MY_VAR"));
     }
 
-    // ── Praxis Ingress factory tests ─────────────────────────────────────────
+    @Test
+    void serverDeploymentUsesServerImageAndMatchingResources() {
+        WanakuRouter router = createRouter(null);
+        Deployment deployment = RouterResourceFactory.makeDesiredServerDeployment(router, null);
+        var service = RouterResourceFactory.makeServerInternalService(router);
+        var pvc = RouterResourceFactory.makeServerVolumePVC(router);
+        var pod = deployment.getSpec().getTemplate();
+
+        assertEquals("test-router-server", deployment.getMetadata().getName());
+        assertEquals("wanaku-server", pod.getSpec().getContainers().getFirst().getName());
+        assertEquals(
+                "quay.io/wanaku/wanaku-server:latest",
+                pod.getSpec().getContainers().getFirst().getImage());
+        assertEquals("server-test-router", service.getMetadata().getName());
+        // The Server has no such setting: Barn is wired through the plugin configuration
+        assertNull(getContainerEnv(deployment, "wanaku-server", "WANAKU_CLASSIC_URL"));
+        assertEquals(
+                deployment.getSpec().getSelector().getMatchLabels(),
+                service.getSpec().getSelector());
+        assertEquals(service.getSpec().getSelector(), pod.getMetadata().getLabels());
+        assertEquals("test-router-server-data", pvc.getMetadata().getName());
+        assertEquals(
+                pvc.getMetadata().getName(),
+                pod.getSpec().getVolumes().getFirst().getPersistentVolumeClaim().getClaimName());
+    }
 
     @Test
-    void praxisIngressTargetsPort8081() {
+    void serverListenerPortsMatchServiceAndHealthProbes() {
         WanakuRouter router = createRouter(null);
-        Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeDesiredServerDeployment(router, null);
+        var container =
+                deployment.getSpec().getTemplate().getSpec().getContainers().getFirst();
+        var service = RouterResourceFactory.makeServerInternalService(router);
+        Map<String, Integer> expected = Map.of("management", 8080, "mcp", 8081, "inference", 8083, "a2a", 8084);
+
+        assertEquals(
+                expected,
+                container.getPorts().stream()
+                        .collect(java.util.stream.Collectors.toMap(p -> p.getName(), p -> p.getContainerPort())));
+        assertEquals(
+                expected,
+                service.getSpec().getPorts().stream()
+                        .collect(java.util.stream.Collectors.toMap(p -> p.getName(), p -> p.getPort())));
+        for (var port : service.getSpec().getPorts()) {
+            assertEquals(port.getName(), port.getTargetPort().getStrVal());
+        }
+        assertEquals("0.0.0.0:8080", getContainerEnvValue(deployment, "wanaku-server", "WANAKU_MGMT_LISTEN"));
+        assertEquals("0.0.0.0:8084", getContainerEnvValue(deployment, "wanaku-server", "WANAKU_A2A_LISTEN"));
+        assertNull(getContainerEnvValue(deployment, "wanaku-server", "WANAKU_MCP_LISTEN"));
+        assertEquals(
+                "management",
+                container.getLivenessProbe().getHttpGet().getPort().getStrVal());
+        assertEquals(
+                "management",
+                container.getReadinessProbe().getHttpGet().getPort().getStrVal());
+        assertEquals(
+                "management", container.getStartupProbe().getHttpGet().getPort().getStrVal());
+    }
+
+    @Test
+    void serverDeploymentUsesCustomServerConfiguration() {
+        WanakuRouter router = createRouter(null);
+        WanakuRouterSpec.ServerSpec serverSpec = new WanakuRouterSpec.ServerSpec();
+        serverSpec.setImage("quay.io/wanaku/wanaku-server:custom");
+        serverSpec.setImagePullPolicy("Always");
+        WanakuTypes.EnvVar customVar = new WanakuTypes.EnvVar();
+        customVar.setName("WANAKU_MGMT_LISTEN");
+        customVar.setValue("0.0.0.0:9190");
+        serverSpec.setEnv(List.of(customVar));
+        router.getSpec().setServer(serverSpec);
+
+        Deployment deployment = RouterResourceFactory.makeDesiredServerDeployment(router, null);
+
+        assertEquals(
+                serverSpec.getImage(),
+                deployment
+                        .getSpec()
+                        .getTemplate()
+                        .getSpec()
+                        .getContainers()
+                        .getFirst()
+                        .getImage());
+        assertEquals(
+                "Always",
+                deployment
+                        .getSpec()
+                        .getTemplate()
+                        .getSpec()
+                        .getContainers()
+                        .getFirst()
+                        .getImagePullPolicy());
+        assertEquals("0.0.0.0:9190", getContainerEnvValue(deployment, "wanaku-server", "WANAKU_MGMT_LISTEN"));
+    }
+
+    // ── Server Ingress factory tests ─────────────────────────────────────────
+
+    @Test
+    void serverRoutesExposeManagementAndMcpOnOneHost() {
+        WanakuRouter router = createRouter(null);
+        var routes = List.of(
+                RouterResourceFactory.makeServerRoute(router, "wanaku.example.com", false),
+                RouterResourceFactory.makeServerRoute(router, "wanaku.example.com", true));
+        assertEquals(
+                Map.of("/", 8080, "/default/mcp", 8081),
+                routes.stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                r -> r.getSpec().getPath(),
+                                r -> r.getSpec().getPort().getTargetPort().getIntVal())));
+        for (var route : routes) {
+            assertEquals("wanaku.example.com", route.getSpec().getHost());
+            assertEquals("server-test-router", route.getSpec().getTo().getName());
+            assertEquals("edge", route.getSpec().getTls().getTermination());
+            assertEquals("Redirect", route.getSpec().getTls().getInsecureEdgeTerminationPolicy());
+        }
+    }
+
+    @Test
+    void authenticatedRoutesTargetProxyPorts() {
+        WanakuRouter router = createRouterWithAuth();
+        var management = RouterResourceFactory.makeServerRoute(router, null, false);
+        var mcp = RouterResourceFactory.makeServerRoute(router, "wanaku.example.com", true);
+        assertNull(management.getSpec().getHost());
+        assertEquals(4181, management.getSpec().getPort().getTargetPort().getIntVal());
+        assertEquals(4180, mcp.getSpec().getPort().getTargetPort().getIntVal());
+        assertEquals("oauth2-proxy-test-router", management.getSpec().getTo().getName());
+        assertEquals("oauth2-proxy-test-router", mcp.getSpec().getTo().getName());
+    }
+
+    @Test
+    void serverIngressTargetsPort8081() {
+        WanakuRouter router = createRouter(null);
+        Ingress ingress = RouterResourceFactory.makeServerIngress(router, "wanaku.example.com");
+        assertEquals(
+                "/default/mcp",
+                ingress.getSpec()
+                        .getRules()
+                        .getFirst()
+                        .getHttp()
+                        .getPaths()
+                        .getFirst()
+                        .getPath());
         assertEquals(
                 8081,
                 ingress.getSpec()
@@ -59,14 +401,18 @@ class RouterResourceFactoryTest {
                         .getService()
                         .getPort()
                         .getNumber());
+        var management =
+                ingress.getSpec().getRules().getFirst().getHttp().getPaths().getLast();
+        assertEquals("/", management.getPath());
+        assertEquals(8080, management.getBackend().getService().getPort().getNumber());
     }
 
     @Test
-    void praxisIngressTargetsPraxisService() {
+    void serverIngressTargetsServerService() {
         WanakuRouter router = createRouter(null);
-        Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
+        Ingress ingress = RouterResourceFactory.makeServerIngress(router, "wanaku.example.com");
         assertEquals(
-                "praxis-test-router",
+                "server-test-router",
                 ingress.getSpec()
                         .getRules()
                         .getFirst()
@@ -79,25 +425,25 @@ class RouterResourceFactoryTest {
     }
 
     @Test
-    void praxisIngressWithTlsSecretName() {
+    void serverIngressWithTlsSecretName() {
         WanakuRouter router = createRouterWithExposure("nginx", null);
-        Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
+        Ingress ingress = RouterResourceFactory.makeServerIngress(router, "wanaku.example.com");
         assertNotNull(ingress.getSpec().getTls());
         assertEquals(1, ingress.getSpec().getTls().size());
     }
 
     @Test
-    void praxisIngressWithIngressClassName() {
+    void serverIngressWithIngressClassName() {
         WanakuRouter router = createRouterWithExposure("nginx", null);
-        Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
+        Ingress ingress = RouterResourceFactory.makeServerIngress(router, "wanaku.example.com");
         assertEquals("nginx", ingress.getSpec().getIngressClassName());
     }
 
     @Test
-    void praxisIngressWithAnnotationsMergesThem() {
+    void serverIngressWithAnnotationsMergesThem() {
         Map<String, String> annotations = Map.of("cert-manager.io/cluster-issuer", "letsencrypt-prod");
         WanakuRouter router = createRouterWithExposure(null, annotations);
-        Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
+        Ingress ingress = RouterResourceFactory.makeServerIngress(router, "wanaku.example.com");
         assertNotNull(ingress.getMetadata().getAnnotations());
         assertEquals("letsencrypt-prod", ingress.getMetadata().getAnnotations().get("cert-manager.io/cluster-issuer"));
     }
@@ -107,7 +453,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxyDeploymentHasMcpAndMgmtContainers() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         List<String> names = deployment.getSpec().getTemplate().getSpec().getContainers().stream()
                 .map(c -> c.getName())
@@ -116,23 +462,33 @@ class RouterResourceFactoryTest {
     }
 
     @Test
-    void oauth2ProxyMcpContainerTargetsPraxisMcpPort() {
+    void oauth2ProxyMcpContainerTargetsServerMcpPort() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         assertEquals(
-                "http://praxis-test-router:8081",
+                "http://server-test-router:8081",
                 getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_UPSTREAMS"));
         assertEquals("0.0.0.0:4180", getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_HTTP_ADDRESS"));
     }
 
     @Test
-    void oauth2ProxyMgmtContainerTargetsPraxisMgmtPort() {
-        WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+    void oauth2ProxyMcpSkipAuthRoutesDoNotExemptPublicNamespace() {
+        Deployment deployment =
+                RouterResourceFactory.makeOauth2ProxyDeployment(createRouterWithAuth(), "wanaku.example.com", null);
 
         assertEquals(
-                "http://praxis-test-router:9090",
+                "^/.well-known/.*,^/authorize$,^/token$,^/register$,OPTIONS=^/.*",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_SKIP_AUTH_ROUTES"));
+    }
+
+    @Test
+    void oauth2ProxyMgmtContainerTargetsServerMgmtPort() {
+        WanakuRouter router = createRouterWithAuth();
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        assertEquals(
+                "http://server-test-router:8080",
                 getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_UPSTREAMS"));
         assertEquals(
                 "0.0.0.0:4181", getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_HTTP_ADDRESS"));
@@ -141,7 +497,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxyUsesIssuerAndSecretsFromSpec() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         for (String containerName : List.of("oauth2-proxy-mcp", "oauth2-proxy-mgmt")) {
             assertEquals(
@@ -172,7 +528,7 @@ class RouterResourceFactoryTest {
     @Test
     void oauth2ProxySkipsOidcDiscoveryAndDerivesEndpoints() {
         WanakuRouter router = createRouterWithAuth();
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
 
         for (String containerName : List.of("oauth2-proxy-mcp", "oauth2-proxy-mgmt")) {
             assertEquals("true", getContainerEnvValue(deployment, containerName, "OAUTH2_PROXY_SKIP_OIDC_DISCOVERY"));
@@ -196,8 +552,86 @@ class RouterResourceFactoryTest {
         override.setValue("example.com");
         router.getSpec().getAuth().setEnv(List.of(override));
 
-        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
         assertEquals("example.com", getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_EMAIL_DOMAINS"));
+    }
+
+    @Test
+    void oauth2ProxyKeepsFullIssuerUrlAndUsesInternalIssuerForBackChannel() {
+        WanakuRouter router = createRouterWithAuth();
+        router.getSpec().getAuth().setIssuerUrl("https://sso.example.com/realms/acme/");
+        router.getSpec().getAuth().setInternalIssuerUrl("http://keycloak.sso.svc:8080/realms/acme");
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        assertEquals(
+                "https://sso.example.com/realms/acme",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_OIDC_ISSUER_URL"));
+        assertEquals(
+                "https://sso.example.com/realms/acme/protocol/openid-connect/auth",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_LOGIN_URL"));
+        assertEquals(
+                "http://keycloak.sso.svc:8080/realms/acme/protocol/openid-connect/token",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_REDEEM_URL"));
+        assertEquals(
+                "http://keycloak.sso.svc:8080/realms/acme/protocol/openid-connect/certs",
+                getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_OIDC_JWKS_URL"));
+    }
+
+    @Test
+    void oauth2ProxyTreatsMcpAndManagementApiPathsAsApiRoutes() {
+        WanakuRouter router = createRouterWithAuth();
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        assertEquals(
+                "^/$,^/mcp/?$,^/[^/]+/mcp/?$",
+                getContainerEnvValue(deployment, "oauth2-proxy-mcp", "OAUTH2_PROXY_API_ROUTES"));
+        assertEquals("^/api/.*", getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_API_ROUTES"));
+    }
+
+    @Test
+    void oauth2ProxySecretVersionIsAnnotatedOnPods() {
+        Deployment deployment =
+                RouterResourceFactory.makeOauth2ProxyDeployment(createRouterWithAuth(), "wanaku.example.com", "42");
+
+        assertEquals(
+                "42",
+                deployment
+                        .getSpec()
+                        .getTemplate()
+                        .getMetadata()
+                        .getAnnotations()
+                        .get(RouterResourceFactory.AUTH_SECRET_VERSION_ANNOTATION));
+    }
+
+    @Test
+    void serverAdvertisesIssuerOnlyWhenAuthIsEnabled() {
+        WanakuRouter router = createRouterWithAuth();
+        router.getSpec().getAuth().setInternalIssuerUrl("http://keycloak:8080/realms/wanaku");
+        Deployment withAuth = RouterResourceFactory.makeDesiredServerDeployment(router, null);
+        Deployment withoutAuth = RouterResourceFactory.makeDesiredServerDeployment(createRouter(null), null);
+
+        assertEquals(
+                "https://keycloak.example.com/realms/wanaku",
+                getContainerEnvValue(withAuth, "wanaku-server", "WANAKU_AUTH_ISSUER"));
+        assertEquals(
+                "http://keycloak:8080/realms/wanaku",
+                getContainerEnvValue(withAuth, "wanaku-server", "WANAKU_AUTH_UPSTREAM_ISSUER"));
+        assertNull(getContainerEnv(withoutAuth, "wanaku-server", "WANAKU_AUTH_ISSUER"));
+    }
+
+    @Test
+    void headlessManagementProxyAnswersUnauthorizedOnEveryPath() {
+        WanakuRouter router = createRouterWithAuth();
+        WanakuRouterSpec.ServerSpec server = new WanakuRouterSpec.ServerSpec();
+        server.setVariant("headless");
+        router.getSpec().setServer(server);
+
+        Deployment deployment = RouterResourceFactory.makeOauth2ProxyDeployment(router, "wanaku.example.com", null);
+
+        assertEquals("^/.*", getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_API_ROUTES"));
+        assertEquals(
+                "^/healthz$,^/health$",
+                getContainerEnvValue(deployment, "oauth2-proxy-mgmt", "OAUTH2_PROXY_SKIP_AUTH_ROUTES"));
     }
 
     @Test
@@ -212,9 +646,9 @@ class RouterResourceFactoryTest {
     }
 
     @Test
-    void praxisIngressTargetsOauth2ProxyWhenAuthEnabled() {
+    void serverIngressTargetsOauth2ProxyWhenAuthEnabled() {
         WanakuRouter router = createRouterWithAuth();
-        Ingress ingress = RouterResourceFactory.makePraxisIngress(router, "wanaku.example.com");
+        Ingress ingress = RouterResourceFactory.makeServerIngress(router, "wanaku.example.com");
 
         var backendService = ingress.getSpec()
                 .getRules()
@@ -233,7 +667,7 @@ class RouterResourceFactoryTest {
     @Test
     void annotationEnvVarAddsNewVar() {
         WanakuRouter router = createRouter(null, Map.of("env.wanaku.ai/MY_ANNOTATION_VAR", "injected"));
-        Deployment deployment = RouterResourceFactory.makeDesiredRouterBackendDeployment(router, null);
+        Deployment deployment = RouterResourceFactory.makeDesiredBarnDeployment(router, null);
 
         assertEquals("injected", getEnvValue(deployment, "MY_ANNOTATION_VAR"));
     }
@@ -258,7 +692,7 @@ class RouterResourceFactoryTest {
         WanakuRouter router = createRouter(null);
         WanakuRouterSpec.AuthSpec authSpec = new WanakuRouterSpec.AuthSpec();
         authSpec.setEnabled(true);
-        // Keycloak base URL: the operator appends the /realms/wanaku path
+        // Deprecated Keycloak base URL format: the operator appends the /realms/wanaku path
         authSpec.setIssuerUrl("https://keycloak.example.com");
         authSpec.setSecretName("wanaku-auth");
         router.getSpec().setAuth(authSpec);
@@ -296,7 +730,7 @@ class RouterResourceFactoryTest {
 
     private static String getEnvValue(Deployment deployment, String name) {
         return deployment.getSpec().getTemplate().getSpec().getContainers().stream()
-                .filter(c -> c.getName().equals("wanaku-mcp-router"))
+                .filter(c -> c.getName().equals("wanaku-barn"))
                 .findFirst()
                 .flatMap(c -> c.getEnv().stream()
                         .filter(e -> e.getName().equals(name))

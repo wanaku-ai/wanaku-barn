@@ -1,13 +1,43 @@
 package ai.wanaku.operator.wanaku;
 
 import java.util.List;
+import java.util.Map;
 import io.fabric8.kubernetes.api.model.Condition;
 
 public class WanakuRouterStatus {
+    private Long observedGeneration;
+    private Map<String, String> endpoints;
+    private String barnUrl;
     private String host;
     private String sseEndpoint;
     private String streamableEndpoint;
     private List<Condition> conditions;
+
+    public Long getObservedGeneration() {
+        return observedGeneration;
+    }
+
+    public void setObservedGeneration(Long observedGeneration) {
+        this.observedGeneration = observedGeneration;
+    }
+
+    /** Public URL of each exposed listener, keyed by listener name (management, mcp, inference, a2a). */
+    public Map<String, String> getEndpoints() {
+        return endpoints;
+    }
+
+    public void setEndpoints(Map<String, String> endpoints) {
+        this.endpoints = endpoints;
+    }
+
+    /** In-cluster URL of the Wanaku Barn API, set when Barn is enabled. */
+    public String getBarnUrl() {
+        return barnUrl;
+    }
+
+    public void setBarnUrl(String barnUrl) {
+        this.barnUrl = barnUrl;
+    }
 
     public String getHost() {
         return host;
@@ -17,10 +47,14 @@ public class WanakuRouterStatus {
         this.host = host;
     }
 
+    /** @deprecated Wanaku Server has no SSE transport; this field is left empty. */
+    @Deprecated
     public String getSseEndpoint() {
         return sseEndpoint;
     }
 
+    /** @deprecated Wanaku Server has no SSE transport; retained to clear legacy status. */
+    @Deprecated
     public void setSseEndpoint(String sseEndpoint) {
         this.sseEndpoint = sseEndpoint;
     }

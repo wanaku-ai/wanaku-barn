@@ -1,4 +1,5 @@
 import Ajv from 'ajv';
+import { newId } from './id.ts';
 
 export interface RequestSpec {
   method: string;
@@ -122,7 +123,7 @@ export async function executeRunResponse(spec: RequestSpec, token?: string, mana
   const actual = { ...safeSpec, headers: Object.fromEntries(headers.entries()) };
   const secrets = [...requestSecrets(actual, token), ...(managementToken ? [managementToken] : [])];
   const run: Run = {
-    id: crypto.randomUUID(), startedAt: new Date(started).toISOString(), durationMs: 0,
+    id: newId(), startedAt: new Date(started).toISOString(), durationMs: 0,
     request: redact(actual, secrets), status: null, responseHeaders: {}, response: '',
     outcome: 'error', summary: '', audit: [],
   };

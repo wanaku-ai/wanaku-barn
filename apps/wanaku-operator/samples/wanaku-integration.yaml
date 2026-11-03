@@ -1,0 +1,28 @@
+apiVersion: "wanaku.ai/v1alpha1"
+kind: WanakuIntegration
+metadata:
+  name: orders
+spec:
+  # The WanakuRouter that the runtime registers with
+  routerRef: wanaku-dev
+  # Set exactly one routes source
+  routes:
+    configMapRef:
+      name: orders-routes
+      main: orders.camel.yaml
+#    routesRef: datastore://orders.camel.yaml    # needs spec.barn.enabled on the router
+#    serviceCatalog:                              # needs spec.barn.enabled on the router
+#      name: orders
+#      system: orders
+#  dependencies:
+#    - org.apache.camel:camel-http:4.22.1
+  mcp:
+    port: 9090
+#    tags: wanaku
+  registration:
+    enabled: true
+#    name: orders
+#    namespace: default
+#    tokenSecretRef:
+#      name: wanaku-token
+#      key: token

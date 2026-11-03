@@ -35,11 +35,8 @@ public class DeploymentInstructionsBean {
     static final String TEMPLATE_DOCKER_NATIVE = "docker-native";
 
     private static final Map<String, String> AUTH_OPTIONS = Map.of(
-            TEMPLATE_LOCAL_CIC, "--client-id wanaku-service \\\n  ",
-            TEMPLATE_DOCKER_CIC,
-                    "-e TOKEN_ENDPOINT=<token-endpoint> \\\n  -e CLIENT_ID=wanaku-service \\\n  -e CLIENT_SECRET=<client-secret> \\\n  ",
             TEMPLATE_DOCKER_NATIVE,
-                    "-e AUTH_SERVER=<auth-server> \\\n  -e QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET=<client-secret> \\\n  ");
+            "-e AUTH_SERVER=<auth-server> \\\n  -e QUARKUS_OIDC_CLIENT_CREDENTIALS_SECRET=<client-secret> \\\n  ");
 
     @Inject
     ServiceCatalogBean serviceCatalogBean;
@@ -102,7 +99,7 @@ public class DeploymentInstructionsBean {
                 placeholders = getDockerPlaceholders(catalogType);
                 break;
             default:
-                throw new WanakuException(
+                throw new IllegalArgumentException(
                         "Unsupported deployment model: %s. Use: local, docker".formatted(deploymentModel));
         }
 
@@ -138,9 +135,11 @@ public class DeploymentInstructionsBean {
             placeholders.add(new PlaceholderDefinition(
                     "registration-url",
                     "Registration URL",
-                    "URL of the Wanaku router for service registration",
-                    "http://localhost:8080",
+                    "URL of the Barn backend that serves the service catalog",
+                    "http://localhost:8180",
                     "url"));
+            placeholders.add(mcpPortPlaceholder());
+            placeholders.add(wanakuUrlPlaceholder("http://localhost:8080"));
         }
         return placeholders;
     }
@@ -151,19 +150,11 @@ public class DeploymentInstructionsBean {
             placeholders.add(new PlaceholderDefinition(
                     "registration-url",
                     "Registration URL",
-                    "URL of the Wanaku router (use host.docker.internal for local router)",
-                    "http://host.docker.internal:8080",
+                    "URL of the Barn backend that serves the service catalog (use host.docker.internal for a local Barn)",
+                    "http://host.docker.internal:8180",
                     "url"));
-            Collections.addAll(
-                    placeholders,
-                    new PlaceholderDefinition(
-                            "token-endpoint",
-                            "Token Endpoint",
-                            "OAuth2 token endpoint URL for authentication",
-                            "http://host.docker.internal:8080",
-                            "url"),
-                    new PlaceholderDefinition(
-                            "client-secret", "Client Secret", "OIDC client secret for service authentication", ""));
+            placeholders.add(mcpPortPlaceholder());
+            placeholders.add(wanakuUrlPlaceholder("http://host.docker.internal:8080"));
         } else {
             Collections.addAll(
                     placeholders,
@@ -178,5 +169,22 @@ public class DeploymentInstructionsBean {
                     "url"));
         }
         return placeholders;
+    }
+
+    private static PlaceholderDefinition mcpPortPlaceholder() {
+        return new PlaceholderDefinition(
+                "mcp-port",
+                "MCP Port",
+                "Host port of the capability's MCP endpoint (one port for each system)",
+                "9090");
+    }
+
+    private static PlaceholderDefinition wanakuUrlPlaceholder(String defaultValue) {
+        return new PlaceholderDefinition(
+                "wanaku-url",
+                "Wanaku URL",
+                "URL of the Wanaku Server management API, where the capability registers itself as a forward",
+                defaultValue,
+                "url");
     }
 }

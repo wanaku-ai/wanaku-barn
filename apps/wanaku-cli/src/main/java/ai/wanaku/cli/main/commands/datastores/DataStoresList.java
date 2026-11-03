@@ -9,6 +9,7 @@ import org.jline.terminal.Terminal;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.DataStoreRecord;
 import ai.wanaku.core.services.api.DataStoresService;
@@ -30,12 +31,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.commonResponseErrorHandl
 @CommandLine.Command(name = "list", description = "List data store entries")
 public class DataStoresList extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"-e", "--label-expression"},
@@ -53,7 +50,7 @@ Note: If omitted, all data stores are listed. Label matching is case-sensitive.
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
-        dataStoresService = initAuthenticatedService(DataStoresService.class, host);
+        dataStoresService = initAuthenticatedService(DataStoresService.class, barn.baseUri());
 
         try {
             WanakuResponse<List<DataStoreRecord>> response = dataStoresService.list(labelExpression);

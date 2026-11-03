@@ -295,12 +295,12 @@ class SkillInstallTest {
         String basics = Files.readString(destination.resolve("wanaku-mcp-basics/SKILL.md"));
         String operator = Files.readString(destination.resolve("wanaku-operator/SKILL.md"));
         String catalogs = Files.readString(destination.resolve("wanaku-service-catalogs/SKILL.md"));
-        assertTrue(basics.contains("[Usage guide](" + docs + "usage.md)"));
-        assertTrue(operator.contains("[Operator guide](" + docs + "operator.md)"));
-        assertTrue(operator.contains("[Usage guide](" + docs + "usage.md)"));
-        assertTrue(catalogs.contains("[Service catalogs guide](" + docs + "service-catalogs.md)"));
-        assertTrue(catalogs.contains("[Usage guide](" + docs + "usage.md)"));
-        assertTrue(catalogs.contains("[Operator guide](" + docs + "operator.md)"));
+        assertTrue(basics.contains("[CLI guide](" + docs + "cli/index.md)"));
+        assertTrue(operator.contains("[Operator guide](" + docs + "operate/operator.md)"));
+        assertTrue(operator.contains("[Install the Barn backend](" + docs + "operate/install.md)"));
+        assertTrue(catalogs.contains("[Service catalogs guide](" + docs + "manage/service-catalogs.md)"));
+        assertTrue(catalogs.contains("[Install the Wanaku CLI](" + docs + "cli/install.md)"));
+        assertTrue(catalogs.contains("[Operator guide](" + docs + "operate/operator.md)"));
         assertTrue(operator.contains("[router CRD schema](https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/"
                 + ref + "/apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)"));
         for (String skill : SKILLS) {

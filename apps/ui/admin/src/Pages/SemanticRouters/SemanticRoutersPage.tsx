@@ -77,6 +77,7 @@ export function SemanticRoutersPage() {
   const [managingExperts, setManagingExperts] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const { wizard, setWizard, loadingWizard, openWizard } =
     useWizardCatalog(setError);
   const load = useCallback(async () => {
@@ -136,6 +137,14 @@ export function SemanticRoutersPage() {
       </div>
       <div id="page-content">
         <div className="semantic-router-content">
+          {notice && (
+            <InlineNotification
+              kind="success"
+              title="Catalog published successfully"
+              subtitle={notice}
+              onClose={() => setNotice(null)}
+            />
+          )}
           {error && (
             <InlineNotification
               kind="error"
@@ -172,7 +181,10 @@ export function SemanticRoutersPage() {
                   </Button>
                   <Button
                     disabled={loadingWizard}
-                    onClick={() => void openWizard(null)}
+                    onClick={() => {
+                      setNotice(null);
+                      void openWizard(null);
+                    }}
                   >
                     Create semantic router
                   </Button>
@@ -216,7 +228,10 @@ export function SemanticRoutersPage() {
                           size="sm"
                           aria-label={`Edit ${definition.name || "draft"}`}
                           disabled={loadingWizard}
-                          onClick={() => void openWizard(definition)}
+                          onClick={() => {
+                            setNotice(null);
+                            void openWizard(definition);
+                          }}
                         >
                           Edit
                         </Button>
@@ -244,6 +259,12 @@ export function SemanticRoutersPage() {
                   onClose={() => setWizard(null)}
                   onSaved={() => {
                     void load();
+                  }}
+                  onPublished={(name) => {
+                    setWizard(null);
+                    setNotice(
+                      `${name} was published. Open its review for deployment instructions.`,
+                    );
                   }}
                 />
               )}

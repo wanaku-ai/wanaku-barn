@@ -8,6 +8,7 @@ import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.IdSelector;
 import ai.wanaku.cli.main.support.LabelHelper;
 import ai.wanaku.cli.main.support.WanakuPrinter;
@@ -44,12 +45,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.handleNotFound;
 @CommandLine.Command(name = "remove", description = "Remove labels from data stores")
 public class DataStoresLabelRemove extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.ArgGroup(exclusive = true, multiplicity = "1")
     IdSelector selector;
@@ -66,7 +63,7 @@ public class DataStoresLabelRemove extends BaseCommand {
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
         if (dataStoresService == null) {
-            dataStoresService = initAuthenticatedService(DataStoresService.class, host);
+            dataStoresService = initAuthenticatedService(DataStoresService.class, barn.baseUri());
         }
 
         if (selector.labelExpression != null) {

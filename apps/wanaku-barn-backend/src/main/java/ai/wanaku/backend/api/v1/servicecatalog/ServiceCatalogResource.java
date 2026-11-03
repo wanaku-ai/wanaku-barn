@@ -19,9 +19,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestResponse;
+import ai.wanaku.backend.api.v1.exceptions.InvalidPayloadException;
 import ai.wanaku.backend.audit.AuditContext;
 import ai.wanaku.backend.audit.Audited;
 import ai.wanaku.backend.common.Paging;
@@ -192,13 +194,21 @@ public class ServiceCatalogResource {
      * POST /api/v1/service-catalog
      *
      * @param dataStore the data store entry containing the Base64-encoded ZIP
-     * @return response with the created data store entry
+     * @return response with the created data store entry, or HTTP 422 when the package does not pass validation
      */
     @POST
     @Audited(operation = "service_catalog.deploy", targetType = "service_catalog", targetField = "name")
     public WanakuResponse<DataStore> deploy(@QueryParam("expectedVersion") Long expectedVersion, DataStore dataStore) {
         LOG.debugf("REST: Deploying service catalog: %s", dataStore.getName());
         auditContext.setTarget(dataStore.getName());
+        // Deploy runs the same checks as validate, so an invalid catalog never reaches a capability
+        ValidationResult validation = catalogValidator.validateCatalog(dataStore);
+        if (!validation.valid()) {
+            throw new InvalidPayloadException("The service catalog is not valid: %s"
+                    .formatted(validation.errors().stream()
+                            .map(issue -> issue.path() + ": " + issue.message())
+                            .collect(Collectors.joining("; "))));
+        }
         DataStore result = serviceCatalogBean.deploy(dataStore, CatalogLifecycle.ORIGIN_API, expectedVersion);
         auditContext.setPolicyRevision(Long.toString(CatalogLifecycle.activeVersion(result)));
         return new WanakuResponse<>(result);
@@ -353,10 +363,10 @@ public class ServiceCatalogResource {
         LOG.debugf("REST: Getting deployment instructions for catalog '%s' with model '%s'", name, model);
 
         if (name == null || name.isBlank()) {
-            throw new WanakuException("Query parameter 'name' is required");
+            throw new IllegalArgumentException("Query parameter 'name' is required");
         }
         if (model == null || model.isBlank()) {
-            throw new WanakuException("Query parameter 'model' is required");
+            throw new IllegalArgumentException("Query parameter 'model' is required");
         }
 
         DeploymentInstructions instructions = deploymentInstructionsBean.generateInstructions(name, model);

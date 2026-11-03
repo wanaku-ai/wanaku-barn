@@ -8,8 +8,11 @@ The following table lists the configurable parameters and their default values.
 |  ---  |  ---  |  ---  |
 | `app.containerSecurityContext.allowPrivilegeEscalation` |   | false |
 | `app.containerSecurityContext.capabilities.drop` |   | [ALL] |
+| `app.envs.QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_INTEGRATION_NAMESPACES` |   | JOSDK_WATCH_CURRENT |
 | `app.envs.QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_ROUTER_NAMESPACES` |   | JOSDK_WATCH_CURRENT |
+| `app.envs.QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_SEMANTIC_ROUTER_NAMESPACES` |   | JOSDK_WATCH_CURRENT |
 | `app.envs.QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_SERVICE_CATALOG_NAMESPACES` |   | JOSDK_WATCH_CURRENT |
+| `app.envs.olm.createdAt` |   | 2026-01-01T00:00:00Z |
 | `app.envs.project.version` |   |   |
 | `app.image` | The container image to use. | quay.io/wanaku/wanaku-operator:latest |
 | `app.imagePullPolicy` |   | IfNotPresent |
@@ -41,7 +44,9 @@ The following table lists the configurable parameters and their default values.
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
+
+```shell
+helm install --name chart-name -f values.yaml .
 ```
-$ helm install --name chart-name -f values.yaml .
-```
+
 > **Tip**: You can use the default [values.yaml](values.yaml)

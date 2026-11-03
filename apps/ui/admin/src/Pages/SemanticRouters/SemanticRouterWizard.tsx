@@ -30,6 +30,7 @@ interface SemanticRouterWizardProps {
   experts: SemanticExpert[];
   onClose: () => void;
   onSaved: () => void;
+  onPublished: (name: string) => void;
 }
 
 const steps = [
@@ -45,6 +46,7 @@ export function SemanticRouterWizard({
   experts,
   onClose,
   onSaved,
+  onPublished,
 }: SemanticRouterWizardProps) {
   const {
     definition,
@@ -63,14 +65,15 @@ export function SemanticRouterWizard({
     next,
     preview,
     publish,
-  } = useSemanticRouterDraft(initial, onSaved);
+  } = useSemanticRouterDraft(initial, onSaved, onPublished);
   const heading = useRef<HTMLHeadingElement>(null);
   const visibleErrors = errors.filter((item) =>
     belongsToStep(item.field ?? "", step),
   );
   useEffect(() => {
     heading.current?.focus();
-  }, [step]);
+    heading.current?.scrollIntoView({ block: "start" });
+  }, [step, notice, error]);
   return (
     <ComposedModal
       open

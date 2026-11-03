@@ -42,6 +42,7 @@ export function belongsToStep(field: string, step: number): boolean {
 export function useSemanticRouterDraft(
   initial: SemanticRouterDefinition | null,
   onSaved: () => void,
+  onPublished: (name: string) => void,
 ) {
   const [definition, setDefinition] = useState<SemanticRouterDefinition>(
     () => initial ?? blank,
@@ -185,6 +186,7 @@ export function useSemanticRouterDraft(
       setPublication(await semanticRouterApi.publish(saved.id));
       setPublicationNotice(null);
       onSaved();
+      onPublished(saved.name || "Semantic router");
     });
   const saveDraft = () =>
     perform(async () => {

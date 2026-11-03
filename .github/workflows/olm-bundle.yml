@@ -1,0 +1,80 @@
+name: OLM Bundle
+
+# Builds the OLM bundle of the Wanaku Operator and validates it with the same checks that the
+# community-operators pipelines run. See docs/operate/operator-olm.md.
+
+on:
+  pull_request:
+    branches:
+      - "main"
+      - '[0-9]*.[0-9]*.x'
+    paths:
+      - apps/wanaku-operator/**
+      - .github/workflows/olm-bundle.yml
+      - .github/scripts/submit-community-operators.sh
+
+permissions:
+  contents: read
+
+env:
+  OPERATOR_SDK_VERSION: v1.42.3
+  # sha256 of operator_sdk_linux_amd64 for OPERATOR_SDK_VERSION, from the upstream checksums.txt
+  OPERATOR_SDK_SHA256: 887a3bb0d63ccc4ca47a522d0c8ffac56d9d5246f6a2bd886b4ed23eb2e2672f
+
+jobs:
+  bundle:
+    name: Build and validate the bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine SDK ref
+        id: sdk-ref
+        shell: bash
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if git ls-remote --heads https://github.com/wanaku-ai/wanaku-capabilities-java-sdk.git "$BASE_REF" | grep -q .; then
+            echo "ref=$BASE_REF" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Checkout Wanaku Capabilities SDK
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: wanaku-ai/wanaku-capabilities-java-sdk
+          persist-credentials: false
+          ref: ${{ steps.sdk-ref.outputs.ref }}
+          path: wanaku-capabilities-java-sdk
+      - name: Set up JDK 21
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build Wanaku Capabilities SDK
+        run: mvn --no-transfer-progress -DskipTests clean install
+        working-directory: ${{ github.workspace }}/wanaku-capabilities-java-sdk
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Install operator-sdk
+        run: |
+          curl -sSfL -o operator-sdk "https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64"
+          echo "${OPERATOR_SDK_SHA256}  operator-sdk" | sha256sum --check --strict
+          install -m 0755 operator-sdk "${RUNNER_TEMP}/operator-sdk"
+          mkdir -p "${HOME}/.local/bin"
+          mv "${RUNNER_TEMP}/operator-sdk" "${HOME}/.local/bin/operator-sdk"
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+      - name: Build the bundle
+        run: make olm-bundle VERSION=0.0.0-pr
+      - name: Validate the bundle
+        run: make olm-validate
+      - name: Verify finish-bundle post-conditions
+        run: make olm-verify-bundle
+      - name: Lint the OLM scripts
+        run: shellcheck -x apps/wanaku-operator/olm/scripts/*.sh .github/scripts/submit-community-operators.sh
+      - name: Upload the bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: olm-bundle
+          path: apps/wanaku-operator/target/bundle/wanaku-operator
+          retention-days: 14

@@ -24,6 +24,13 @@
             <version>${quarkus-operator-sdk.version}</version>
         </dependency>
 
+        <!-- Generates the OLM bundle (CSV, CRDs, annotations, bundle.Dockerfile) in target/bundle -->
+        <dependency>
+            <groupId>io.quarkiverse.operatorsdk</groupId>
+            <artifactId>quarkus-operator-sdk-bundle-generator</artifactId>
+            <version>${quarkus-operator-sdk.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>ai.wanaku</groupId>
             <artifactId>core-util</artifactId>
@@ -61,6 +68,10 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -105,6 +116,12 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- CRUD mock API server for reconciler tests -->
+        <dependency>
+            <groupId>io.fabric8</groupId>
+            <artifactId>kubernetes-server-mock</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -138,6 +155,8 @@
                                 <!-- Prefix roleRef names to match namespace-prefixed ClusterRoles -->
                                 <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-router-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-router-cluster-role" />
                                 <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-service-catalog-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-service-catalog-cluster-role" />
+                                <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-semantic-router-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-semantic-router-cluster-role" />
+                                <replace dir="${helm.templates}" includes="*-crd-role-binding.yaml" token="name: wanaku-integration-cluster-role" value="name: {{ $.Release.Namespace }}-wanaku-integration-cluster-role" />
                                 <replace dir="${helm.templates}" includes="validating-clusterrolebinding.yaml" token="name: josdk-crd-validating-cluster-role" value="name: {{ $.Release.Namespace }}-josdk-crd-validating-cluster-role" />
                                 <!-- Prefix the JOSDK validating ClusterRoleBinding resource name with Release.Namespace -->
                                 <replace file="${helm.templates}/validating-clusterrolebinding.yaml" token="name: {{ .Chart.Name }}-crd-validating-role-binding" value="name: {{ .Release.Namespace }}-crd-validating-role-binding" />
@@ -254,6 +273,8 @@ subjects:
                                             <excludes>
                                                 <exclude>templates/wanaku-router-crd-role-binding.yaml</exclude>
                                                 <exclude>templates/wanaku-service-catalog-crd-role-binding.yaml</exclude>
+                                                <exclude>templates/wanaku-semantic-router-crd-role-binding.yaml</exclude>
+                                                <exclude>templates/wanaku-integration-crd-role-binding.yaml</exclude>
                                                 <exclude>templates/validating-clusterrolebinding.yaml</exclude>
                                             </excludes>
                                         </resource>

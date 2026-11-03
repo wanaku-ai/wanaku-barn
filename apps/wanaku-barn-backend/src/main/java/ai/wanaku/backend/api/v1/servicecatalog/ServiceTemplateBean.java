@@ -261,7 +261,7 @@ public class ServiceTemplateBean {
             return;
         }
         if (value.contains("..") || !SYSTEM_IDENTIFIER_PATTERN.matcher(value).matches()) {
-            throw new WanakuException(
+            throw new IllegalArgumentException(
                     "Invalid %s '%s': only letters, digits, '.', '_' and '-' are allowed (and no '..')"
                             .formatted(fieldName, value));
         }

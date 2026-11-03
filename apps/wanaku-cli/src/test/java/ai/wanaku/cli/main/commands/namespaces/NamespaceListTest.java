@@ -37,6 +37,7 @@ class NamespaceListTest {
         command = new NamespaceList();
         command.namespacesService = namespacesService;
         command.host = "http://localhost:8080";
+        command.mcpUrl = "http://localhost:8081";
     }
 
     @SuppressWarnings("unchecked")
@@ -57,6 +58,28 @@ class NamespaceListTest {
         verify(printer).printTable(captor.capture(), eq("name"), eq("address"), eq("labels"));
         List<?> printed = captor.getValue();
         assertEquals(1, printed.size());
+        assertEquals("http://localhost:8081/my-ns/mcp", ((NamespaceList.NamespaceRow) printed.get(0)).getAddress());
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    @DisplayName("Should build the address from the MCP URL option")
+    void shouldBuildAddressFromMcpUrl() throws Exception {
+        Namespace ns = new Namespace();
+        ns.setName("my-ns");
+
+        when(namespacesService.list(isNull())).thenReturn(new WanakuResponse<>(List.of(ns)));
+
+        new picocli.CommandLine(command).parseArgs("--mcp-url", "https://mcp.example.com/");
+
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+        command.doCall(null, printer);
+
+        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
+        verify(printer).printTable(captor.capture(), eq("name"), eq("address"), eq("labels"));
+        assertEquals(
+                "https://mcp.example.com/my-ns/mcp",
+                ((NamespaceList.NamespaceRow) captor.getValue().get(0)).getAddress());
     }
 
     @SuppressWarnings("unchecked")

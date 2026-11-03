@@ -2,7 +2,15 @@ package ai.wanaku.cli.main.support;
 
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.net.UnknownHostException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.channels.UnresolvedAddressException;
+import java.time.Duration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import dev.langchain4j.exception.ToolArgumentsException;
 import dev.langchain4j.exception.ToolExecutionException;
 
@@ -16,6 +24,10 @@ import dev.langchain4j.exception.ToolExecutionException;
  * the Wanaku CLI.</p>
  */
 public final class McpErrorHelper {
+
+    // The message the LangChain4j Streamable HTTP transport uses for a non-2xx response
+    private static final Pattern REDIRECT_STATUS = Pattern.compile("Unexpected status code: (30[12378])");
+    private static final Duration PROBE_TIMEOUT = Duration.ofSeconds(5);
 
     private McpErrorHelper() {}
 
@@ -74,17 +86,48 @@ public final class McpErrorHelper {
      * @return a user-friendly error message
      */
     public static String friendlyMessage(Exception ex, String uri) {
+        return friendlyMessage(ex, uri, null);
+    }
+
+    /**
+     * Produces a user-friendly error message for the given exception and
+     * MCP server URI.
+     *
+     * <p>The MCP transport does not follow redirects and reports them only as
+     * {@code Unexpected status code: 302}. In that case, this method sends a
+     * {@code HEAD} request to the same URI, without following redirects, to read
+     * the {@code Location} header and explain what the user must do.</p>
+     *
+     * @param ex the exception thrown during MCP client operations
+     * @param uri the MCP server URI the command was targeting (may be null)
+     * @param token the bearer token the command used (may be null)
+     * @return a user-friendly error message
+     */
+    public static String friendlyMessage(Exception ex, String uri, String token) {
         Throwable root = rootCause(ex);
 
-        if (root instanceof ConnectException) {
+        Integer redirectStatus = redirectStatus(root);
+        if (redirectStatus != null) {
+            return redirectMessage(uri, redirectStatus, probeLocation(uri, token), token != null && !token.isBlank());
+        }
+
+        // The JDK HttpClient wraps most failures in a ConnectException (caused by a
+        // ClosedChannelException or an UnresolvedAddressException), so the known types are
+        // looked up in the whole cause chain. Resolution failures are checked first.
+        Throwable unknownHost = findCause(ex, UnknownHostException.class);
+        if (unknownHost != null) {
+            return unknownHostMessage(unknownHost.getMessage());
+        }
+
+        if (findCause(ex, UnresolvedAddressException.class) != null) {
+            return unknownHostMessage(hostOf(uri));
+        }
+
+        if (findCause(ex, ConnectException.class) != null) {
             return connectionRefusedMessage(uri);
         }
 
-        if (root instanceof UnknownHostException) {
-            return unknownHostMessage(root);
-        }
-
-        if (root instanceof SocketTimeoutException) {
+        if (findCause(ex, SocketTimeoutException.class) != null) {
             return timeoutMessage(uri);
         }
 
@@ -119,9 +162,9 @@ public final class McpErrorHelper {
         return sb.toString();
     }
 
-    private static String unknownHostMessage(Throwable root) {
+    private static String unknownHostMessage(String host) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Unable to resolve host: ").append(root.getMessage());
+        sb.append("Unable to resolve host: ").append(host);
         sb.append("\n\nPossible causes:\n");
         sb.append("  - Invalid hostname in --uri option\n");
         sb.append("  - DNS resolution failure\n");
@@ -150,6 +193,131 @@ public final class McpErrorHelper {
         }
         sb.append("\n\nExpected format: http://<host>:<port>/path or https://<host>:<port>/path");
         return sb.toString();
+    }
+
+    private static Integer redirectStatus(Throwable root) {
+        String message = root.getMessage();
+        if (message == null) {
+            return null;
+        }
+        Matcher matcher = REDIRECT_STATUS.matcher(message.trim());
+        return matcher.matches() ? Integer.valueOf(matcher.group(1)) : null;
+    }
+
+    /**
+     * Reads the redirect target of the URI. Returns null if the server does not
+     * redirect the probe or cannot be reached.
+     */
+    private static URI probeLocation(String uri, String token) {
+        if (uri == null) {
+            return null;
+        }
+        try {
+            URI target = URI.create(uri.trim());
+            HttpRequest.Builder request = HttpRequest.newBuilder(target)
+                    .method("HEAD", HttpRequest.BodyPublishers.noBody())
+                    .timeout(PROBE_TIMEOUT);
+            if (token != null && !token.isBlank()) {
+                request.header("Authorization", "Bearer " + token.trim());
+            }
+            HttpClient client = HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.NEVER)
+                    .connectTimeout(PROBE_TIMEOUT)
+                    .build();
+            HttpResponse<Void> response = client.send(request.build(), HttpResponse.BodyHandlers.discarding());
+            if (response.statusCode() / 100 != 3) {
+                return null;
+            }
+            return response.headers()
+                    .firstValue("Location")
+                    .map(target::resolve)
+                    .orElse(null);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String redirectMessage(String uri, int status, URI location, boolean hasToken) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("The MCP server responded with a redirect (HTTP ")
+                .append(status)
+                .append(")");
+        if (location == null) {
+            sb.append("\n\nThe CLI does not follow redirects for MCP requests. Possible causes:\n");
+            sb.append("  - The server forces HTTPS: use --uri https://...\n");
+            sb.append("  - The server asks for a browser login: check that the token is valid");
+            return sb.toString();
+        }
+        sb.append(" to ").append(location);
+
+        URI original = URI.create(uri.trim());
+        if (isHttpsUpgrade(original, location)) {
+            sb.append("\n\nThe server redirects to HTTPS. Use --uri ").append(location);
+        } else if (isLoginRedirect(original, location)) {
+            sb.append("\n\nThe server asks for a browser login, which the CLI cannot do. Possible causes:\n");
+            if (hasToken) {
+                sb.append("  - The token is expired\n");
+                sb.append("  - The token audience is not accepted by the server");
+            } else {
+                sb.append("  - The token is missing (pass it with --token)");
+            }
+        } else {
+            sb.append("\n\nThe CLI does not follow redirects for MCP requests. Try --uri ")
+                    .append(location);
+        }
+        return sb.toString();
+    }
+
+    private static boolean isHttpsUpgrade(URI original, URI location) {
+        return "http".equalsIgnoreCase(original.getScheme())
+                && "https".equalsIgnoreCase(location.getScheme())
+                && sameHost(original, location)
+                && stripTrailingSlash(original.getPath()).equals(stripTrailingSlash(location.getPath()));
+    }
+
+    private static boolean isLoginRedirect(URI original, URI location) {
+        String path = location.getPath() != null ? location.getPath() : "";
+        return path.contains("/oauth2/start") || path.contains("/oauth2/sign_in") || !sameHost(original, location);
+    }
+
+    private static boolean sameHost(URI a, URI b) {
+        return a.getHost() != null && a.getHost().equalsIgnoreCase(b.getHost());
+    }
+
+    /**
+     * Returns the host of the given URI, or the URI itself when it has no parsable host.
+     */
+    private static String hostOf(String uri) {
+        if (uri == null) {
+            return null;
+        }
+        try {
+            String host = URI.create(uri).getHost();
+            return host != null ? host : uri;
+        } catch (IllegalArgumentException e) {
+            return uri;
+        }
+    }
+
+    private static String stripTrailingSlash(String path) {
+        if (path == null) {
+            return "";
+        }
+        return path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
+    }
+
+    private static Throwable findCause(Throwable ex, Class<? extends Throwable> type) {
+        Throwable current = ex;
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return current;
+            }
+            current = current.getCause() != current ? current.getCause() : null;
+        }
+        return null;
     }
 
     private static Throwable rootCause(Throwable ex) {

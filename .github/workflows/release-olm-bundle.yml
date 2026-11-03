@@ -1,0 +1,157 @@
+name: release-olm-bundle
+
+# Publishes the OLM bundle of a released Wanaku Operator and opens the pull requests that list it on
+# OperatorHub.io and in the OpenShift community catalog. Run it after release-artifacts, once
+# quay.io/wanaku/wanaku-operator:<version> exists. See docs/operate/operator-olm.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      currentDevelopmentVersion:
+        description: 'The released version (for example 0.3.0)'
+        required: true
+      previousVersion:
+        description: 'The previously released bundle version (for example 0.2.0). Empty for the first release'
+        required: false
+      operandTag:
+        description: 'Tag for the quay.io/wanaku operand images in relatedImages. Empty keeps ":latest"'
+        required: false
+      channel:
+        description: 'OLM channel of the bundle'
+        required: false
+        default: 'alpha'
+      submit:
+        description: 'Open the pull requests on the community-operators repositories'
+        type: boolean
+        default: true
+
+env:
+  OPERATOR_SDK_VERSION: v1.42.3
+  # sha256 of operator-sdk_linux_amd64 for OPERATOR_SDK_VERSION, from the upstream checksums.txt
+  OPERATOR_SDK_SHA256: 887a3bb0d63ccc4ca47a522d0c8ffac56d9d5246f6a2bd886b4ed23eb2e2672f
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    name: Build and publish the bundle
+    runs-on: ubuntu-latest
+    if: github.repository == 'wanaku-ai/wanaku-barn'
+    steps:
+      - name: Validate the inputs
+        env:
+          VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
+          PREVIOUS: ${{ github.event.inputs.previousVersion }}
+        run: |
+          semver='^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
+          [[ "${VERSION}" =~ ${semver} ]] || { echo "'${VERSION}' is not a semantic version"; exit 1; }
+          [[ -z "${PREVIOUS}" || "${PREVIOUS}" =~ ${semver} ]] || { echo "'${PREVIOUS}' is not a semantic version"; exit 1; }
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          ref: wanaku-${{ github.event.inputs.currentDevelopmentVersion }}
+          persist-credentials: false
+      - name: Set up JDK 21
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Install operator-sdk
+        run: |
+          curl -sSfL -o operator-sdk "https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64"
+          echo "${OPERATOR_SDK_SHA256}  operator-sdk" | sha256sum --check --strict
+          mkdir -p "${HOME}/.local/bin"
+          install -m 0755 operator-sdk "${HOME}/.local/bin/operator-sdk"
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+      - name: Check that the operator image is published
+        env:
+          VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
+        run: skopeo inspect --no-tags "docker://quay.io/wanaku/wanaku-operator:${VERSION}" > /dev/null
+      - name: Build the bundle
+        env:
+          VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
+          PREVIOUS: ${{ github.event.inputs.previousVersion }}
+          OPERAND_TAG: ${{ github.event.inputs.operandTag }}
+          CHANNEL: ${{ github.event.inputs.channel }}
+        run: |
+          args=(VERSION="${VERSION}" CHANNEL="${CHANNEL}")
+          if [[ -n "${PREVIOUS}" ]]; then
+            args+=(REPLACES="wanaku-operator.v${PREVIOUS}" SKIP_RANGE=">=${PREVIOUS} <${VERSION}")
+          fi
+          if [[ -n "${OPERAND_TAG}" ]]; then
+            args+=(OPERAND_TAG="${OPERAND_TAG}")
+          fi
+          args+=(CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)")
+          make olm-bundle "${args[@]}"
+      - name: Validate the bundle
+        run: make olm-validate
+      - name: Package the bundle
+        env:
+          VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
+        run: |
+          cd apps/wanaku-operator/target/bundle
+          zip -r "${GITHUB_WORKSPACE}/wanaku-operator-bundle-${VERSION}.zip" wanaku-operator
+      - name: Login to Container Registry
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - name: Build and push the bundle image
+        env:
+          VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
+        run: |
+          make olm-bundle-image VERSION="${VERSION}"
+          make olm-push-bundle-image VERSION="${VERSION}"
+      - name: Attach the bundle to the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
+        run: |
+          gh release upload "v${VERSION}" "wanaku-operator-bundle-${VERSION}.zip" --clobber \
+            || echo "::warning::GitHub release v${VERSION} not found; the bundle ZIP is only available as a workflow artifact"
+      - name: Upload the bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: olm-bundle-${{ github.event.inputs.currentDevelopmentVersion }}
+          path: apps/wanaku-operator/target/bundle/wanaku-operator
+          retention-days: 90
+
+  submit:
+    name: Open the community-operators pull request (${{ matrix.target }})
+    needs: bundle
+    if: github.event.inputs.submit == 'true' && github.repository == 'wanaku-ai/wanaku-barn'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: OperatorHub.io
+            repo: k8s-operatorhub/community-operators
+          - target: OpenShift community catalog
+            repo: redhat-openshift-ecosystem/community-operators-prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Download the bundle
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: olm-bundle-${{ github.event.inputs.currentDevelopmentVersion }}
+          path: bundle
+      - name: Open the pull request
+        env:
+          # A token that can push to the forks below and open pull requests on the target repositories
+          GH_TOKEN: ${{ secrets.COMMUNITY_OPERATORS_TOKEN }}
+          TARGET_REPO: ${{ matrix.repo }}
+          FORK_OWNER: ${{ vars.COMMUNITY_OPERATORS_FORK_OWNER }}
+          VERSION: ${{ github.event.inputs.currentDevelopmentVersion }}
+          BUNDLE_DIR: bundle
+          GIT_NAME: ${{ vars.COMMUNITY_OPERATORS_GIT_NAME }}
+          GIT_EMAIL: ${{ vars.COMMUNITY_OPERATORS_GIT_EMAIL }}
+          REVIEWERS: ${{ vars.COMMUNITY_OPERATORS_REVIEWERS }}
+        run: bash .github/scripts/submit-community-operators.sh

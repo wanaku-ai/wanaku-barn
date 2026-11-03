@@ -1,0 +1,533 @@
+---
+title: Service templates
+description: "Create, deploy, and instantiate service templates: parameterized service catalogs that Barn turns into catalogs with your values."
+---
+
+# Service Templates
+
+This document explains what service templates are, how they work, and how to use them to create parameterized service catalogs in Wanaku.
+
+> [!NOTE]
+> Service templates are parameterized blueprints that produce **service catalogs** when instantiated with user-provided values. For the catalog format, see [Service catalogs](service-catalogs.md). To deploy a catalog and serve it to Wanaku, see [Build and deploy a service catalog](build-a-service-catalog.md).
+
+## What Are Service Templates?
+
+Service templates are parameterized service catalogs. They allow you to create reusable catalog packages with placeholder values that users can fill in when creating actual service catalogs.
+
+Think of a service template as a blueprint: it defines the structure, routes, and dependencies of a service catalog, but leaves certain values (such as broker URLs, credentials, or topic names) to be filled in later.
+
+## Lifecycle: Template to Service Catalog
+
+The lifecycle of a service template follows this pattern:
+
+1. **Template Creation**: A template is created with routes that use Camel Property Placeholders (<code v-pre>{{key}}</code>) and a `service.properties` file that lists their values.
+2. **User Fills Parameters**: When instantiating the template, the user provides values for the placeholders.
+3. **Service Catalog Creation**: The template is transformed into a deployable service catalog with the user's values substituted in.
+
+```text
+Service Template (with {{placeholders}})
+    ↓  (user provides values)
+Service Catalog (ready to deploy)
+```
+
+## How `service.properties` Works with Camel Property Placeholders
+
+The routes of a template refer to configurable values with Camel Property Placeholders, for example <code v-pre>{{broker.url}}</code>. The `service.properties` file of each system lists these properties and their template values.
+
+Example `service.properties` file in a template:
+
+```properties
+broker.url=tcp://broker:61616
+broker.username=changeme
+broker.password=changeme
+queue.name=my.queue
+```
+
+When a user instantiates the template, they provide a flat map of property keys and values:
+
+```json
+{
+  "broker.url": "tcp://localhost:61616",
+  "broker.username": "admin",
+  "broker.password": "admin"
+}
+```
+
+Barn matches the map against the keys of each `service.properties` file:
+
+- When a key is in the file, Barn replaces its value.
+- When a key is not in the file, Barn ignores it.
+- A property that the user does not provide keeps its template value.
+
+The resulting service catalog has this `service.properties` file:
+
+```properties
+broker.url=tcp://localhost:61616
+broker.username=admin
+broker.password=admin
+queue.name=my.queue
+```
+
+Barn also removes the `catalog.properties.<system>` lines from the `index.properties` file of the new catalog.
+
+## Using Service Templates via CLI
+
+### List Available Templates
+
+```shell
+wanaku service template list
+```
+
+This lists the service templates in Barn, with their names and descriptions.
+
+You can filter templates by name or description:
+
+```shell
+wanaku service template list --search jms
+```
+
+### Instantiate a Template
+
+To create a service catalog from a template, use the `wanaku service template instantiate` command:
+
+```shell
+wanaku service template instantiate \
+  --name jms-tool \
+  --property forage.jms.broker.url=tcp://broker:61616 \
+  --property request.queue=orders.request \
+  --property response.queue=orders.response
+```
+
+This creates a new service catalog by filling in the template's property placeholders with the provided values. To serve the new catalog to Wanaku, start a Camel Integration Capability for it. See [Serve the catalog to Wanaku](build-a-service-catalog.md#serve-the-catalog-to-wanaku).
+
+### Initialize a New Template Locally
+
+To create a new template directory, add the `--template` flag to `wanaku service init`:
+
+```shell
+wanaku service init --name=my-template --services=my-service --template
+```
+
+The command creates the same files as for a catalog, plus a `service.properties` file for each system and its `catalog.properties.<system>` line in `index.properties`.
+
+### Deploy a Template to Barn
+
+To package and deploy a local template directory to Barn:
+
+```shell
+wanaku service deploy --template --path=/path/to/template
+```
+
+This packages the template directory into a ZIP file and deploys it to Barn as a template.
+
+### Validate a Template
+
+To check a local template directory for structural errors without deploying it:
+
+```shell
+wanaku service validate --template --path=/path/to/template
+```
+
+Every error and warning is listed with the file and property at fault. The command exits with a
+non-zero status when the template is invalid.
+
+### Template Version History
+
+Barn keeps the version history of each template, in the same way as for service catalogs.
+See [Version history](../reference/service-catalog-api.md#version-history) for the rules.
+
+```shell
+wanaku service versions list --template --name=my-template
+wanaku service versions download --template --name=my-template --version=1
+wanaku service versions restore --template --name=my-template --version=1
+```
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/service-template/deploy?expectedVersion={n}` | Deploy a new version. `expectedVersion` is optional. |
+| `GET` | `/api/v1/service-template/versions?name={name}&from={time}&to={time}` | List the versions, newest first. `from` and `to` are optional. |
+| `GET` | `/api/v1/service-template/versions/get?name={name}&version={n}` | Get the metadata of one version. |
+| `GET` | `/api/v1/service-template/versions/download?name={name}&version={n}` | Get the package of one version. |
+| `POST` | `/api/v1/service-template/versions/activate?name={name}&version={n}&expectedVersion={m}` | Restore one version as a new version. |
+
+### Remove and Restore a Template
+
+A template removal keeps the template and its versions, in the same way as for catalogs. See [Removal and restore](../reference/service-catalog-api.md#removal-and-restore).
+
+```shell
+wanaku service removed --template
+wanaku service restore --template --name=my-template
+```
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `DELETE` | `/api/v1/service-template/remove?name={name}` | Remove a template. |
+| `GET` | `/api/v1/service-template/removed` | List removed templates. |
+| `POST` | `/api/v1/service-template/restore?name={name}` | Restore a removed template. |
+
+Barn does not deploy a removed built-in template again at startup. Restore the template to use it again.
+
+Built-in templates that Barn deploys at startup create versions with the origin `startup`.
+A catalog that `instantiate` creates gets a version with the origin `instantiate`.
+
+## Using Service Templates via UI
+
+The Wanaku Admin UI provides a graphical interface for working with service templates.
+
+### Service Templates Tab
+
+Navigate to the **Service Templates** tab to view all available templates. Each template card shows:
+
+- Template name
+- Icon
+- Description
+- List of services included in the template
+- Whether the template has parameterized properties
+
+### Create Service Catalog Wizard
+
+To create a service catalog from a template:
+
+1. Click **Create from Template** on the Service Catalogs page.
+2. Select a template from the list.
+3. If the template has parameterized properties, a form will appear with input fields for each placeholder.
+4. Fill in the values and click **Create**.
+5. Barn creates the new service catalog.
+
+## Creating Custom Templates
+
+You can create your own service templates by following the directory structure and conventions used by built-in templates.
+
+### Directory Structure
+
+A service template ZIP package has this structure:
+
+```text
+my-template/
+├── index.properties                # Catalog metadata
+└── my-service/                     # Service directory (one or more)
+    ├── my-service.camel.yaml       # Camel routes definition
+    ├── my-service.dependencies.txt # (optional) Camel dependencies
+    └── service.properties          # (optional) Parameterized properties
+```
+
+### `index.properties` Format
+
+The `index.properties` file defines the catalog metadata and declares services:
+
+```properties
+# Catalog metadata
+catalog.name=my-template
+catalog.icon=database
+catalog.description=My custom service template
+
+# Service declarations
+catalog.services=my-service
+
+# System files (routes, dependencies)
+catalog.routes.my-service=my-service/my-service.camel.yaml
+catalog.dependencies.my-service=my-service/my-service.dependencies.txt
+
+# Declare parameterized properties files
+catalog.properties.my-service=my-service/service.properties
+```
+
+The `catalog.properties.<system>` key is what marks this as a **template** rather than a regular service catalog. It tells Wanaku that this service has parameterized properties that need to be filled in.
+
+### `service.properties` Format
+
+The `service.properties` file contains key-value pairs with Camel Property Placeholders:
+
+```properties
+# Broker connection
+broker.url={{broker.url}}
+broker.username={{broker.username}}
+broker.password={{broker.password}}
+
+# Queue/topic settings
+queue.name={{queue.name}}
+topic.name={{topic.name}}
+```
+
+Use the <code v-pre>{{key}}</code> syntax for any value that should be filled in by the user.
+
+> [!TIP]
+> You can also use the **convention-based approach**: if a service has a `service.properties` file at `<service>/service.properties`, Wanaku will automatically detect it even if it's not declared in `index.properties`. This means you can omit the `catalog.properties.<system>` declaration if you follow the convention.
+
+### Packaging the Template
+
+To package your custom template:
+
+```shell
+wanaku service package --path=my-template -o my-template.b64
+```
+
+This creates a ZIP file suitable for deployment.
+
+### Validating the Template
+
+Before deploying, validate the packaged template against the expected structure:
+
+**Endpoint:** `POST /api/v1/service-template/validate`
+
+**Body:** a JSON object with the package name and the Base64-encoded ZIP:
+
+```json
+{
+  "name": "my-template.service.zip",
+  "data": "<base64-encoded ZIP>"
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "type": "template",
+    "name": "my-template",
+    "valid": false,
+    "errors": [
+      {
+        "path": "index.properties",
+        "message": "A service template must provide a properties file for at least one system, either declared as 'catalog.properties.<system>' or placed at '<system>/service.properties'"
+      }
+    ],
+    "warnings": []
+  },
+  "error": null
+}
+```
+
+The endpoint runs the same checks as the [service catalog validation endpoint](../reference/service-catalog-api.md#validate-a-catalog)
+and additionally requires the package to provide a `service.properties` file for at least one system —
+a template without parameterized properties is just a service catalog.
+
+Every problem found is reported at once, each one pointing at the file (and property) that is at fault.
+The endpoint returns `200` with the outcome in `data.valid` and `data.errors`, or `422` when the request
+carries no package data to validate.
+
+### Deploying the Template
+
+To deploy your custom template to Barn:
+
+```shell
+wanaku service deploy --template --path=my-template
+```
+
+Or use the Admin UI to upload the ZIP file via the **Service Templates** → **Upload Template** dialog.
+
+## Built-in Templates
+
+Barn deploys built-in service templates at startup. Run `wanaku service template list` for the full list. Some of them are:
+
+### `jms-tool`
+
+A template for a JMS request and reply tool, for example with an ActiveMQ Artemis broker. The tool sends a message to a request queue and waits for the reply on a response queue.
+
+**Parameters:**
+
+- `forage.jms.broker.url`: The broker URL (e.g., `tcp://localhost:61616`)
+- `forage.jms.username` and `forage.jms.password`: The broker credentials
+- `request.queue`: The queue that receives the request
+- `response.queue`: The queue that receives the reply
+- `tool.description`: The tool description that AI agents see
+
+### `kafka-tool`
+
+A template for creating a Kafka-backed MCP tool with manual request/reply correlation. This template includes:
+
+- A request route that sends a message to the request topic
+- A response route that consumes the response topic and forwards replies into a shared reply queue
+- Parameterized brokers, request topic, response topic, reply timeout, and reply consumer group settings
+
+**Parameters:**
+
+- `kafka.brokers`: Kafka bootstrap servers, for example `localhost:9092`
+- `kafka.request.topic`: Topic used for outbound requests
+- `kafka.response.topic`: Topic used for correlated replies
+- `kafka.reply.timeout-ms`: How long to wait for a reply before failing, in milliseconds
+- `kafka.response.group-id`: Consumer group used for the reply listener
+
+The request route sets a `wanakuCorrelationId` header from the Camel exchange id, and the response route uses that same header to match the reply to the original request.
+
+A template for creating an AWS SQS-backed MCP tool with manual request/reply correlation. Since SQS is a one-way messaging service, the template uses two queues:
+
+A template for creating an AWS SQS-backed MCP tool with manual request/reply correlation, Since SQS is a one-way messaging service, the template uses two queues:
+
+- A request route that sends a message to the request queue
+- A response route that consumes the response queue and forwards correlated replies back to the waiting request
+
+**Parameters:**
+
+- `aws.sqs.region`: AWS region (e.g., `us-east-1`)
+- `aws.sqs.accessKey`: AWS access key
+- `aws.sqs.secretKey`: AWS secret key
+- `aws.sqs.request.queue`: Queue used for outbound requests
+- `aws.sqs.response.queue`: Queue used for correlated replies
+- `aws.sqs.reply.timeout-ms`: How long to wait for a reply before failing, in milliseconds
+
+The request route sets a `wanakuCorrelationId` header, which the SQS component transfers as a message attribute. The service consuming the request queue must copy the `wanakuCorrelationId` message attribute from the request to its reply so the response route can match the reply to the original request.
+
+### `github-pullrequest-source-tool`
+
+A template for creating a GitHub Pull Request tool service. This template allows agents to fetch pull request information on demand from a specified repository.
+
+**Parameters:**
+
+- `github.owner`: The GitHub repository owner (e.g., `apache`)
+- `github.repo`: The GitHub repository name (e.g., `camel`)
+- `github.token`: A GitHub Personal Access Token (PAT) for authentication
+
+**Tool Parameters:**
+
+- `state`: Filter PRs by state (`open`, `closed`, `all`). Default: `open`
+- `head`: Filter by head user or head organization and branch (`user:branch`)
+- `base`: Filter by base branch name
+- `sort`: What to sort results by (`created`, `updated`, `popularity`, `long-running`). Default: `created`
+- `direction`: The direction of the sort (`asc`, `desc`)
+
+### `sql-tool`
+
+A template for querying a relational database using the [Apache Camel SQL component](https://camel.apache.org/components/next/sql-component.html). This template exposes a SQL query as an MCP tool, allowing AI assistants to fetch live data from any JDBC-compatible database.
+
+**Parameters:**
+
+- `forage.jdbc.username`: Database username
+- `forage.jdbc.password`: Database password
+- `forage.jdbc.db.kind`: Database type (e.g., `postgresql`, `mysql`). Used to resolve the correct JDBC driver dependencies. If not provided, the template's default is used.
+- `sql.query`: The SQL query to execute
+
+**Example:**
+
+```shell
+wanaku service template instantiate \
+  --name sql-tool \
+  --property forage.jdbc.username=postgres \
+  --property forage.jdbc.password=wanaku \
+  --property sql.query='SELECT name, price FROM products WHERE price < ${body} ORDER BY price' \
+  --service-name product-catalog \
+  --service-system product-catalog
+```
+
+#### Passing Dynamic Arguments to SQL Queries
+
+The `sql-tool` template supports dynamic input from the AI assistant using Camel Simple expressions in the query. The most common pattern is `${body}`, which is replaced at runtime with the input the AI sends when it calls the tool.
+
+For example, with this query:
+
+```sql
+SELECT name, price FROM products WHERE price < ${body} ORDER BY price
+```
+
+When the AI assistant sends `800` as the tool input, the query executes as:
+
+```sql
+SELECT name, price FROM products WHERE price < 800 ORDER BY price
+```
+
+Since this template is built on the Apache Camel SQL component, you can use any query pattern that the component supports — including named parameters. For advanced query patterns, refer to the [Camel SQL component documentation](https://camel.apache.org/components/next/sql-component.html).
+
+### `camel-qdrant-search-tool` and `camel-pinecone-tool`
+
+Templates for a similarity search tool on a Qdrant collection or a Pinecone index. The AI assistant sends a text `query`. The tool turns the query into an embedding vector, searches the vector store for the closest matches, and returns the text of each match.
+
+The tool creates the embedding with the [Camel OpenAI component](https://camel.apache.org/components/next/openai-component.html), so it works with any OpenAI-compatible embeddings endpoint, for example OpenAI or Ollama.
+
+> [!IMPORTANT]
+> Use the same embedding model that stored the data in the vector store. Vectors from different models are not comparable, and the search returns wrong matches.
+
+The tool reads the text of each match from the `text_segment` key of the Qdrant payload or the Pinecone metadata. This is the key that LangChain4j and Forage use when they store data. If your data uses a different key, the tool returns empty text.
+
+**Embedding parameters (both templates):**
+
+- `embedding.base.url`: The OpenAI-compatible API URL (e.g., `https://api.openai.com/v1` or `http://localhost:11434/v1` for Ollama)
+- `embedding.model`: The embedding model (e.g., `text-embedding-3-small` or `nomic-embed-text`)
+- `embedding.api.key`: The API key. Ollama ignores it, but it must not be empty.
+
+**Qdrant parameters:**
+
+- `qdrant.host` and `qdrant.port`: The Qdrant gRPC address (the default gRPC port is `6334`)
+- `qdrant.collection`: The collection to search
+- `qdrant.api.key`: The Qdrant API key
+- `qdrant.max.results`: The maximum number of matches. Default: `5`
+
+**Pinecone parameters:**
+
+- `pinecone.token`: The Pinecone API key
+- `pinecone.index.name` and `pinecone.index.host`: The index to search
+- `pinecone.cloud` and `pinecone.cloud.region`: The cloud and region of the index
+- `pinecone.collection`: The collection name
+- `pinecone.top.k`: The maximum number of matches. Default: `5`
+
+**Example:**
+
+```shell
+wanaku service template instantiate \
+  --name camel-qdrant-search-tool \
+  --property qdrant.host=qdrant \
+  --property qdrant.port=6334 \
+  --property qdrant.collection=docs \
+  --property qdrant.api.key= \
+  --property embedding.base.url=http://ollama:11434/v1 \
+  --property embedding.model=nomic-embed-text \
+  --property embedding.api.key=unused
+```
+
+## Best Practices
+
+### When to Use Templates
+
+- You need to deploy the same service catalog multiple times with different configurations (e.g., dev, staging, prod brokers).
+- You want to provide reusable blueprints for common integrations (e.g., Kafka, ActiveMQ, HTTP APIs).
+- You want to simplify onboarding by allowing users to fill in a few parameters instead of writing YAML routes.
+
+### When NOT to Use Templates
+
+- The service catalog has no parameterized values (just deploy it as a regular catalog).
+- The configuration is one-time and won't be reused.
+
+### Template Naming Conventions
+
+- Use lowercase kebab-case for template names (e.g., `jms-tool`, `kafka-tool`).
+- Use descriptive names that indicate the integration or service type.
+
+### Property Key Naming
+
+- Use dot-separated keys (e.g., `broker.url`, `queue.name`) to group related properties.
+- Avoid overly generic keys like `url` or `name` — prefix them with context (e.g., `broker.url` instead of `url`).
+
+## Troubleshooting
+
+### Template Not Found
+
+If `wanaku service template list` doesn't show your template, check:
+
+- Was the template deployed successfully? Check the Barn backend logs for errors.
+- Does the ZIP contain a valid `index.properties` file?
+- Is the `catalog.properties.<system>` key declared (or does the template follow the convention with `<system>/service.properties`)?
+
+### Properties Not Replaced
+
+If placeholders like <code v-pre>{{broker.url}}</code> are not being replaced:
+
+- Ensure you're using the correct Camel Property Placeholder syntax: <code v-pre>{{key}}</code>, not `${key}`.
+- Check that the property key matches exactly what you provided during instantiation.
+- Verify the `service.properties` file is correctly declared in `index.properties` or follows the `<system>/service.properties` convention.
+
+### Invalid ZIP Structure
+
+If deployment fails with a ZIP parsing error:
+
+- Ensure the ZIP contains an `index.properties` file at the root.
+- Check that service directories match the names declared in `catalog.services`.
+- Verify that file paths in `index.properties` match the actual file locations in the ZIP.
+- Run `wanaku service validate --template --path=<dir>` (or post the package to
+  `POST /api/v1/service-template/validate`) to get the full list of problems, each one pointing at
+  the file and property that is at fault.
+
+## Related Documentation
+
+- [Use the Wanaku CLI](../cli/index.md) — General Wanaku CLI usage
+- [Configurations](../reference/configuration.md) — Quarkus and Wanaku configuration options
+- [Contributing](../contributing/index.md) — How to contribute to Wanaku

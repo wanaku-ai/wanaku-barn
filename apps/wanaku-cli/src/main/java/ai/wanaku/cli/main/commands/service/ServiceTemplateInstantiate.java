@@ -14,6 +14,7 @@ import java.util.Properties;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.io.TemplateInstantiationRequest;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceTemplateService;
 import picocli.CommandLine;
@@ -29,12 +30,8 @@ public class ServiceTemplateInstantiate extends BaseCommand {
             required = true)
     private String name;
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--properties"},
@@ -111,7 +108,7 @@ public class ServiceTemplateInstantiate extends BaseCommand {
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
-        ServiceTemplateService service = initAuthenticatedService(ServiceTemplateService.class, host);
+        ServiceTemplateService service = initAuthenticatedService(ServiceTemplateService.class, barn.baseUri());
 
         Map<String, String> propsMap = resolveProperties(printer);
         if (propsMap == null) {

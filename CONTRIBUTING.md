@@ -4,7 +4,7 @@ Thank you for your interest in contributing to the Wanaku MCP Router project!
 
 ## Getting Started
 
-Please read our comprehensive [Contributing Guide](docs/contributing.md) for detailed information on:
+Please read our comprehensive [Contributing Guide](docs/contributing/index.md) for detailed information on:
 
 - Understanding tools, providers, and prompts
 - Creating new MCP servers
@@ -14,10 +14,10 @@ Please read our comprehensive [Contributing Guide](docs/contributing.md) for det
 
 ## Quick Links
 
-- **Contributing Guide**: [docs/contributing.md](docs/contributing.md)
-- **Building Guide**: [docs/building.md](docs/building.md)
-- **Architecture Overview**: [docs/architecture.md](docs/architecture.md)
-- **Release Guide**: [docs/release-guide.md](docs/release-guide.md)
+- **Contributing Guide**: [docs/contributing/index.md](docs/contributing/index.md)
+- **Building Guide**: [docs/contributing/building.md](docs/contributing/building.md)
+- **Architecture Overview**: [docs/get-started/architecture.md](docs/get-started/architecture.md)
+- **Release Guide**: [docs/contributing/release-guide.md](docs/contributing/release-guide.md)
 
 ## Code of Conduct
 

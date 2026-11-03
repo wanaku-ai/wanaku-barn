@@ -70,8 +70,8 @@ test('author, classify, publish, and remove through live Barn and native preview
     expect((await after.json() as { data: SemanticPublication[] }).data).toHaveLength(0);
     await page.getByRole('button', { name: 'View generated files', exact: true }).click();
     await page.getByRole('button', { name: 'Publish catalog', exact: true }).click();
-    await expect(page.getByText('Catalog published', { exact: true })).toBeVisible({ timeout: 20000 });
-    await expect(page.getByText(/Runtime status: not observed/)).toBeVisible();
+    await expect(page.getByRole('dialog')).toBeHidden({ timeout: 20000 });
+    await expect(page.getByRole('status').filter({ hasText: 'Catalog published successfully' })).toContainText(`${name} was published`);
     const definitions = await request.get(apiBase);
     expect(definitions.ok()).toBeTruthy();
     const body = await definitions.json() as { data: SemanticRouterDefinition[] };
@@ -84,6 +84,13 @@ test('author, classify, publish, and remove through live Barn and native preview
     expect(revisionBody.data).toHaveLength(1);
     expect(revisionBody.data[0].status).toBe('published');
     const publication = revisionBody.data[0];
+    await page.getByRole('button', { name: `Edit ${name}`, exact: true }).click();
+    for (let step = 0; step < 4; step++) await wizard.next();
+    const published = page.getByRole('region', { name: 'Published catalog', exact: true });
+    await expect(published).toContainText(`Revision: ${publication.revision}`);
+    await expect(published).toContainText(publication.sha256!);
+    await expect(published).toContainText('Runtime status: not observed');
+    await expect(published.getByRole('heading', { name: 'Deployment instructions' })).toBeVisible();
     await page.getByRole('button', { name: 'Close', exact: true }).last().click();
     const stores = await request.get(storeApi);
     expect(stores.ok()).toBeTruthy();

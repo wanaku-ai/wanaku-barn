@@ -4,8 +4,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.WebApplicationException;
 
 import java.net.URI;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +28,8 @@ import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 import ai.wanaku.capabilities.sdk.api.exceptions.WanakuException;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.core.services.api.ServiceCatalogService;
+import ai.wanaku.operator.util.OperatorUtil;
+import ai.wanaku.operator.util.RouterResourceFactory;
 
 import static ai.wanaku.operator.util.OperatorUtil.READY_CONDITION;
 import static ai.wanaku.operator.util.OperatorUtil.findCondition;
@@ -39,7 +40,8 @@ import static ai.wanaku.operator.util.OperatorUtil.readyCondition;
         informer = @Informer(namespaces = Constants.WATCH_CURRENT_NAMESPACE),
         name = "wanaku-service-catalog")
 @CSVMetadata(
-        displayName = "Wanaku Service Catalog operator",
+        bundleName = WanakuBundleMetadata.BUNDLE_NAME,
+        displayName = "Wanaku Service Catalog",
         description = "Deploys and manages Wanaku Service Catalogs")
 @RBACRule(
         apiGroups = "",
@@ -51,6 +53,7 @@ import static ai.wanaku.operator.util.OperatorUtil.readyCondition;
         verbs = {RBACVerbs.GET, RBACVerbs.LIST, RBACVerbs.WATCH})
 public class WanakuServiceCatalogReconciler implements Reconciler<WanakuServiceCatalog>, Cleaner<WanakuServiceCatalog> {
     private static final Logger LOG = Logger.getLogger(WanakuServiceCatalogReconciler.class);
+    private static final Duration BARN_RECHECK = Duration.ofSeconds(15);
 
     private static final String CATALOG_DATA_KEY = "catalog.zip";
 
@@ -92,15 +95,28 @@ public class WanakuServiceCatalogReconciler implements Reconciler<WanakuServiceC
                             routerRef, namespace));
         }
 
-        WanakuRouterSpec.RouterSpec routerSpec = router.getSpec().getRouter();
-        if (routerSpec == null || !routerSpec.isEnabled()) {
+        if (!RouterResourceFactory.isBarnEnabled(router)) {
             return setErrorStatus(
                     resource,
                     "ValidationError",
                     String.format(
-                            "WanakuRouter '%s' does not have barn-backend enabled (spec.router.enabled must be true). "
-                                    + "Service catalogs require barn-backend for persistence.",
+                            "WanakuRouter '%s' does not have Wanaku Barn enabled (spec.barn.enabled must be true). "
+                                    + "Service catalogs require Wanaku Barn for persistence.",
                             routerRef));
+        }
+
+        // Deploying while Barn starts only fails and backs off; wait for the router to report Barn available
+        final Condition barnAvailable = findCondition(
+                router.getStatus() != null ? router.getStatus().getConditions() : null,
+                WanakuRouterReconciler.BARN_AVAILABLE_CONDITION);
+        if (barnAvailable == null || !OperatorUtil.CONDITION_STATUS_TRUE.equals(barnAvailable.getStatus())) {
+            UpdateControl<WanakuServiceCatalog> waiting = setErrorStatus(
+                    resource,
+                    "BarnUnavailable",
+                    String.format(
+                            "Waiting for Wanaku Barn of WanakuRouter '%s' to become available%s",
+                            routerRef, barnAvailable != null ? ": " + barnAvailable.getMessage() : ""));
+            return waiting.rescheduleAfter(BARN_RECHECK);
         }
 
         final String routerBaseUrl = getRouterBaseUrl(routerRef);
@@ -164,7 +180,7 @@ public class WanakuServiceCatalogReconciler implements Reconciler<WanakuServiceC
                 .withType(READY_CONDITION)
                 .withStatus("False")
                 .withObservedGeneration(resource.getMetadata().getGeneration())
-                .withLastTransitionTime(OffsetDateTime.now(ZoneOffset.UTC).toString())
+                .withLastTransitionTime(OperatorUtil.now())
                 .withReason(reason)
                 .withMessage(message)
                 .build();

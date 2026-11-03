@@ -13,7 +13,8 @@ globs:
   - "docs/**/*.md"
   - "*.md"
   - "core/README.md"
-  - "capabilities/README.md"
+  - "apps/**/README.md"
+  - "deploy/**/*.md"
 
 ignores:
   - ".oss-ai-helper-rules/**"

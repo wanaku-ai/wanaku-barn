@@ -5,6 +5,7 @@ import jakarta.ws.rs.WebApplicationException;
 import org.jboss.logging.Logger;
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.DataStoresService;
 import picocli.CommandLine;
@@ -18,12 +19,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.handleNotFound;
 public class DataStoresRemove extends BaseCommand {
     private static final Logger LOG = Logger.getLogger(DataStoresRemove.class);
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--id"},
@@ -52,7 +49,7 @@ public class DataStoresRemove extends BaseCommand {
             printer.printWarningMessage("Both --id and --name provided. Using --id only.");
         }
 
-        dataStoresService = initAuthenticatedService(DataStoresService.class, host);
+        dataStoresService = initAuthenticatedService(DataStoresService.class, barn.baseUri());
 
         try {
             // Prefer ID over name if both provided

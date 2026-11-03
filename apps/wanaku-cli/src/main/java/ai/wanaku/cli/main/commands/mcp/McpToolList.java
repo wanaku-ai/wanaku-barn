@@ -23,6 +23,7 @@ public class McpToolList extends BaseCommand {
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {
+        Mcp.warnIfTokenOverPlainHttp(printer, uri, getAuthTokenOverride());
         try (McpClient client = resolveClient()) {
             List<ToolSpecification> tools = client.listTools();
 
@@ -37,7 +38,7 @@ public class McpToolList extends BaseCommand {
 
             return EXIT_OK;
         } catch (Exception e) {
-            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri));
+            printer.printErrorMessage(McpErrorHelper.friendlyMessage(e, uri, getAuthTokenOverride()));
             return EXIT_ERROR;
         }
     }

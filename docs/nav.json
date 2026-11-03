@@ -1,0 +1,82 @@
+{
+  "sidebar": [
+    {
+      "text": "Get started",
+      "link": "get-started/",
+      "items": [
+        { "text": "Architecture", "link": "get-started/architecture" }
+      ]
+    },
+    {
+      "text": "Use the CLI",
+      "link": "cli/",
+      "items": [
+        { "text": "Install the CLI", "link": "cli/install" },
+        { "text": "Authenticate", "link": "cli/authenticate" },
+        { "text": "Tools, resources, and prompts", "link": "cli/capabilities" },
+        { "text": "Forwards", "link": "cli/forwards" },
+        { "text": "Namespaces", "link": "cli/namespaces" },
+        { "text": "Evaluators", "link": "cli/evaluators" },
+        { "text": "Shell completion", "link": "cli/shell-completion" },
+        { "text": "Agent skills", "link": "cli/agent-skills" }
+      ]
+    },
+    {
+      "text": "Deploy and operate",
+      "link": "operate/",
+      "items": [
+        { "text": "Install the Barn backend", "link": "operate/install" },
+        { "text": "Keycloak", "link": "operate/keycloak" },
+        { "text": "Deploy with the Operator", "link": "operate/operator" },
+        { "text": "Operator on OperatorHub", "link": "operate/operator-olm" },
+        { "text": "Backup, restore and upgrade", "link": "operate/backup-and-upgrade" },
+        { "text": "Observability", "link": "operate/observability" },
+        { "text": "Secure a deployment", "link": "operate/secure-a-deployment" },
+        { "text": "Troubleshooting", "link": "operate/troubleshooting" }
+      ]
+    },
+    {
+      "text": "Manage integrations and data",
+      "link": "manage/",
+      "items": [
+        { "text": "Service catalogs", "link": "manage/service-catalogs" },
+        { "text": "Build and deploy a service catalog", "link": "manage/build-a-service-catalog" },
+        { "text": "Service templates", "link": "manage/service-templates" },
+        { "text": "Kamelet catalog", "link": "manage/kamelets" },
+        { "text": "Run integrations in the cloud", "link": "manage/cloud-run" },
+        { "text": "Data stores", "link": "manage/data-stores" },
+        { "text": "Create a semantic router", "link": "manage/semantic-routing-wizard" },
+        { "text": "Semantic router contract", "link": "manage/semantic-router-contract" },
+        { "text": "Audit trail", "link": "manage/audit-trail" },
+        { "text": "Deployment debugger", "link": "manage/deployment-debugger" }
+      ]
+    },
+    {
+      "text": "Reference",
+      "link": "reference/",
+      "items": [
+        { "text": "Configuration", "link": "reference/configuration" },
+        { "text": "Label expressions", "link": "reference/label-expressions" },
+        { "text": "Operator custom resources", "link": "reference/operator-crds" },
+        { "text": "Service catalog API", "link": "reference/service-catalog-api" },
+        { "text": "Tool URIs", "link": "reference/uris" }
+      ]
+    },
+    {
+      "text": "Contribute",
+      "link": "contributing/",
+      "collapsed": true,
+      "items": [
+        { "text": "Building", "link": "contributing/building" },
+        { "text": "Write documentation", "link": "contributing/documentation" },
+        { "text": "Testing", "link": "contributing/testing" },
+        { "text": "Testing MCP servers", "link": "contributing/testing-mcp-servers" },
+        { "text": "Test plans", "link": "contributing/test-plans" },
+        { "text": "Release guide", "link": "contributing/release-guide" },
+        { "text": "Release checklist", "link": "contributing/release-checklist" },
+        { "text": "Internals", "link": "contributing/internals" },
+        { "text": "Persistence internals", "link": "contributing/persistence-internals" }
+      ]
+    }
+  ]
+}

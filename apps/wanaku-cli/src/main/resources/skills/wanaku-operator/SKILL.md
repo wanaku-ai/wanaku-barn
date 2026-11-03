@@ -65,7 +65,7 @@ kind: WanakuRouter
 metadata:
   name: wanaku-dev
 spec:
-  praxis: {}
+  server: {}
 ```
 
 Apply and wait for readiness:
@@ -90,7 +90,7 @@ kind: WanakuRouter
 metadata:
   name: wanaku-dev
 spec:
-  praxis: {}
+  server: {}
   router:
     enabled: true
 ```
@@ -139,6 +139,6 @@ kubectl wait wanakuservicecatalog/my-catalogs -n wanaku --for=condition=Ready --
 
 ## References
 
-- [Operator guide](../../docs/operator.md)<!-- wanaku:versioned --> — operator deployment and lifecycle background; consult the current CRD schema for fields
-- [Usage guide](../../docs/usage.md)<!-- wanaku:versioned --> — installing and running Wanaku on OpenShift or Kubernetes
+- [Operator guide](../../docs/operate/operator.md)<!-- wanaku:versioned --> — operator deployment and lifecycle background; consult the current CRD schema for fields
+- [Install the Barn backend](../../docs/operate/install.md)<!-- wanaku:versioned --> — installing and running Wanaku on OpenShift or Kubernetes
 - [Service catalogs skill](../wanaku-service-catalogs/SKILL.md) — authoring and packaging catalogs

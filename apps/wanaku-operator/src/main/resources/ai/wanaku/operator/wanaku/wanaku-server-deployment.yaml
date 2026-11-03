@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ""
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ""
+      component: ""
+  template:
+    metadata:
+      labels:
+        app: ""
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: "wanaku-server"
+          image: quay.io/wanaku/wanaku-server:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: WANAKU_MGMT_LISTEN
+              value: "0.0.0.0:8080"
+            - name: WANAKU_A2A_LISTEN
+              value: "0.0.0.0:8084"
+            - name: WANAKU_PERSIST_BACKEND
+              value: "file"
+            - name: WANAKU_PERSIST_PATH
+              value: "/data/registry"
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: management
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 10
+          ports:
+            - name: management
+              containerPort: 8080
+              protocol: TCP
+            - name: mcp
+              containerPort: 8081
+              protocol: TCP
+            - name: inference
+              containerPort: 8083
+              protocol: TCP
+            - name: a2a
+              containerPort: 8084
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: management
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: management
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 30
+          volumeMounts:
+            - mountPath: /data/registry
+              name: server-volume
+      volumes:
+        - name: server-volume
+          persistentVolumeClaim:
+            claimName: server-volume-claim

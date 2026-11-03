@@ -19,6 +19,10 @@ spec:
             properties:
               auth:
                 properties:
+                  authProxy:
+                    type: "string"
+                  authServer:
+                    type: "string"
                   clientId:
                     type: "string"
                   enabled:
@@ -30,16 +34,65 @@ spec:
                           type: "string"
                         value:
                           type: "string"
+                        valueFrom:
+                          properties:
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: "string"
+                                name:
+                                  type: "string"
+                              type: "object"
+                          type: "object"
                       type: "object"
                     type: "array"
                   image:
                     type: "string"
                   imagePullPolicy:
                     type: "string"
+                  internalIssuerUrl:
+                    type: "string"
                   issuerUrl:
                     type: "string"
                   secretName:
                     type: "string"
+                type: "object"
+              barn:
+                properties:
+                  enabled:
+                    type: "boolean"
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: "string"
+                        value:
+                          type: "string"
+                        valueFrom:
+                          properties:
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: "string"
+                                name:
+                                  type: "string"
+                              type: "object"
+                          type: "object"
+                      type: "object"
+                    type: "array"
+                  image:
+                    type: "string"
+                  imagePullPolicy:
+                    type: "string"
+                  storage:
+                    properties:
+                      existingClaim:
+                        type: "string"
+                      size:
+                        type: "string"
+                      storageClassName:
+                        type: "string"
+                    type: "object"
                 type: "object"
               exposure:
                 properties:
@@ -51,25 +104,42 @@ spec:
                     type: "string"
                   ingressClassName:
                     type: "string"
+                  listeners:
+                    properties:
+                      a2a:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                      inference:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                      management:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                      mcp:
+                        properties:
+                          enabled:
+                            type: "boolean"
+                          host:
+                            type: "string"
+                        type: "object"
+                    type: "object"
+                  type:
+                    type: "string"
                 type: "object"
               imagePullPolicy:
                 type: "string"
-              praxis:
-                properties:
-                  env:
-                    items:
-                      properties:
-                        name:
-                          type: "string"
-                        value:
-                          type: "string"
-                      type: "object"
-                    type: "array"
-                  image:
-                    type: "string"
-                  imagePullPolicy:
-                    type: "string"
-                type: "object"
               router:
                 properties:
                   enabled:
@@ -81,6 +151,16 @@ spec:
                           type: "string"
                         value:
                           type: "string"
+                        valueFrom:
+                          properties:
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: "string"
+                                name:
+                                  type: "string"
+                              type: "object"
+                          type: "object"
                       type: "object"
                     type: "array"
                   image:
@@ -88,9 +168,46 @@ spec:
                   imagePullPolicy:
                     type: "string"
                 type: "object"
+              server:
+                properties:
+                  configMapRef:
+                    properties:
+                      key:
+                        type: "string"
+                      name:
+                        type: "string"
+                    type: "object"
+                  env:
+                    items:
+                      properties:
+                        name:
+                          type: "string"
+                        value:
+                          type: "string"
+                        valueFrom:
+                          properties:
+                            secretKeyRef:
+                              properties:
+                                key:
+                                  type: "string"
+                                name:
+                                  type: "string"
+                              type: "object"
+                          type: "object"
+                      type: "object"
+                    type: "array"
+                  image:
+                    type: "string"
+                  imagePullPolicy:
+                    type: "string"
+                  variant:
+                    type: "string"
+                type: "object"
             type: "object"
           status:
             properties:
+              barnUrl:
+                type: "string"
               conditions:
                 items:
                   properties:
@@ -108,8 +225,14 @@ spec:
                       type: "string"
                   type: "object"
                 type: "array"
+              endpoints:
+                additionalProperties:
+                  type: "string"
+                type: "object"
               host:
                 type: "string"
+              observedGeneration:
+                type: "integer"
               sseEndpoint:
                 type: "string"
               streamableEndpoint:

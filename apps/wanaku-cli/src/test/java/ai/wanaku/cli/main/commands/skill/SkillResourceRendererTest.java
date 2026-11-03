@@ -36,12 +36,12 @@ class SkillResourceRendererTest {
         "1.12.3, wanaku-1.12.3"
     })
     void selectsExactDocumentationAndRawSchemaUrls(String version, String ref) throws Exception {
-        String template = "[Usage](../../docs/usage.md#installation)<!-- wanaku:versioned -->\n"
+        String template = "[Usage](../../docs/cli/index.md#installation)<!-- wanaku:versioned -->\n"
                 + "[Schema](../../" + SCHEMA + ")<!-- wanaku:versioned -->\n"
                 + "[Operator](../wanaku-operator/SKILL.md)\n"
                 + "[External](https://example.org/guide)";
         String expected = "[Usage](https://github.com/wanaku-ai/wanaku-barn/blob/" + ref
-                + "/docs/usage.md#installation)\n"
+                + "/docs/cli/index.md#installation)\n"
                 + "[Schema](https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/" + ref + "/" + SCHEMA + ")\n"
                 + "[Operator](../wanaku-operator/SKILL.md)\n"
                 + "[External](https://example.org/guide)";
@@ -58,7 +58,7 @@ class SkillResourceRendererTest {
             String original = template.replace("<!-- wanaku:versioned -->", "");
             String html = renderer.render(parser.parse(template));
             assertEquals(renderer.render(parser.parse(original)), html.replace("<!-- wanaku:versioned -->", ""));
-            assertTrue(html.contains("href=\"../../docs/usage.md\""));
+            assertTrue(html.contains("href=\"../../docs/cli/index.md\""));
         }
     }
 
@@ -80,13 +80,13 @@ class SkillResourceRendererTest {
             strings = {
                 "[Missing](../../docs/does-not-exist.md)<!-- wanaku:versioned -->",
                 "[Wrong](../../README.md)<!-- wanaku:versioned -->",
-                "[Traversal](../../docs/../docs/usage.md)<!-- wanaku:versioned -->",
+                "[Traversal](../../docs/../docs/cli/index.md)<!-- wanaku:versioned -->",
                 "[Missing schema](../../apps/wanaku-operator/deploy/helm/wanaku-operator/crds/missing.yml)<!-- wanaku:versioned -->",
                 "[Wrong schema](../../apps/wanaku-cli/pom.xml)<!-- wanaku:versioned -->",
-                "[Bad](https://example.org/docs/usage.md)<!-- wanaku:versioned -->",
-                "<!-- wanaku:versioned -->[Bad](../../docs/usage.md",
-                "<!-- wanaku:typo -->[Bad](../../docs/usage.md)",
-                "[Unmarked](../../docs/usage.md)",
+                "[Bad](https://example.org/docs/cli/index.md)<!-- wanaku:versioned -->",
+                "<!-- wanaku:versioned -->[Bad](../../docs/cli/index.md",
+                "<!-- wanaku:typo -->[Bad](../../docs/cli/index.md)",
+                "[Unmarked](../../docs/cli/index.md)",
                 "[Unmarked schema](../../apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)",
                 "[Unreplaced](${wanaku.docs}/usage.md)"
             })
@@ -101,10 +101,10 @@ class SkillResourceRendererTest {
         String original = Files.readString(source.resolve("wanaku-operator/SKILL.md"));
         SkillResourceRenderer.renderResources("0.2.0", source, output, REPOSITORY);
         assertEquals(original, Files.readString(source.resolve("wanaku-operator/SKILL.md")));
-        assertTrue(original.contains("[Operator guide](../../docs/operator.md)"));
+        assertTrue(original.contains("[Operator guide](../../docs/operate/operator.md)"));
         String rendered = Files.readString(output.resolve("wanaku-operator/SKILL.md"));
         assertTrue(rendered.contains(
-                "[Operator guide](https://github.com/wanaku-ai/wanaku-barn/blob/wanaku-0.2.0/docs/operator.md)"));
+                "[Operator guide](https://github.com/wanaku-ai/wanaku-barn/blob/wanaku-0.2.0/docs/operate/operator.md)"));
         assertTrue(rendered.contains(
                 "[router CRD schema](https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/wanaku-0.2.0/" + SCHEMA
                         + ")"));
@@ -121,7 +121,7 @@ class SkillResourceRendererTest {
         Files.createDirectories(source.resolve("first"));
         Files.createDirectories(source.resolve("second"));
         Files.writeString(source.resolve("index.txt"), "first/SKILL.md\nsecond/SKILL.md\n");
-        Files.writeString(source.resolve("first/SKILL.md"), "[Usage](../../docs/usage.md)<!-- wanaku:versioned -->");
+        Files.writeString(source.resolve("first/SKILL.md"), "[Usage](../../docs/cli/index.md)<!-- wanaku:versioned -->");
         Files.writeString(source.resolve("second/SKILL.md"), "${unreplaced}");
         assertThrows(
                 IOException.class, () -> SkillResourceRenderer.renderResources("0.2.0", source, output, REPOSITORY));
@@ -133,7 +133,7 @@ class SkillResourceRendererTest {
             strings = {
                 "",
                 "missing/SKILL.md",
-                "../docs/usage.md",
+                "../docs/cli/index.md",
                 "/tmp/SKILL.md",
                 "index.txt",
                 "first/SKILL.md\nfirst/SKILL.md"

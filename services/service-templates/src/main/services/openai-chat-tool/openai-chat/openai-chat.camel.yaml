@@ -7,6 +7,7 @@
         description: "{{tool.description}}"
         parameter.prompt: string
         parameter.prompt.description: "The prompt text to send to OpenAI for chat completion"
+        parameter.prompt.required: true
         parameter.systemMessage: string
         parameter.systemMessage.description: "Optional system message to set the behavior of the assistant"
         parameter.model: string
@@ -16,52 +17,27 @@
         parameter.maxTokens: integer
         parameter.maxTokens.description: "Maximum number of tokens to generate"
       steps:
+        # The OpenAI component uses these headers when they are set, and the endpoint options otherwise
         - setHeader:
-            name: CamelOpenAI.operation
-            constant: "{{openai.operation}}"
+            name: CamelOpenAISystemMessage
+            simple: "${header.systemMessage}"
         - setHeader:
-            name: CamelOpenAI.model
-            constant: "{{openai.model}}"
+            name: CamelOpenAIModel
+            simple: "${header.model}"
         - setHeader:
-            name: CamelOpenAI.temperature
-            constant: "{{openai.temperature}}"
+            name: CamelOpenAITemperature
+            simple: "${header.temperature}"
         - setHeader:
-            name: CamelOpenAI.maxTokens
-            constant: "{{openai.max.tokens}}"
-        - setHeader:
-            name: CamelOpenAI.topP
-            constant: "{{openai.top.p}}"
-        - setHeader:
-            name: CamelOpenAI.frequencyPenalty
-            constant: "{{openai.frequency.penalty}}"
-        - setHeader:
-            name: CamelOpenAI.presencePenalty
-            constant: "{{openai.presence.penalty}}"
-        - choice:
-            when:
-              - simple: "${header.CamelOpenAI.systemMessage} != ''"
-                steps:
-                  - setHeader:
-                      name: CamelOpenAI.messages
-                      simple: '[{"role": "system", "content": "{{openai.system.message}}"}, {"role": "user", "content": "${header.prompt}"}]'
-            otherwise:
-              steps:
-                - setHeader:
-                    name: CamelOpenAI.messages
-                    simple: '[{"role": "user", "content": "${header.prompt}"}]'
-        - choice:
-            when:
-              - simple: "${header.CamelOpenAI.stopSequences} != ''"
-                steps:
-                  - setHeader:
-                      name: CamelOpenAI.stop
-                      simple: "${header.CamelOpenAI.stopSequences}"
-            otherwise:
-              steps:
-                - setHeader:
-                    name: CamelOpenAI.stop
-                    simple: "{{openai.stop.sequences}}"
+            name: CamelOpenAIMaxTokens
+            simple: "${header.maxTokens}"
+        - setBody:
+            simple: "${header.prompt}"
         - to:
             uri: "openai:chat-completion"
             parameters:
               apiKey: "{{openai.api.key}}"
+              model: "{{openai.model}}"
+              temperature: "{{openai.temperature}}"
+              maxTokens: "{{openai.max.tokens}}"
+              topP: "{{openai.top.p}}"
+              systemMessage: "RAW({{openai.system.message}})"

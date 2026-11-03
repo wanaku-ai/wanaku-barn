@@ -21,6 +21,8 @@ on:
     paths-ignore:
       - .github/**
       - docs/**
+      - design/**
+      - '**/*.md'
       - artwork/**
       - README.md
       - docker-*

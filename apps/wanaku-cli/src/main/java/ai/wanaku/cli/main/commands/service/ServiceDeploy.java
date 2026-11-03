@@ -14,6 +14,7 @@ import java.util.zip.ZipOutputStream;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceCatalogService;
 import ai.wanaku.core.services.api.ServiceTemplateService;
@@ -31,12 +32,8 @@ public class ServiceDeploy extends BaseCommand {
             arity = "0..1")
     private String path;
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--template"},
@@ -115,11 +112,11 @@ public class ServiceDeploy extends BaseCommand {
 
         try {
             if (template) {
-                ServiceTemplateService service = initAuthenticatedService(ServiceTemplateService.class, host);
+                ServiceTemplateService service = initAuthenticatedService(ServiceTemplateService.class, barn.baseUri());
                 service.deploy(dataStore);
                 printer.printSuccessMessage(String.format("Service template '%s' deployed successfully", catalogName));
             } else {
-                ServiceCatalogService service = initAuthenticatedService(ServiceCatalogService.class, host);
+                ServiceCatalogService service = initAuthenticatedService(ServiceCatalogService.class, barn.baseUri());
                 service.deploy(dataStore);
                 printer.printSuccessMessage(String.format("Service catalog '%s' deployed successfully", catalogName));
             }

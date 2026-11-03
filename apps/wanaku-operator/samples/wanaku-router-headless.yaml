@@ -1,0 +1,10 @@
+apiVersion: "wanaku.ai/v1alpha1"
+kind: WanakuRouter
+metadata:
+  name: wanaku-dev
+spec:
+# The headless Wanaku Server omits the embedded admin UI. Management APIs, MCP, inference,
+# A2A, persistence, probes and authentication work as with the standard variant.
+  server:
+    variant: headless
+#    image: quay.io/wanaku/wanaku-server-headless:latest

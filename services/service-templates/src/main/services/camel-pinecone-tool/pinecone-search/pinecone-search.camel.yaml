@@ -6,14 +6,27 @@
         tags: wanaku
         description: "{{tool.description}}"
         parameter.query: string
-        parameter.query.description: "The search query vector or text to search in Pinecone"
+        parameter.query.description: "The text to search for similar content in Pinecone"
+        parameter.query.required: true
       steps:
+        - setBody:
+            simple: "${header.query}"
+        - to:
+            uri: "openai:embeddings"
+            parameters:
+              apiKey: "{{embedding.api.key}}"
+              baseUrl: "{{embedding.base.url}}"
+              embeddingModel: "{{embedding.model}}"
+              encodingFormat: float
         - setHeader:
             name: CamelPineconeAction
             constant: "QUERY"
         - setHeader:
             name: CamelPineconeQueryTopK
             constant: "{{pinecone.top.k}}"
+        - setHeader:
+            name: CamelPineconeQueryIncludeMetadata
+            constant: "true"
         - to:
             uri: "pinecone:{{pinecone.collection}}"
             parameters:
@@ -22,3 +35,7 @@
               host: "{{pinecone.index.host}}"
               cloud: "{{pinecone.cloud}}"
               cloudRegion: "{{pinecone.cloud.region}}"
+        - setBody:
+            simple: "${body.matchesList}"
+        - transformDataType:
+            toType: "pinecone:rag"

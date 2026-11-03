@@ -1,0 +1,9 @@
+# Operand images the operator can deploy, one 'name image' pair per line.
+# They are listed in the CSV spec.relatedImages so that disconnected (air-gapped)
+# OpenShift clusters can mirror them. Keep in sync with the defaults in the operator code.
+wanaku-server quay.io/wanaku/wanaku-server:latest
+wanaku-server-headless quay.io/wanaku/wanaku-server-headless:latest
+wanaku-barn-backend quay.io/wanaku/wanaku-barn-backend:latest
+wanaku-semantic-router quay.io/wanaku/wanaku-semantic-router:latest
+camel-integration-capability quay.io/wanaku/camel-integration-capability:latest
+oauth2-proxy quay.io/oauth2-proxy/oauth2-proxy:v7.9.0

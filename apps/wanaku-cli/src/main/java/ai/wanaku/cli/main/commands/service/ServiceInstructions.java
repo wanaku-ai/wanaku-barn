@@ -6,6 +6,7 @@ import jakarta.ws.rs.core.Response;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.DeploymentInstructions;
 import ai.wanaku.core.services.api.ServiceCatalogService;
@@ -29,16 +30,12 @@ public class ServiceInstructions extends BaseCommand {
             required = true)
     private String model;
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
-        ServiceCatalogService service = initAuthenticatedService(ServiceCatalogService.class, host);
+        ServiceCatalogService service = initAuthenticatedService(ServiceCatalogService.class, barn.baseUri());
 
         try {
             WanakuResponse<DeploymentInstructions> response = service.getDeploymentInstructions(name, model);

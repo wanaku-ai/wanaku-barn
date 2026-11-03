@@ -16,6 +16,8 @@ on:
     paths-ignore:
       - .github/**
       - docs/**
+      - design/**
+      - '**/*.md'
       - artwork/**
       - README.md
       - docker-*
@@ -30,7 +32,6 @@ on:
       - SECURITY.md
       - get-wanaku.sh
       - javadoc-warm.sh
-      - tests/plans/**
       - .*
 
 # Least-privilege default for the automatically-provided GITHUB_TOKEN. PR builds run untrusted

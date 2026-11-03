@@ -44,7 +44,6 @@ services/
 tests/
   e2e/                     # End-to-end tests
   load/                    # Load tests
-  plans/                   # Test plans for humans and AI agents
 ```
 
 ## Commands
@@ -66,6 +65,9 @@ make cli-native
 
 # Install CLI to ~/bin
 make install
+
+# OLM bundle (operator)
+make olm-bundle olm-validate   # see docs/operate/operator-olm.md
 ```
 
 ## Code Style
@@ -78,23 +80,24 @@ make install
 
 ## Operator
 
-- CRDs: `WanakuRouter`, `WanakuServiceCatalog` (all `wanaku.ai/v1alpha1`). The `WanakuCapability`, `WanakuCamelRoute` and `WanakuCamelCodeExecutionEngine` CRDs were removed — deploy capabilities as regular Deployments and register them with `wanaku forwards add`
+- CRDs: `WanakuRouter`, `WanakuServiceCatalog`, `WanakuSemanticRouter`, `WanakuIntegration` (all `wanaku.ai/v1alpha1`). The `WanakuCapability`, `WanakuCamelRoute` and `WanakuCamelCodeExecutionEngine` CRDs were removed — deploy capabilities as regular Deployments and register them with `wanaku forwards add`
 - Helm chart: `apps/wanaku-operator/deploy/helm/wanaku-operator/`
-- When adding new CRDs, RBAC rules must be added to the Helm chart (see `docs/contributing.md`)
+- When adding new CRDs, RBAC rules must be added to the Helm chart (see `docs/contributing/index.md`)
 - CRD manifests are auto-generated during build in `target/kubernetes/`, must be copied to `crds/`
-- Router internal URL pattern: `http://internal-{routerRef}:8080`
+- OLM bundle: generated in `apps/wanaku-operator/target/bundle/` by `make olm-bundle`; CSV metadata lives in `WanakuBundleMetadata`, operand images in `apps/wanaku-operator/olm/related-images.txt`; see `docs/operate/operator-olm.md`
+- Router internal URL pattern: `http://barn-{routerRef}:8080`
 
 ## Service Catalogs
 
-- CLI workflow: `init` -> `expose` -> `package` -> `deploy`
+- CLI workflow: `init` -> `expose` -> `validate` -> `package` -> `deploy`
 - `wanaku service package` creates Base64-encoded ZIP for operator/ConfigMap use
 - `wanaku service deploy` packages and deploys directly to router REST API
 - Route ID extraction uses indentation-aware parsing (route-level only, ignores step-level IDs)
 
 ## Test Plans
 
-- Test plans live under `tests/plans/`, reusable steps under `tests/plans/common/`
-- Guidelines for writing test plans are in `docs/contributing-test-plans.md`
+- Test plans and reusable steps are maintained in [wanaku-tests](https://github.com/wanaku-ai/wanaku-tests), under `plans/` and `plans/common/`
+- Follow the test-plan instructions in wanaku-tests when writing or running plans
 
 ## Acceptance Criteria
 

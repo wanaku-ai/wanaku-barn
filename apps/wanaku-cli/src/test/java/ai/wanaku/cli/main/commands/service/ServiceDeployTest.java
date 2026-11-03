@@ -2,12 +2,12 @@ package ai.wanaku.cli.main.commands.service;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Properties;
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.support.WanakuPrinter;
+import picocli.CommandLine;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,8 +33,8 @@ class ServiceDeployTest {
         tempDir.resolve("empty").toFile().mkdirs();
 
         ServiceDeploy cmd = new ServiceDeploy();
-        setField(cmd, "path", tempDir.resolve("empty").toAbsolutePath().toString());
-        setField(cmd, "host", "http://localhost:8080");
+        new CommandLine(cmd)
+                .parseArgs("--path", tempDir.resolve("empty").toAbsolutePath().toString());
 
         Integer result = cmd.doCall(terminal, printer);
         assertEquals(1, result);
@@ -55,8 +55,7 @@ class ServiceDeployTest {
         }
 
         ServiceDeploy cmd = new ServiceDeploy();
-        setField(cmd, "path", rootDir.getAbsolutePath());
-        setField(cmd, "host", "http://localhost:8080");
+        new CommandLine(cmd).parseArgs("--path", rootDir.getAbsolutePath());
 
         Integer result = cmd.doCall(terminal, printer);
         assertEquals(1, result);
@@ -79,16 +78,9 @@ class ServiceDeployTest {
         }
 
         ServiceDeploy cmd = new ServiceDeploy();
-        setField(cmd, "path", rootDir.getAbsolutePath());
-        setField(cmd, "host", "http://localhost:8080");
+        new CommandLine(cmd).parseArgs("--path", rootDir.getAbsolutePath());
 
         Integer result = cmd.doCall(terminal, printer);
         assertEquals(1, result);
-    }
-
-    private void setField(Object obj, String fieldName, Object value) throws Exception {
-        Field field = obj.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(obj, value);
     }
 }

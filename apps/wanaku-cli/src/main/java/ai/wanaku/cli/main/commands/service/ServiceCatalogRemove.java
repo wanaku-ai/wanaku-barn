@@ -4,6 +4,7 @@ import jakarta.ws.rs.WebApplicationException;
 
 import org.jline.terminal.Terminal;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceCatalogService;
 import picocli.CommandLine;
@@ -13,12 +14,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.handleNotFound;
 @CommandLine.Command(name = "remove", description = "Remove a service catalog by name")
 public class ServiceCatalogRemove extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--name"},
@@ -29,7 +26,7 @@ public class ServiceCatalogRemove extends BaseCommand {
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
-        ServiceCatalogService service = initAuthenticatedService(ServiceCatalogService.class, host);
+        ServiceCatalogService service = initAuthenticatedService(ServiceCatalogService.class, barn.baseUri());
 
         try {
             service.remove(name);

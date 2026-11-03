@@ -110,6 +110,17 @@
         "envs" : {
           "type" : "object",
           "properties" : {
+            "olm" : {
+              "type" : "object",
+              "properties" : {
+                "createdAt" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_SEMANTIC_ROUTER_NAMESPACES" : {
+              "type" : "string"
+            },
             "project" : {
               "type" : "object",
               "properties" : {
@@ -117,6 +128,9 @@
                   "type" : "string"
                 }
               }
+            },
+            "QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_INTEGRATION_NAMESPACES" : {
+              "type" : "string"
             },
             "QUARKUS_OPERATOR_SDK_CONTROLLERS_WANAKU_SERVICE_CATALOG_NAMESPACES" : {
               "type" : "string"

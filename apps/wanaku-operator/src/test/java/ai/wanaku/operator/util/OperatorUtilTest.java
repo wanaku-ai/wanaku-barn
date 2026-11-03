@@ -2,14 +2,19 @@ package ai.wanaku.operator.util;
 
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.ConditionBuilder;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.ServiceBuilder;
 
 import static ai.wanaku.operator.assertions.OperatorAssertions.assertCondition;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class OperatorUtilTest {
 
@@ -86,8 +91,66 @@ class OperatorUtilTest {
     }
 
     @Test
+    void routerBaseUrlTargetsBarnService() {
+        assertEquals("http://barn-test-router:8080", OperatorUtil.getRouterBaseUrl("test-router"));
+    }
+
+    @Test
     void validateImageAllowedSkipsBlankImage() {
         assertDoesNotThrow(() -> OperatorUtil.validateImageAllowed(null, "quay.io/wanaku/"));
         assertDoesNotThrow(() -> OperatorUtil.validateImageAllowed("", "quay.io/wanaku/"));
+    }
+
+    @Test
+    void conditionKeepsTransitionTimeWhenStatusIsUnchanged() {
+        Condition previous = OperatorUtil.condition("ServerAvailable", false, "Progressing", "starting", 1L, null);
+        Condition current =
+                OperatorUtil.condition("ServerAvailable", false, "ImagePullBackOff", "pull failed", 2L, previous);
+
+        assertEquals(previous.getLastTransitionTime(), current.getLastTransitionTime());
+        assertEquals("ImagePullBackOff", current.getReason());
+        assertEquals(2L, current.getObservedGeneration());
+    }
+
+    @Test
+    void conditionChangesTransitionTimeWhenStatusFlips() {
+        Condition previous = new ConditionBuilder()
+                .withType("ServerAvailable")
+                .withStatus("False")
+                .withLastTransitionTime("2020-01-01T00:00Z")
+                .build();
+        Condition current = OperatorUtil.condition("ServerAvailable", true, "Available", "ok", 1L, previous);
+
+        assertEquals("True", current.getStatus());
+        assertNotEquals("2020-01-01T00:00Z", current.getLastTransitionTime());
+    }
+
+    @Test
+    void desiredHashDetectsSpecChanges() {
+        Service desired = new ServiceBuilder()
+                .withNewMetadata()
+                .withName("svc")
+                .endMetadata()
+                .withNewSpec()
+                .addNewPort()
+                .withPort(8080)
+                .endPort()
+                .endSpec()
+                .build();
+        OperatorUtil.stampDesiredHash(desired, desired.getSpec());
+        Service existing = new ServiceBuilder(desired).build();
+        Service changed = new ServiceBuilder(desired)
+                .editSpec()
+                .editFirstPort()
+                .withPort(9090)
+                .endPort()
+                .endSpec()
+                .build();
+        OperatorUtil.stampDesiredHash(changed, changed.getSpec());
+
+        assertTrue(OperatorUtil.sameDesiredHash(desired, existing));
+        assertFalse(OperatorUtil.sameDesiredHash(changed, existing));
+        assertFalse(OperatorUtil.sameDesiredHash(
+                desired, new ServiceBuilder().withNewMetadata().endMetadata().build()));
     }
 }

@@ -1,1 +1,2 @@
 org.apache.camel:camel-pinecone
+org.apache.camel:camel-openai

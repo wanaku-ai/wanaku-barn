@@ -8,6 +8,7 @@ import java.util.Base64;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceCatalogService;
 import ai.wanaku.core.services.api.ServiceTemplateService;
@@ -18,12 +19,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.handleNotFound;
 @CommandLine.Command(name = "download", description = "Download the package of one version as a ZIP file")
 public class ServiceVersionsDownload extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--name"},
@@ -54,10 +51,10 @@ public class ServiceVersionsDownload extends BaseCommand {
         DataStore content;
         try {
             content = template
-                    ? initAuthenticatedService(ServiceTemplateService.class, host)
+                    ? initAuthenticatedService(ServiceTemplateService.class, barn.baseUri())
                             .downloadVersion(name, version)
                             .data()
-                    : initAuthenticatedService(ServiceCatalogService.class, host)
+                    : initAuthenticatedService(ServiceCatalogService.class, barn.baseUri())
                             .downloadVersion(name, version)
                             .data();
         } catch (WebApplicationException ex) {

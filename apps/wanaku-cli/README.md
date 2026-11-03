@@ -7,6 +7,7 @@ Command-line interface tool for managing the Wanaku MCP Router via its managemen
 ## Purpose
 
 The Wanaku CLI provides a user-friendly interface for:
+
 - Managing tools and resources
 - Configuring namespaces
 - Monitoring downstream MCP servers
@@ -37,12 +38,13 @@ jbang app install wanaku@wanaku-ai/wanaku
 ### Via Binary Download
 
 Download the latest release from [GitHub releases](https://github.com/wanaku-ai/wanaku/releases) and extract to your PATH.
+
 ### PATH Configuration
 
-If you installed via `get-wanaku.sh`, the CLI is placed in `$HOME/bin` which may not be on your default `PATH`. See [PATH Configuration](../../docs/usage.md#path-configuration) in the usage guide for setup instructions.
+If you installed via `get-wanaku.sh`, the CLI is placed in `$HOME/bin` which may not be on your default `PATH`. See [PATH Configuration](../../docs/cli/install.md#path-configuration) in the CLI installation guide for setup instructions.
 
 >
-> 
+>
 ## Basic Usage
 
 ```shell
@@ -83,11 +85,12 @@ wanaku namespaces cleanup --max-age-days 7 -y
 ## Configuration
 
 The CLI stores configuration in `~/.wanaku/`:
+
 - `credentials` - Authentication tokens
 - `cli.properties` - CLI configuration
 
 ## Related Documentation
 
-- [Usage Guide](../../docs/usage.md) - Complete CLI reference
-- [Label Expressions Guide](src/main/resources/docs/LABEL_EXPRESSIONS.md) - Advanced filtering
-- [Architecture](../../docs/architecture.md)
+- [CLI guide](../../docs/cli/index.md) - Complete CLI reference
+- [Label Expressions Guide](../../docs/reference/label-expressions.md) - Advanced filtering
+- [Architecture](../../docs/get-started/architecture.md)

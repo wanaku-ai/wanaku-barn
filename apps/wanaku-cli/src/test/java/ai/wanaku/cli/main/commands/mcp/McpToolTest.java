@@ -3,14 +3,18 @@ package ai.wanaku.cli.main.commands.mcp;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import io.vertx.core.json.JsonObject;
 import ai.wanaku.cli.main.commands.BaseCommand;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.mcp.client.ClientUtil;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.exception.ToolArgumentsException;
 import dev.langchain4j.exception.ToolExecutionException;
 import dev.langchain4j.mcp.client.McpClient;
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
 import dev.langchain4j.service.tool.ToolExecutionResult;
 import picocli.CommandLine;
 
@@ -122,9 +126,93 @@ class McpToolTest {
         params.put("key1", "value1");
         params.put("key2", "value2");
 
-        String json = McpTool.serializeParams(params);
+        String json = McpTool.serializeParams(new JsonObject(), params, null);
 
         assertEquals("{\"key1\":\"value1\",\"key2\":\"value2\"}", json);
+    }
+
+    @Test
+    @DisplayName("Should convert params according to the tool input schema")
+    void shouldConvertParamsUsingSchema() {
+        JsonObjectSchema schema = JsonObjectSchema.builder()
+                .addNumberProperty("a")
+                .addIntegerProperty("n")
+                .addBooleanProperty("flag")
+                .addStringProperty("s")
+                .build();
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("a", "1.5");
+        params.put("n", "2");
+        params.put("flag", "true");
+        params.put("s", "42");
+        params.put("other", "x");
+
+        String json = McpTool.serializeParams(new JsonObject(), params, schema);
+
+        assertEquals("{\"a\":1.5,\"n\":2,\"flag\":true,\"s\":\"42\",\"other\":\"x\"}", json);
+    }
+
+    @Test
+    @DisplayName("Should keep the raw string when a value does not match the schema type")
+    void shouldKeepStringOnInvalidTypedValue() {
+        JsonObjectSchema schema =
+                JsonObjectSchema.builder().addNumberProperty("a").build();
+
+        String json = McpTool.serializeParams(new JsonObject(), Map.of("a", "abc"), schema);
+
+        assertEquals("{\"a\":\"abc\"}", json);
+    }
+
+    @Test
+    @DisplayName("Should not split param values at commas")
+    void shouldNotSplitParamsAtCommas() {
+        McpTool cmd = new McpTool();
+        new CommandLine(cmd).parseArgs("--param", "message=hello, world", "--param", "other=1,2");
+
+        assertEquals(Map.of("message", "hello, world", "other", "1,2"), cmd.params);
+    }
+
+    @Test
+    @DisplayName("Should send typed arguments using the tool input schema")
+    void shouldSendTypedArgumentsFromSchema() throws Exception {
+        command.name = "get-sum";
+        command.params = new LinkedHashMap<>(Map.of("a", "1"));
+        command.arguments = "{\"b\": 2, \"a\": \"ignored\"}";
+        JsonObjectSchema schema = JsonObjectSchema.builder()
+                .addNumberProperty("a")
+                .addNumberProperty("b")
+                .build();
+        when(mcpClient.listTools())
+                .thenReturn(List.of(ToolSpecification.builder()
+                        .name("get-sum")
+                        .parameters(schema)
+                        .build()));
+        when(mcpClient.executeTool(any(ToolExecutionRequest.class)))
+                .thenReturn(ToolExecutionResult.builder()
+                        .resultText("3")
+                        .isError(false)
+                        .build());
+
+        Integer result = command.doCall(null, mock(WanakuPrinter.class));
+
+        assertEquals(BaseCommand.EXIT_OK, result);
+        ArgumentCaptor<ToolExecutionRequest> captor = ArgumentCaptor.forClass(ToolExecutionRequest.class);
+        verify(mcpClient).executeTool(captor.capture());
+        assertEquals(
+                new JsonObject("{\"a\":1,\"b\":2}"),
+                new JsonObject(captor.getValue().arguments()));
+    }
+
+    @Test
+    @DisplayName("Should return error when --arguments is not a JSON object")
+    void shouldReturnErrorOnInvalidArguments() throws Exception {
+        command.arguments = "[1, 2]";
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+
+        Integer result = command.doCall(null, printer);
+
+        assertEquals(BaseCommand.EXIT_ERROR, result);
+        verify(printer).printErrorMessage("Invalid value for --arguments: expected a JSON object");
     }
 
     @Test

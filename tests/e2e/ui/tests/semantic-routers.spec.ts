@@ -42,16 +42,19 @@ test('create, validate, preview, publish, reopen, and remove a semantic router',
   await expect(page.getByText('Expected: no_match. Actual: no_match.', { exact: true })).toBeVisible();
   await wizard.next();
   await page.getByRole('button', { name: 'Publish catalog', exact: true }).click();
+  await expect(page.getByRole('dialog')).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: 'Catalog published successfully' })).toContainText('Support-routing was published');
+  expect(fixture.publishRequests).toHaveLength(1);
+  expect(fixture.previews).toHaveLength(3);
+  expect([...fixture.definitions.values()][0].examples).toHaveLength(3);
+  await page.getByRole('button', { name: 'Edit Support-routing', exact: true }).click();
+  await expect(page.getByLabel('Router name', { exact: true })).toHaveValue('Support-routing');
+  for (let step = 0; step < 4; step++) await wizard.next();
   await expect(page.getByText('Revision: revision-001', { exact: true })).toBeVisible();
   await expect(page.getByText(/Runtime status: not observed/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Deployment instructions' })).toBeVisible();
   await expect(page.getByText("java -jar wanaku-semantic-router-0.1.0-SNAPSHOT.jar runtime --semantic-route='Support-routing'", { exact: true })).toBeVisible();
   await expect(page.getByText(/Configure the published expert bean supportExpert/)).toBeVisible();
-  expect(fixture.previews).toHaveLength(3);
-  expect([...fixture.definitions.values()][0].examples).toHaveLength(3);
-  await page.getByRole('button', { name: 'Close', exact: true }).last().click();
-  await page.getByRole('button', { name: 'Edit Support-routing', exact: true }).click();
-  await expect(page.getByLabel('Router name', { exact: true })).toHaveValue('Support-routing');
   await page.getByRole('button', { name: 'Close', exact: true }).last().click();
   await page.getByRole('button', { name: 'Remove Support-routing', exact: true }).click();
   await page.getByRole('button', { name: 'Remove', exact: true }).click();
@@ -125,6 +128,53 @@ async function reviewSavedRouter(page: Page, name: string, unsavedName?: string)
   for (let step = 0; step < 4; step++) await wizard.next();
   await expect(page.getByRole('heading', { name: 'Review and publication', exact: true })).toBeVisible();
 }
+
+test('publishing an edited existing router closes the wizard and confirms the saved name', async ({ page }) => {
+  const fixture = await savedPublicationFixture(page);
+  const updatedName = 'Updated-support-routing';
+  await reviewSavedRouter(page, fixture.name, updatedName);
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Published catalog', exact: true })).toContainText(fixture.current.revision);
+  await expect(page.getByText('Catalog published successfully', { exact: true })).toHaveCount(0);
+  expect(fixture.publishRequests).toHaveLength(0);
+
+  await page.getByRole('button', { name: 'Publish catalog', exact: true }).click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: 'Catalog published successfully' })).toContainText(`${updatedName} was published`);
+  await expect(page.getByRole('button', { name: `Edit ${updatedName}`, exact: true })).toBeVisible();
+  expect(fixture.publishRequests).toEqual([fixture.id]);
+  expect(fixture.definitions.size).toBe(1);
+  expect(fixture.definitions.get(fixture.id)?.name).toBe(updatedName);
+  expect(fixture.currentPublications.get(fixture.id)).toBe('revision-001');
+});
+
+test('failed publication of an existing router keeps the wizard open until a successful retry', async ({ page }) => {
+  const fixture = await savedPublicationFixture(page);
+  await page.route(`**/api/v1/semantic-routers/${fixture.id}/publish`, route => route.fulfill({
+    status: 503,
+    json: { error: { message: 'Catalog publication is temporarily unavailable' } },
+  }), { times: 1 });
+  await reviewSavedRouter(page, fixture.name);
+  const dialog = page.getByRole('dialog');
+  const publish = page.getByRole('button', { name: 'Publish catalog', exact: true });
+  await publish.click();
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('Request failed', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('Catalog publication is temporarily unavailable', { exact: true })).toBeVisible();
+  await expect(page.getByText('Catalog published successfully', { exact: true })).toHaveCount(0);
+  await expect(publish).toBeEnabled();
+  expect(fixture.currentPublications.get(fixture.id)).toBe(fixture.current.revision);
+
+  await publish.click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: 'Catalog published successfully' })).toContainText(`${fixture.name} was published`);
+  expect(fixture.publishRequests).toEqual([fixture.id]);
+  expect(fixture.currentPublications.get(fixture.id)).toBe('revision-001');
+});
 
 test('reopened review shows the resolved current pointer instead of the last hash-sorted revision', async ({ page }) => {
   const fixture = await savedPublicationFixture(page);

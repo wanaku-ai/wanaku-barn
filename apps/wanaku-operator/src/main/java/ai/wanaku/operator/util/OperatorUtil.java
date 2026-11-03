@@ -1,14 +1,25 @@
 package ai.wanaku.operator.util;
 
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.ConditionBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
+import io.fabric8.kubernetes.api.model.HasMetadata;
+import io.fabric8.kubernetes.client.utils.Serialization;
+import ai.wanaku.operator.wanaku.WanakuTypes;
 
 /**
  * Shared operator utilities for condition management, image pull policy resolution,
@@ -20,6 +31,12 @@ public final class OperatorUtil {
     public static final String CONDITION_STATUS_TRUE = "True";
     public static final String CONDITION_STATUS_FALSE = "False";
     public static final String CONDITION_REASON_READY = "ReconciliationSucceeded";
+
+    /** Label set on every workload the operator manages; used to scope the operator's informers. */
+    public static final String MANAGED_BY_LABEL = "app.kubernetes.io/managed-by";
+
+    public static final String MANAGED_BY_VALUE = "wanaku-operator";
+    public static final String DESIRED_HASH_ANNOTATION = "wanaku.ai/desired-hash";
 
     public static final String DEFAULT_PULL_POLICY = "IfNotPresent";
     public static final Set<String> VALID_PULL_POLICIES = Set.of("Always", "IfNotPresent", "Never");
@@ -78,20 +95,141 @@ public final class OperatorUtil {
      * @return a new Ready condition
      */
     public static Condition readyCondition(Long generation, Condition previousCondition, String message) {
-        final boolean alreadyReady =
-                previousCondition != null && CONDITION_STATUS_TRUE.equals(previousCondition.getStatus());
-        final String lastTransitionTime = alreadyReady && previousCondition.getLastTransitionTime() != null
-                ? previousCondition.getLastTransitionTime()
-                : OffsetDateTime.now(ZoneOffset.UTC).toString();
+        return condition(READY_CONDITION, true, CONDITION_REASON_READY, message, generation, previousCondition);
+    }
+
+    /**
+     * Creates a condition, keeping the previous transition time when the status did not change.
+     *
+     * @param type the condition type
+     * @param status the condition status
+     * @param reason the machine-readable reason
+     * @param message the human-readable message
+     * @param generation the observed generation
+     * @param previousCondition the previous condition of the same type (may be null)
+     * @return the new condition
+     */
+    public static Condition condition(
+            String type, boolean status, String reason, String message, Long generation, Condition previousCondition) {
+        final String statusValue = status ? CONDITION_STATUS_TRUE : CONDITION_STATUS_FALSE;
+        final boolean unchanged = previousCondition != null
+                && statusValue.equals(previousCondition.getStatus())
+                && previousCondition.getLastTransitionTime() != null;
+        final String lastTransitionTime = unchanged ? previousCondition.getLastTransitionTime() : now();
 
         return new ConditionBuilder()
-                .withType(READY_CONDITION)
-                .withStatus(CONDITION_STATUS_TRUE)
+                .withType(type)
+                .withStatus(statusValue)
                 .withObservedGeneration(generation)
                 .withLastTransitionTime(lastTransitionTime)
-                .withReason(CONDITION_REASON_READY)
+                .withReason(reason)
                 .withMessage(message)
                 .build();
+    }
+
+    /**
+     * Converts an environment variable of a custom resource into a container environment variable. A variable
+     * with {@code valueFrom.secretKeyRef} reads its value from that Secret key.
+     *
+     * @param env the environment variable from the custom resource
+     * @return the container environment variable
+     */
+    public static EnvVar toEnvVar(WanakuTypes.EnvVar env) {
+        final WanakuTypes.SecretKeyRef secret =
+                env.getValueFrom() != null ? env.getValueFrom().getSecretKeyRef() : null;
+        if (secret == null) {
+            return new EnvVarBuilder()
+                    .withName(env.getName())
+                    .withValue(env.getValue())
+                    .build();
+        }
+        return new EnvVarBuilder()
+                .withName(env.getName())
+                .withNewValueFrom()
+                .withNewSecretKeyRef()
+                .withName(secret.getName())
+                .withKey(secret.getKey())
+                .endSecretKeyRef()
+                .endValueFrom()
+                .build();
+    }
+
+    /**
+     * Returns the current time as an RFC 3339 timestamp with second precision, as Kubernetes expects in
+     * condition and event times.
+     *
+     * @return the current UTC time, for example {@code 2026-10-15T09:13:00Z}
+     */
+    public static String now() {
+        return Instant.now().truncatedTo(ChronoUnit.SECONDS).toString();
+    }
+
+    /**
+     * Builds the Ready condition: True when every given condition is True, otherwise False with the reason
+     * and message of the first condition that is not True.
+     */
+    public static Condition aggregateReady(List<Condition> conditions, Long generation, List<Condition> previous) {
+        final Condition previousReady = findCondition(previous, READY_CONDITION);
+        for (Condition condition : conditions) {
+            if (!isTrue(condition)) {
+                return condition(
+                        READY_CONDITION,
+                        false,
+                        condition.getReason(),
+                        condition.getType() + ": " + condition.getMessage(),
+                        generation,
+                        previousReady);
+            }
+        }
+        return readyCondition(generation, previousReady, "All required components are available");
+    }
+
+    public static boolean isTrue(Condition condition) {
+        return condition != null && CONDITION_STATUS_TRUE.equals(condition.getStatus());
+    }
+
+    /**
+     * Stores a hash of the desired resource spec in an annotation, so drift in any field can be detected
+     * by comparing it with the annotation of the existing resource.
+     *
+     * @param desired the desired resource
+     * @param spec the desired spec to hash
+     */
+    public static void stampDesiredHash(HasMetadata desired, Object spec) {
+        final Map<String, String> annotations = new HashMap<>();
+        if (desired.getMetadata().getAnnotations() != null) {
+            annotations.putAll(desired.getMetadata().getAnnotations());
+        }
+        annotations.put(DESIRED_HASH_ANNOTATION, sha256(Serialization.asJson(spec)));
+        desired.getMetadata().setAnnotations(annotations);
+    }
+
+    /**
+     * Checks whether the existing resource carries the same desired-spec hash as the desired one.
+     *
+     * @param desired the desired resource (may be unstamped, which counts as a match)
+     * @param existing the existing resource
+     * @return true when the hashes match or the desired resource has no hash
+     */
+    public static boolean sameDesiredHash(HasMetadata desired, HasMetadata existing) {
+        final String desiredHash = annotation(desired, DESIRED_HASH_ANNOTATION);
+        return desiredHash == null || desiredHash.equals(annotation(existing, DESIRED_HASH_ANNOTATION));
+    }
+
+    private static String annotation(HasMetadata resource, String key) {
+        if (resource.getMetadata() == null || resource.getMetadata().getAnnotations() == null) {
+            return null;
+        }
+        return resource.getMetadata().getAnnotations().get(key);
+    }
+
+    private static String sha256(String value) {
+        try {
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 is not available", e);
+        }
     }
 
     /**
@@ -114,7 +252,7 @@ public final class OperatorUtil {
 
     /**
      * Resolves image pull policy with priority:
-     * 1. Component-specific policy (router.imagePullPolicy or praxis.imagePullPolicy)
+     * 1. Component-specific policy (router.imagePullPolicy or server.imagePullPolicy)
      * 2. Global policy (spec.imagePullPolicy)
      * 3. Default (IfNotPresent)
      *
@@ -138,9 +276,9 @@ public final class OperatorUtil {
      * Constructs the internal base URL for a router.
      *
      * @param routerRef the router reference name
-     * @return the base URL in the format "http://internal-{routerRef}:8080"
+     * @return the base URL in the format "http://barn-{routerRef}:8080"
      */
     public static String getRouterBaseUrl(String routerRef) {
-        return "http://internal-" + routerRef + ":8080";
+        return "http://barn-" + routerRef + ":8080";
     }
 }

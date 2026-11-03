@@ -32,7 +32,7 @@ spec:
             - name: KC_HTTP_ENABLED
               value: "true"
             - name: KC_HOSTNAME
-              value: "KEYCLOAK_HOST"
+              value: "https://KEYCLOAK_HOST"
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC
@@ -79,3 +79,23 @@ spec:
     app: keycloak
   sessionAffinity: None
   type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+spec:
+  tls:
+    - hosts:
+        - KEYCLOAK_HOST
+  rules:
+    - host: KEYCLOAK_HOST
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080

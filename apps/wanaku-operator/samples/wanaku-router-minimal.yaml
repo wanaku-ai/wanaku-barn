@@ -1,0 +1,8 @@
+apiVersion: "wanaku.ai/v1alpha1"
+kind: WanakuRouter
+metadata:
+  name: wanaku-dev
+spec:
+  server:
+    image: quay.io/orpiske/wanaku-server:latest
+    imagePullPolicy: Always

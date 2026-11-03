@@ -13,6 +13,7 @@ import {
 } from "@carbon/react";
 import ReactMarkdown from "react-markdown";
 import { JsonCode } from "./JsonCode";
+import { newId } from "./id";
 import { NamespaceSelector, type PanelProps } from "./panels";
 import {
   converse,
@@ -167,7 +168,7 @@ export function LlmChatPanel({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             jsonrpc: "2.0",
-            id: crypto.randomUUID(),
+            id: newId(),
             method: "tools/list",
             params: {},
           }),

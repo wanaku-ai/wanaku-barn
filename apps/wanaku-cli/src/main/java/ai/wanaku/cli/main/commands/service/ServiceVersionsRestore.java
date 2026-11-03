@@ -5,6 +5,7 @@ import jakarta.ws.rs.WebApplicationException;
 import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.ServiceCatalogService;
 import ai.wanaku.core.services.api.ServiceTemplateService;
@@ -17,12 +18,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.handleNotFound;
         description = "Restore an earlier version. The restore creates a new version with the earlier content")
 public class ServiceVersionsRestore extends BaseCommand {
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--name"},
@@ -52,10 +49,10 @@ public class ServiceVersionsRestore extends BaseCommand {
         DataStore restored;
         try {
             restored = template
-                    ? initAuthenticatedService(ServiceTemplateService.class, host)
+                    ? initAuthenticatedService(ServiceTemplateService.class, barn.baseUri())
                             .activateVersion(name, version, expectedVersion)
                             .data()
-                    : initAuthenticatedService(ServiceCatalogService.class, host)
+                    : initAuthenticatedService(ServiceCatalogService.class, barn.baseUri())
                             .activateVersion(name, version, expectedVersion)
                             .data();
         } catch (WebApplicationException ex) {

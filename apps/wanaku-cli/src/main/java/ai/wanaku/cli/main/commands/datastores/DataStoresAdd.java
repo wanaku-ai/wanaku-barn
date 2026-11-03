@@ -12,6 +12,7 @@ import org.jline.terminal.Terminal;
 import ai.wanaku.capabilities.sdk.api.types.DataStore;
 import ai.wanaku.capabilities.sdk.api.types.WanakuResponse;
 import ai.wanaku.cli.main.commands.BaseCommand;
+import ai.wanaku.cli.main.support.BarnApiOptions;
 import ai.wanaku.cli.main.support.WanakuPrinter;
 import ai.wanaku.core.services.api.DataStoreRecord;
 import ai.wanaku.core.services.api.DataStoresService;
@@ -26,12 +27,8 @@ import static ai.wanaku.cli.main.support.ResponseHelper.commonResponseErrorHandl
 public class DataStoresAdd extends BaseCommand {
     private static final Logger LOG = Logger.getLogger(DataStoresAdd.class);
 
-    @CommandLine.Option(
-            names = {"--host"},
-            description = "The API host",
-            defaultValue = "http://localhost:8080",
-            arity = "0..1")
-    protected String host;
+    @CommandLine.Mixin
+    BarnApiOptions barn;
 
     @CommandLine.Option(
             names = {"--read-from-file"},
@@ -75,7 +72,7 @@ public class DataStoresAdd extends BaseCommand {
         dataStore.setData(base64Data);
 
         // Call API
-        dataStoresService = initAuthenticatedService(DataStoresService.class, host);
+        dataStoresService = initAuthenticatedService(DataStoresService.class, barn.baseUri());
 
         try {
             WanakuResponse<DataStoreRecord> response = dataStoresService.add(dataStore);

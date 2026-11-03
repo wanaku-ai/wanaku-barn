@@ -8,7 +8,7 @@ import picocli.CommandLine;
 @CommandLine.Command(
         name = "tools",
         description = "Manage tools",
-        subcommands = {ToolsList.class, ToolsShow.class, ToolsGenerate.class})
+        subcommands = {ToolsList.class, ToolsShow.class})
 public class Tools extends BaseCommand {
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) {
