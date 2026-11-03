@@ -71,14 +71,16 @@ for further detail.
 
 ### Version-aware references
 
-The source `SKILL.md` files are browsable templates. Keep the original relative links
+The source `SKILL.md` files are browsable templates. Use GitHub `blob/main/` links
 for repository and website readers. Immediately follow each documentation or CRD
 schema link with the invisible `<!-- wanaku:versioned -->` marker:
 
 ```markdown
-[CLI guide](../../docs/cli/index.md)<!-- wanaku:versioned -->
-[Router schema](../../apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)<!-- wanaku:versioned -->
+[CLI guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/cli/index.md)<!-- wanaku:versioned -->
+[Router schema](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)<!-- wanaku:versioned -->
 ```
+
+Existing marked `../../docs/` and `../../apps/` template links are also supported.
 
 During Maven's `process-classes` phase, the CLI renders these references in
 `target/classes/skills/`, before tests, JVM packaging and native-image generation.
@@ -88,18 +90,19 @@ filtered version resource lives at `ai/wanaku/core/util/version.txt` to avoid
 colliding with dependency resources such as the Capabilities SDK's `/version.txt`:
 
 - Unqualified release versions such as `0.2.0` use `wanaku-0.2.0`, matching the tag
-  created by `release:prepare`. Do not use the separate `v0.2.0` tag: it contains
-  development-version code.
+  defined in [`.github/workflows/release.yml`](https://github.com/wanaku-ai/wanaku-barn/blob/main/.github/workflows/release.yml).
+  Do not use the separate `v0.2.0` tag: it contains development-version code.
 - Qualified builds such as `0.3.0-SNAPSHOT`, `0.3.0-alpha1` and `0.3.0-RC1` use `main`.
 - Missing or unsupported version formats fail the build instead of guessing a tag.
 
 Documentation links use `https://github.com/wanaku-ai/wanaku-barn/blob/<ref>/docs/`.
 CRD links use `https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/<ref>/apps/wanaku-operator/deploy/helm/wanaku-operator/crds/`
 so agents can retrieve the YAML directly. Documentation fragments are preserved.
-Release tags must retain the referenced files from their source templates. Rendering checks files in the local
-checkout and does not make network requests or require a tag before a release build.
+Release tags must retain the referenced files from their source templates. Rendering
+checks files in the local checkout and does not make network requests or require a tag
+before a release build.
 
-Malformed markers, unresolved placeholders, missing reference targets and unmarked
+Unrendered or malformed Wanaku markers, missing reference targets and unmarked
 `../../docs/` or `../../apps/` Markdown links fail the build. Links between skills
 and external URLs are copied unchanged. `wanaku skill install` copies the rendered
 resources without rewriting links or relying on the installation directory.

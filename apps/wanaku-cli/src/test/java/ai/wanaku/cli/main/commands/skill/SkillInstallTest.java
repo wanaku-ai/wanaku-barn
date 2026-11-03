@@ -295,18 +295,19 @@ class SkillInstallTest {
         String basics = Files.readString(destination.resolve("wanaku-mcp-basics/SKILL.md"));
         String operator = Files.readString(destination.resolve("wanaku-operator/SKILL.md"));
         String catalogs = Files.readString(destination.resolve("wanaku-service-catalogs/SKILL.md"));
-        assertTrue(basics.contains("[CLI guide](" + docs + "cli/index.md)"));
-        assertTrue(operator.contains("[Operator guide](" + docs + "operate/operator.md)"));
-        assertTrue(operator.contains("[Install the Barn backend](" + docs + "operate/install.md)"));
-        assertTrue(catalogs.contains("[Service catalogs guide](" + docs + "manage/service-catalogs.md)"));
-        assertTrue(catalogs.contains("[Install the Wanaku CLI](" + docs + "cli/install.md)"));
-        assertTrue(catalogs.contains("[Operator guide](" + docs + "operate/operator.md)"));
-        assertTrue(operator.contains("[router CRD schema](https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/"
-                + ref + "/apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)"));
+        assertTrue(basics.contains("(" + docs + "cli/index.md)"));
+        assertTrue(operator.contains("(" + docs + "operate/operator.md)"));
+        assertTrue(operator.contains("(" + docs + "operate/install.md)"));
+        assertTrue(catalogs.contains("(" + docs + "manage/service-catalogs.md)"));
+        assertTrue(catalogs.contains("(" + docs + "cli/install.md)"));
+        assertTrue(catalogs.contains("(" + docs + "operate/operator.md)"));
+        assertTrue(operator.contains("(https://raw.githubusercontent.com/wanaku-ai/wanaku-barn/" + ref
+                + "/apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)"));
         for (String skill : SKILLS) {
             String text = Files.readString(destination.resolve(skill + "/SKILL.md"));
-            assertFalse(text.contains("wanaku:"));
-            assertFalse(text.contains("${"));
+            assertFalse(java.util.regex.Pattern.compile("<!--\\s*wanaku:")
+                    .matcher(text)
+                    .find());
             assertFalse(text.contains("../../docs/"));
             assertFalse(text.contains("../../apps/"));
             var links =

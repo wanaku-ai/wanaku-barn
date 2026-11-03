@@ -60,7 +60,7 @@ After this is completed successfully, you can announce the release.
 To release early builds, run:
 
 ```shell
-gh workflow run early-access -f currentDevelopmentVersion=$(cat core/core-util/target/classes/version.txt)
+gh workflow run early-access -f currentDevelopmentVersion=$(cat core/core-util/target/classes/ai/wanaku/core/util/version.txt)
 ```
 
 Early builds only produce the Linux x86_64 native executables. The `early-access` workflow sets the

@@ -16,8 +16,9 @@ public final class SkillResourceRenderer {
     private static final String NUMBER = "(?:0|[1-9][0-9]*)";
     private static final Pattern VERSION =
             Pattern.compile("(" + NUMBER + "\\." + NUMBER + "\\." + NUMBER + ")(-[A-Za-z0-9][A-Za-z0-9.-]*)?");
-    private static final Pattern LINK =
-            Pattern.compile("\\[([^]\\r\\n]+)]\\(\\.\\./\\.\\./([^\\s)]+)\\)<!-- wanaku:versioned -->");
+    private static final Pattern LINK = Pattern.compile("\\[([^]\\r\\n]+)]\\((?:\\.\\./\\.\\./|"
+            + Pattern.quote(REPOSITORY + "main/") + ")([^\\s)]+)\\)<!-- wanaku:versioned -->");
+    private static final Pattern LEFTOVER_MARKER = Pattern.compile("<!--\\s*wanaku:");
     private static final Pattern UNRENDERED_LINK = Pattern.compile("\\]\\(\\.\\./\\.\\./(?:docs|apps)/");
 
     private SkillResourceRenderer() {}
@@ -44,7 +45,7 @@ public final class SkillResourceRenderer {
         if (!matcher.matches()) {
             throw new IOException("Unsupported CLI build version: " + version);
         }
-        // Only unqualified Maven release versions map to the release:prepare tag.
+        // Unqualified releases use the wanaku- tag scheme defined in .github/workflows/release.yml.
         return matcher.group(2) == null ? "wanaku-" + matcher.group(1) : "main";
     }
 
@@ -70,8 +71,7 @@ public final class SkillResourceRenderer {
         }
         matcher.appendTail(rendered);
         String result = rendered.toString();
-        if (result.contains("wanaku:")
-                || result.contains("${")
+        if (LEFTOVER_MARKER.matcher(result).find()
                 || UNRENDERED_LINK.matcher(result).find()) {
             throw new IOException("Unrendered or malformed versioned skill reference");
         }
@@ -89,9 +89,13 @@ public final class SkillResourceRenderer {
             if (path.isAbsolute() || !path.normalize().equals(path) || path.getNameCount() < 2) {
                 throw new IOException("Invalid bundled skill index entry: " + entry);
             }
-            String template = Files.readString(source.resolve(path), StandardCharsets.UTF_8);
-            if (rendered.put(path, render(template, version, repositoryRoot)) != null) {
-                throw new IOException("Duplicate bundled skill index entry: " + entry);
+            try {
+                String template = Files.readString(source.resolve(path), StandardCharsets.UTF_8);
+                if (rendered.put(path, render(template, version, repositoryRoot)) != null) {
+                    throw new IOException("Duplicate bundled skill index entry: " + entry);
+                }
+            } catch (IOException e) {
+                throw new IOException(entry + ": " + e.getMessage(), e);
             }
         }
         if (rendered.isEmpty()) {

@@ -134,6 +134,6 @@ wanaku namespaces list --label-expression 'env=production & tier=backend'
 
 ## References
 
-- [CLI guide](../../docs/cli/index.md)<!-- wanaku:versioned --> — installation, authentication, CLI reference
+- [CLI guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/cli/index.md)<!-- wanaku:versioned --> — installation, authentication, CLI reference
 - [Service catalogs skill](../wanaku-service-catalogs/SKILL.md) — creating and deploying capabilities
 - [Operator skill](../wanaku-operator/SKILL.md) — running Wanaku on Kubernetes or OpenShift
