@@ -6,6 +6,7 @@ import java.util.TreeMap;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
@@ -141,7 +142,17 @@ public final class SemanticRouterResourceFactory {
         }
         env.add(value("WSR_NAME", forwardName(resource)));
         env.add(value("WSR_NAMESPACE", forwardNamespace(resource)));
-        env.add(value("WSR_MCP_ADDRESS", mcpAddress(resource)));
+        // Register the pod IP, not the Service. The Service publishes not-ready addresses, so during a rolling
+        // update Wanaku could discover the tools on the old pod, or on no pod when the old pod crash-loops.
+        env.add(new EnvVarBuilder()
+                .withName("POD_IP")
+                .withNewValueFrom()
+                .withNewFieldRef()
+                .withFieldPath("status.podIP")
+                .endFieldRef()
+                .endValueFrom()
+                .build());
+        env.add(value("WSR_MCP_ADDRESS", "http://$(POD_IP):%d/mcp".formatted(MCP_PORT)));
         env.add(value("WSR_BIND", RuntimeWorkloads.ALL_INTERFACES));
         env.add(value("WSR_MCP_PORT", String.valueOf(MCP_PORT)));
         env.add(value("WSR_STATUS_BIND", RuntimeWorkloads.ALL_INTERFACES));
