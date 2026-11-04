@@ -112,8 +112,8 @@ The Wanaku Server has two container images:
 
 | Variant | Default image | Admin UI |
 |---------|---------------|----------|
-| `standard` | `quay.io/wanaku/wanaku-server:0.3.0` | Embedded at `/admin/` |
-| `headless` | `quay.io/wanaku/wanaku-server-headless:0.3.0` | None |
+| `standard` | `quay.io/wanaku/wanaku-server:0.3.1` | Embedded at `/admin/` |
+| `headless` | `quay.io/wanaku/wanaku-server-headless:0.3.1` | None |
 
 To deploy the headless variant, set `spec.server.variant: headless`:
 

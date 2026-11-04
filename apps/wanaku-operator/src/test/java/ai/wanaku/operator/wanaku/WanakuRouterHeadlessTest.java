@@ -30,7 +30,7 @@ class WanakuRouterHeadlessTest {
 
         reconciler.reconcile(router, null);
 
-        assertThat(serverImage()).isEqualTo("quay.io/wanaku/wanaku-server:0.3.0");
+        assertThat(serverImage()).isEqualTo("quay.io/wanaku/wanaku-server:0.3.1");
         assertThat(router.getStatus().getEndpoints()).containsEntry("adminUi", "https://wanaku.example.com/admin/");
     }
 
