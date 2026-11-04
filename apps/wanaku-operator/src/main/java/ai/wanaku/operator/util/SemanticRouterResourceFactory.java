@@ -148,6 +148,8 @@ public final class SemanticRouterResourceFactory {
                 .withName("POD_IP")
                 .withNewValueFrom()
                 .withNewFieldRef()
+                // Set the API server default, else the Deployment never matches and the operator updates it each pass
+                .withApiVersion("v1")
                 .withFieldPath("status.podIP")
                 .endFieldRef()
                 .endValueFrom()

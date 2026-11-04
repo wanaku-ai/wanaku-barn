@@ -103,6 +103,11 @@ class WanakuSemanticRouterReconcilerTest {
                 .containsEntry("WSR_MCP_ADDRESS", "http://$(POD_IP):8090/mcp")
                 .containsEntry("WSR_STATUS_BIND", "0.0.0.0")
                 .containsEntry("WSR_ROUTES_REF", "file:/opt/wsr/routes/support.camel.yaml");
+        // The API server defaults fieldRef.apiVersion to v1. Without it, the Deployment never matches.
+        assertThat(container.getEnv())
+                .anyMatch(e -> "POD_IP".equals(e.getName())
+                        && "v1".equals(e.getValueFrom().getFieldRef().getApiVersion())
+                        && "status.podIP".equals(e.getValueFrom().getFieldRef().getFieldPath()));
         assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/api/v1/health/ready");
         assertThat(container.getStartupProbe().getHttpGet().getPath()).isEqualTo("/api/v1/health/started");
         assertThat(deployment.getSpec().getTemplate().getSpec().getVolumes())
