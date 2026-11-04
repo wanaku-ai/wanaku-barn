@@ -295,6 +295,8 @@ The operator creates these resources:
 - The `<name>-wsr` Deployment with one replica. It uses a rolling update: the new pod registers the forward again with a new instance label, so the old pod does not remove it at shutdown.
 - The `<name>-wsr` Service on port 8090. It publishes addresses of pods that are not ready, because the router discovers the tool while the runtime registers, before the pod is ready.
 
+The runtime registers the forward with the pod IP (`WSR_MCP_ADDRESS=http://$(POD_IP):8090/mcp`), not with the Service address. During a rolling update, the Service also sends traffic to the old pod. Thus the router can discover the tool on the old pod, or on no pod when the old pod crash-loops. `status.mcpAddress` shows the Service address.
+
 The probes use the WSR health endpoints on port 8091 (`/api/v1/health/started`, `/ready` and `/live`). The pod is ready only after the runtime registered the forward. The startup probe allows 10 minutes, because the runtime resolves Maven dependencies at startup.
 
 The status contains these conditions and fields:

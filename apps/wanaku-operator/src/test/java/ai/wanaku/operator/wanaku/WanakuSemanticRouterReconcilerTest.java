@@ -100,7 +100,7 @@ class WanakuSemanticRouterReconcilerTest {
                 .containsEntry("WSR_BARN_URL", "http://barn-wanaku-dev:8080")
                 .containsEntry("WSR_NAME", "support")
                 .containsEntry("WSR_NAMESPACE", "finance")
-                .containsEntry("WSR_MCP_ADDRESS", "http://support-wsr.test.svc:8090/mcp")
+                .containsEntry("WSR_MCP_ADDRESS", "http://$(POD_IP):8090/mcp")
                 .containsEntry("WSR_STATUS_BIND", "0.0.0.0")
                 .containsEntry("WSR_ROUTES_REF", "file:/opt/wsr/routes/support.camel.yaml");
         assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/api/v1/health/ready");
