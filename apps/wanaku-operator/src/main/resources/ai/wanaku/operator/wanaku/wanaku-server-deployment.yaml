@@ -21,7 +21,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: "wanaku-server"
-          image: quay.io/wanaku/wanaku-server:0.3.0
+          image: quay.io/wanaku/wanaku-server:0.3.1
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

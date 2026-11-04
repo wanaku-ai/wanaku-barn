@@ -259,7 +259,7 @@ class RouterResourceFactoryTest {
         assertEquals("test-router-server", deployment.getMetadata().getName());
         assertEquals("wanaku-server", pod.getSpec().getContainers().getFirst().getName());
         assertEquals(
-                "quay.io/wanaku/wanaku-server:0.3.0",
+                "quay.io/wanaku/wanaku-server:0.3.1",
                 pod.getSpec().getContainers().getFirst().getImage());
         assertEquals("server-test-router", service.getMetadata().getName());
         // The Server has no such setting: Barn is wired through the plugin configuration

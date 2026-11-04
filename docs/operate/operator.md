@@ -423,7 +423,7 @@ The `status` of the custom resources stays empty, and `kubectl wait --for=condit
 
 Rename `spec.praxis` to `spec.server` in existing `WanakuRouter` manifests and install
 the updated CRD before applying them. The default engine image is
-`quay.io/wanaku/wanaku-server:0.3.0`.
+`quay.io/wanaku/wanaku-server:0.3.1`.
 
 The engine Deployment changes from `<router>-praxis` to `<router>-server`, its Service
 from `praxis-<router>` to `server-<router>`, and its PVC from `praxis-volume-claim` to

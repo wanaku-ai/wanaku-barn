@@ -325,7 +325,7 @@ public final class RouterResourceFactory {
 
     public static final String SERVER_VARIANT_STANDARD = "standard";
     public static final String SERVER_VARIANT_HEADLESS = "headless";
-    public static final String HEADLESS_SERVER_IMAGE = "quay.io/wanaku/wanaku-server-headless:0.3.0";
+    public static final String HEADLESS_SERVER_IMAGE = "quay.io/wanaku/wanaku-server-headless:0.3.1";
 
     /** True when {@code spec.server.variant} is {@code headless}: the Server has no embedded admin UI. */
     public static boolean isHeadless(WanakuRouter resource) {
