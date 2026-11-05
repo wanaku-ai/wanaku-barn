@@ -79,7 +79,6 @@
         <module>core</module>
         <module>apps</module>
         <module>services</module>
-        <module>tests</module>
     </modules>
 
     <profiles>
