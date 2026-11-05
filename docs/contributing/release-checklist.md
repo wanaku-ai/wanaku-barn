@@ -125,8 +125,7 @@ This workflow will:
 1. Run `mvn release:prepare` (updates all pom.xml versions, commits auto-generated files)
 2. Update `jbang-catalog.json` version reference
 3. Recreate the git tag at the correct commit (`HEAD~2`)
-4. Run `mvn -Pdist release:perform` to publish to Maven Central
-5. Warm javadoc.io caches
+4. Run `mvn -Pdist release:perform -Dgoals=install` to build the release (Barn does not publish to Maven Central)
 
 ### Auto-Committed Files
 
@@ -141,12 +140,11 @@ The `commitFiles` profile auto-commits these version-sensitive files during rele
 
 - [ ] GitHub Actions workflow completed successfully
 - [ ] Tag `wanaku-${CURRENT_VERSION}` exists and points to the correct commit
-- [ ] Artifacts appear on [Maven Central](https://central.sonatype.com/search?q=ai.wanaku)
 - [ ] `jbang-catalog.json` references the new version
 
 ### Trigger Artifact Release
 
-Wait for Maven Central artifacts to be available (~30 minutes), then:
+When the release workflow completes, run:
 
 ```shell
 gh workflow run release-artifacts -f currentDevelopmentVersion=${CURRENT_VERSION}

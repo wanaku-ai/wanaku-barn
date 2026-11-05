@@ -22,7 +22,6 @@ on:
       - glama.json
       - SECURITY.md
       - get-wanaku.sh
-      - javadoc-warm.sh
       - .*
 
 permissions:

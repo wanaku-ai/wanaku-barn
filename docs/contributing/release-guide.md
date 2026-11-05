@@ -56,15 +56,10 @@ gh workflow run release -r ${RELEASE_BRANCH} -f releaseBranch=${RELEASE_BRANCH} 
 
 The release build can take up to 30 minutes to complete. This will:
 
-1. Validate the artifacts
-2. Publish the files to the Maven Central.
+1. Build the release version and tag it.
+2. Install the artifacts in the local Maven repository of the runner. Barn ships applications, so the workflow does not publish to Maven Central.
 
-> [!IMPORTANT]
-> It is **absolutely mandatory** for the artifacts to be validated for the release to proceed.
-
-The publication to Maven Central should take another 30 minutes.
-
-In the meantime, you can release the artifacts. This will build the zip files and tarballs with each
+When the workflow completes, release the artifacts. This will build the zip files and tarballs with each
 component, the native executables and also will publish the containers to Quay.
 
 ```shell
@@ -189,12 +184,10 @@ git push upstream HEAD:${RELEASE_BRANCH} wanaku-${CURRENT_DEVELOPMENT_VERSION}
 Now continue with the release:
 
 ```shell
-mvn -Pdist release:perform
+mvn -Pdist release:perform -Dgoals=install
 ```
 
-After the upload is complete, go to [Maven Central](https://central.sonatype.com/publishing/deployments) and publish the deployment.
-
-> [NOTE] As of 0.1.0, this should be done automatically, but double check on Maven Central.
+This command builds the release. It does not publish to Maven Central.
 
 ### Native Artifacts
 
