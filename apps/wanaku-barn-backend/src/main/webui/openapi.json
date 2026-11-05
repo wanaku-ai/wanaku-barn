@@ -3740,7 +3740,7 @@
   } ],
   "info" : {
     "title" : "wanaku-barn-backend API",
-    "version" : "0.3.0-SNAPSHOT"
+    "version" : "0.3.0"
   },
   "servers" : [ {
     "url" : "http://localhost:8180",
