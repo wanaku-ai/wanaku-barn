@@ -70,8 +70,7 @@ public class SchemaMigrations {
     }
 
     void run(long fromVersion, List<Step> steps) {
-        long newest =
-                steps.isEmpty() ? CURRENT_VERSION : steps.getLast().version();
+        long newest = steps.isEmpty() ? CURRENT_VERSION : steps.getLast().version();
         if (fromVersion > newest) {
             throw new IllegalStateException(("The persisted data has schema version %d, but this Barn version supports"
                             + " schema version %d or earlier. Use a newer Barn version or restore a backup.")

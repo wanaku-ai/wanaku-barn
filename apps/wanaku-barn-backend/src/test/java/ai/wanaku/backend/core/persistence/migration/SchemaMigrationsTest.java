@@ -38,8 +38,7 @@ class SchemaMigrationsTest {
     @Test
     void startupStoresTheCurrentVersionAndReportsReadiness() {
         assertThat(migrations.isComplete()).isTrue();
-        assertThat(migrations.steps().getLast().version())
-                .isEqualTo(SchemaMigrations.CURRENT_VERSION);
+        assertThat(migrations.steps().getLast().version()).isEqualTo(SchemaMigrations.CURRENT_VERSION);
         given().get("/q/health/ready").then().statusCode(200).body("checks.name", hasItem("Persistence schema"));
     }
 

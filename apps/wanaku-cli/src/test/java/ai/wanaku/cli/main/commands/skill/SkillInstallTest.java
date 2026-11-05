@@ -58,7 +58,9 @@ class SkillInstallTest {
     void registersInstallUnderSkill() {
         CommandLine root = new CommandLine(new CliMain());
         CommandLine.ParseResult result = root.parseArgs("skill", "install", "--codex");
-        assertInstanceOf(SkillInstall.class, result.subcommand().subcommand().commandSpec().userObject());
+        assertInstanceOf(
+                SkillInstall.class,
+                result.subcommand().subcommand().commandSpec().userObject());
     }
 
     @Test

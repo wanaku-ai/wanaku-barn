@@ -1,12 +1,12 @@
 package ai.wanaku.operator.util;
 
-import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.api.model.ContainerPort;
-import io.fabric8.kubernetes.api.model.ServicePort;
 import java.util.List;
 import java.util.Map;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerPort;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.ServicePort;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import ai.wanaku.operator.wanaku.WanakuRouter;
@@ -289,7 +289,8 @@ class RouterResourceFactoryTest {
         assertEquals(
                 expected,
                 container.getPorts().stream()
-                        .collect(java.util.stream.Collectors.toMap(ContainerPort::getName, ContainerPort::getContainerPort)));
+                        .collect(java.util.stream.Collectors.toMap(
+                                ContainerPort::getName, ContainerPort::getContainerPort)));
         assertEquals(
                 expected,
                 service.getSpec().getPorts().stream()

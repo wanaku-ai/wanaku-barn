@@ -12,7 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public final class ResponseHelper {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    static final String AUTH_HINT = """
+    static final String AUTH_HINT =
+            """
             Possible causes:
               - No credentials stored: run 'wanaku auth login' (or pass --token)
               - The token expired and could not be refreshed: run 'wanaku auth login' again
