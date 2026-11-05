@@ -59,10 +59,5 @@ jobs:
           git tag -d wanaku-${{ github.event.inputs.currentDevelopmentVersion }}
           git tag wanaku-${{ github.event.inputs.currentDevelopmentVersion }} HEAD~2
           git push origin HEAD:${{ github.event.inputs.releaseBranch }} wanaku-${{ github.event.inputs.currentDevelopmentVersion }}
-          mvn --no-transfer-progress -Pdist release:perform
-
-      # Warm up javadoc.io caches
-
-      - name: Warm javadoc.io caches
-        continue-on-error: true
-        run: bash javadoc-warm.sh ${{ github.event.inputs.currentDevelopmentVersion }}
+          # Barn ships apps, not libraries: build the release, but do not deploy it to Maven Central.
+          mvn --no-transfer-progress -Pdist release:perform -Dgoals=install
