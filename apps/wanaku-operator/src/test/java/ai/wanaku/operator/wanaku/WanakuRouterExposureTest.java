@@ -1,7 +1,7 @@
 package ai.wanaku.operator.wanaku;
 
-import io.fabric8.kubernetes.api.model.Container;
 import java.util.Map;
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.api.model.apps.Deployment;

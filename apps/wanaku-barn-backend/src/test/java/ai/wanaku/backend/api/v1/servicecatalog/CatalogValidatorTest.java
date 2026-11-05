@@ -251,7 +251,8 @@ class CatalogValidatorTest {
 
     @Test
     void testLegacySemanticQuestionIsRejected() throws java.io.IOException {
-        byte[] yaml = ("""
+        byte[] yaml =
+                ("""
                 - semantic:
                     question:
                       department:
@@ -262,7 +263,7 @@ class CatalogValidatorTest {
                         criteria:
                           no_match: Other
                 """)
-                .getBytes(StandardCharsets.UTF_8);
+                        .getBytes(StandardCharsets.UTF_8);
         assertFalse(ai.wanaku.backend.api.v1.semanticrouter.SemanticYamlValidator.validate(yaml)
                 .isEmpty());
     }

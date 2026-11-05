@@ -165,12 +165,12 @@ public final class McpErrorHelper {
     private static String unknownHostMessage(String host) {
         return """
                 Unable to resolve host: %s
-                
+
                 Possible causes:
                   - Invalid hostname in --uri option
                   - DNS resolution failure
-                  - Network connectivity issues""".formatted(
-                host);
+                  - Network connectivity issues"""
+                .formatted(host);
     }
 
     private static String timeoutMessage(String uri) {

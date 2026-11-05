@@ -114,9 +114,16 @@ public class CloudRunIntegration extends CloudCommand {
                     .endMetadata()
                     .addToData(fileName, routes)
                     .build();
-            final GenericKubernetesResource submitted = result.support().submit(
-                    RuntimeKind.INTEGRATION,
-                    result.ns(), files, integration(result.resourceName(), result.ns(), result.target().getRouter(), fileName));
+            final GenericKubernetesResource submitted = result.support()
+                    .submit(
+                            RuntimeKind.INTEGRATION,
+                            result.ns(),
+                            files,
+                            integration(
+                                    result.resourceName(),
+                                    result.ns(),
+                                    result.target().getRouter(),
+                                    fileName));
             printer.printInfoMessage("Submitted WanakuIntegration %s in namespace %s"
                     .formatted(submitted.getMetadata().getName(), result.ns()));
 
@@ -124,15 +131,20 @@ public class CloudRunIntegration extends CloudCommand {
                 printer.printInfoMessage("Follow it with: wanaku cloud status integration " + result.resourceName());
                 return EXIT_OK;
             }
-            return result.support().waitForReady(RuntimeKind.INTEGRATION, result.ns(), result.resourceName(), Duration.ofSeconds(timeoutSeconds));
+            return result.support()
+                    .waitForReady(
+                            RuntimeKind.INTEGRATION,
+                            result.ns(),
+                            result.resourceName(),
+                            Duration.ofSeconds(timeoutSeconds));
         } catch (CloudRunSupport.CloudException e) {
             printer.printErrorMessage(e.getMessage());
             return e.exitCode();
         }
     }
 
-    private record cleanupDuplicatedCode(String resourceName, CloudTargetConfig target, CloudRunSupport support, String ns) {
-    }
+    private record cleanupDuplicatedCode(
+            String resourceName, CloudTargetConfig target, CloudRunSupport support, String ns) {}
 
     private GenericKubernetesResource integration(String resourceName, String ns, String router, String fileName) {
         final Map<String, Object> spec = new HashMap<>();
