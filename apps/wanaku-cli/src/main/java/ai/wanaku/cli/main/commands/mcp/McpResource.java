@@ -72,6 +72,6 @@ public class McpResource extends BaseCommand {
         if (mcpClient != null) {
             return mcpClient;
         }
-        return ClientUtil.createClient(uri, getAuthTokenOverride(), Mcp.PROTOCOL_VERSION);
+        return ClientUtil.createClient(uri, getAuthTokenOverride(), Mcp.PROTOCOL_VERSION, insecure);
     }
 }

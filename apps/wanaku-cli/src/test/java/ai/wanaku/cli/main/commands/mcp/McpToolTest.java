@@ -288,15 +288,15 @@ class McpToolTest {
 
         try (MockedStatic<ClientUtil> clientUtil = mockStatic(ClientUtil.class)) {
             clientUtil
-                    .when(() ->
-                            ClientUtil.createClient("http://localhost:9999/mcp/sse", "my-secret-token", "2025-11-25"))
+                    .when(() -> ClientUtil.createClient(
+                            "http://localhost:9999/mcp/sse", "my-secret-token", "2025-11-25", false))
                     .thenReturn(tokenClient);
 
             Integer result = cmd.doCall(null, mock(WanakuPrinter.class));
             assertEquals(BaseCommand.EXIT_OK, result);
 
-            clientUtil.verify(
-                    () -> ClientUtil.createClient("http://localhost:9999/mcp/sse", "my-secret-token", "2025-11-25"));
+            clientUtil.verify(() ->
+                    ClientUtil.createClient("http://localhost:9999/mcp/sse", "my-secret-token", "2025-11-25", false));
         }
     }
 }

@@ -2,6 +2,7 @@ package ai.wanaku.cli.main.support.security;
 
 import java.io.IOException;
 import java.net.URL;
+import ai.wanaku.core.util.InsecureSSLHelper;
 import com.nimbusds.oauth2.sdk.GeneralException;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import com.nimbusds.oauth2.sdk.http.HTTPResponse;
