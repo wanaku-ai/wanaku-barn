@@ -17,7 +17,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -106,9 +105,8 @@ class NamespaceListTest {
         assertEquals(1, printed.size());
     }
 
-    @SuppressWarnings("unchecked")
     @Test
-    @DisplayName("Should return empty list when label filter matches nothing")
+    @DisplayName("Should return OK and print info when label filter matches nothing")
     void shouldReturnEmptyWhenFilterMatchesNothing() throws Exception {
         when(namespacesService.list(eq("env=staging"))).thenReturn(new WanakuResponse<>(Collections.emptyList()));
 
@@ -119,11 +117,19 @@ class NamespaceListTest {
         Integer result = command.doCall(null, printer);
 
         assertEquals(BaseCommand.EXIT_OK, result);
+        verify(printer).printInfoMessage("No namespaces found.");
+    }
 
-        ArgumentCaptor<List> captor = ArgumentCaptor.forClass(List.class);
-        verify(printer).printTable(captor.capture(), eq("name"), eq("address"), eq("labels"));
-        List<?> printed = captor.getValue();
-        assertTrue(printed.isEmpty());
+    @Test
+    @DisplayName("Should return OK and print info when response data is null")
+    void shouldHandleNullResponseData() throws Exception {
+        when(namespacesService.list(isNull())).thenReturn(new WanakuResponse<>(null));
+
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+        Integer result = command.doCall(null, printer);
+
+        assertEquals(BaseCommand.EXIT_OK, result);
+        verify(printer).printInfoMessage("No namespaces found.");
     }
 
     @Test

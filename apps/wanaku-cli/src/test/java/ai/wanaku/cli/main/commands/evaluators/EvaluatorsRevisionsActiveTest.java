@@ -51,4 +51,16 @@ public class EvaluatorsRevisionsActiveTest {
                 "engine", "passthrough");
         verify(printer).printTable(List.of(row), "name", "method", "namespace", "engine");
     }
+
+    @Test
+    @DisplayName("Should return OK and print info when response data is null")
+    void shouldHandleNullResponseData() throws Exception {
+        when(evaluatorsService.activeRevision()).thenReturn(new WanakuResponse<>(null));
+
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+        Integer result = command.doCall(null, printer);
+
+        assertEquals(0, result);
+        verify(printer).printInfoMessage("No active evaluator revision.");
+    }
 }

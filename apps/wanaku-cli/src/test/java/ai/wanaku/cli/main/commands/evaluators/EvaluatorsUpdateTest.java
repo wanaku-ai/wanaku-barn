@@ -160,4 +160,18 @@ public class EvaluatorsUpdateTest {
         assertEquals(1, result);
         verifyNoInteractions(evaluatorsService);
     }
+
+    @Test
+    @DisplayName("Should return error when response data is null")
+    void shouldHandleNullResponseData() throws Exception {
+        Path file = Files.writeString(tempDir.resolve("evaluators.yaml"), "- name: safety-gate\n");
+        when(evaluatorsService.update(any())).thenReturn(new WanakuResponse<>(null));
+
+        command.file = file;
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+        Integer result = command.doCall(null, printer);
+
+        assertEquals(1, result);
+        verify(printer).printWarningMessage("Update returned no revision data.");
+    }
 }

@@ -12,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -57,5 +59,18 @@ public class EvaluatorsRevisionsActivateTest {
 
         assertEquals(0, result);
         verify(evaluatorsService).activateRevision(2, Map.of("expected_revision", 5L));
+    }
+
+    @Test
+    @DisplayName("Should return error when response data is null")
+    void shouldHandleNullResponseData() throws Exception {
+        when(evaluatorsService.activateRevision(anyLong(), anyMap())).thenReturn(new WanakuResponse<>(null));
+
+        command.id = 1;
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+        Integer result = command.doCall(null, printer);
+
+        assertEquals(1, result);
+        verify(printer).printWarningMessage("Revision not found.");
     }
 }
