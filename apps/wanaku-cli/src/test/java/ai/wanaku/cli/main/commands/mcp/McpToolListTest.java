@@ -133,13 +133,57 @@ class McpToolListTest {
 
         try (MockedStatic<ClientUtil> clientUtil = mockStatic(ClientUtil.class)) {
             clientUtil
-                    .when(() -> ClientUtil.createClient(address, "my-secret-token", "2025-11-25"))
+                    .when(() -> ClientUtil.createClient(address, "my-secret-token", "2025-11-25", false))
                     .thenReturn(tokenClient);
 
             Integer result = cmd.doCall(null, mock(WanakuPrinter.class));
             assertEquals(BaseCommand.EXIT_OK, result);
 
-            clientUtil.verify(() -> ClientUtil.createClient(address, "my-secret-token", "2025-11-25"));
+            clientUtil.verify(() -> ClientUtil.createClient(address, "my-secret-token", "2025-11-25", false));
+        }
+    }
+
+    @Test
+    @DisplayName("Should pass insecure flag to MCP client when --insecure is set")
+    void shouldPassInsecureFlagToMcpClient() {
+        McpClient insecureClient = mock(McpClient.class);
+        when(insecureClient.listTools()).thenReturn(Collections.emptyList());
+
+        String address = "https://localhost:9999/mcp";
+        McpToolList cmd = new McpToolList();
+        new CommandLine(cmd).parseArgs("--uri", address, "--insecure");
+
+        try (MockedStatic<ClientUtil> clientUtil = mockStatic(ClientUtil.class)) {
+            clientUtil
+                    .when(() -> ClientUtil.createClient(address, null, "2025-11-25", true))
+                    .thenReturn(insecureClient);
+
+            Integer result = cmd.doCall(null, mock(WanakuPrinter.class));
+            assertEquals(BaseCommand.EXIT_OK, result);
+
+            clientUtil.verify(() -> ClientUtil.createClient(address, null, "2025-11-25", true));
+        }
+    }
+
+    @Test
+    @DisplayName("Should not pass insecure flag when --insecure is not set")
+    void shouldNotPassInsecureFlagByDefault() {
+        McpClient secureClient = mock(McpClient.class);
+        when(secureClient.listTools()).thenReturn(Collections.emptyList());
+
+        String address = "https://localhost:9999/mcp";
+        McpToolList cmd = new McpToolList();
+        new CommandLine(cmd).parseArgs("--uri", address);
+
+        try (MockedStatic<ClientUtil> clientUtil = mockStatic(ClientUtil.class)) {
+            clientUtil
+                    .when(() -> ClientUtil.createClient(address, null, "2025-11-25", false))
+                    .thenReturn(secureClient);
+
+            Integer result = cmd.doCall(null, mock(WanakuPrinter.class));
+            assertEquals(BaseCommand.EXIT_OK, result);
+
+            clientUtil.verify(() -> ClientUtil.createClient(address, null, "2025-11-25", false));
         }
     }
 }

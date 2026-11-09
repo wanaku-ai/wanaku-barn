@@ -1,4 +1,4 @@
-package ai.wanaku.cli.main.support.security;
+package ai.wanaku.core.util;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
@@ -89,7 +89,7 @@ public class InsecureSSLHelper {
      */
     public static SSLParameters createInsecureSSLParameters() {
         SSLParameters sslParameters = new SSLParameters();
-        sslParameters.setEndpointIdentificationAlgorithm(null); // Disable hostname verification
+        sslParameters.setEndpointIdentificationAlgorithm(null);
         return sslParameters;
     }
 }

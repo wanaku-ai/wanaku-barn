@@ -104,7 +104,7 @@ public class McpTool extends BaseCommand {
         if (mcpClient != null) {
             return mcpClient;
         }
-        return ClientUtil.createClient(uri, getAuthTokenOverride(), Mcp.PROTOCOL_VERSION);
+        return ClientUtil.createClient(uri, getAuthTokenOverride(), Mcp.PROTOCOL_VERSION, insecure);
     }
 
     static JsonObjectSchema findInputSchema(List<ToolSpecification> tools, String toolName) {

@@ -12,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedStatic;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -86,7 +87,8 @@ class McpPlainHttpTokenWarningTest {
         WanakuPrinter printer = mock(WanakuPrinter.class);
         try (MockedStatic<ClientUtil> clientUtil = mockStatic(ClientUtil.class)) {
             clientUtil
-                    .when(() -> ClientUtil.createClient(any(String.class), any(String.class), any(String.class)))
+                    .when(() -> ClientUtil.createClient(
+                            any(String.class), any(String.class), any(String.class), anyBoolean()))
                     .thenReturn(client);
 
             command.doCall(null, printer);
