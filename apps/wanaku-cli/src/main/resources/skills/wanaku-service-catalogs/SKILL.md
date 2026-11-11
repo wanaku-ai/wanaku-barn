@@ -164,6 +164,6 @@ the full CRD reference.
 
 ## References
 
-- [Service catalogs guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/manage/service-catalogs.md) — manifest format, rules files, end-to-end example
-- [Install the Wanaku CLI](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/cli/install.md) — CLI installation and authentication
-- [Operator guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/operate/operator.md) — CRD reference and deployment patterns
+- [Service catalogs guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/manage/service-catalogs.md)<!-- wanaku:versioned --> — manifest format, rules files, end-to-end example
+- [Install the Wanaku CLI](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/cli/install.md)<!-- wanaku:versioned --> — CLI installation and authentication
+- [Operator guide](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/operate/operator.md)<!-- wanaku:versioned --> — CRD reference and deployment patterns

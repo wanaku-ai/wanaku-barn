@@ -1,5 +1,5 @@
 GRAAL_VERSION?=21.0.2-graalce
-WANAKU_VERSION := $(shell cat core/core-util/target/classes/version.txt)
+WANAKU_VERSION := $(shell cat core/core-util/target/classes/ai/wanaku/core/util/version.txt)
 
 HOST?=localhost
 API_ENDPOINT?=http://$(HOST):8080
@@ -72,7 +72,7 @@ load-test: test-resources test-tools
 	$(WANAKU_CLI_CMD) targets tools list
 
 early-builds:
-	gh workflow run early-access --ref $$(git rev-parse --abbrev-ref HEAD) -f currentDevelopmentVersion=$$(cat core/core-util/target/classes/version.txt)
+	gh workflow run early-access --ref $$(git rev-parse --abbrev-ref HEAD) -f currentDevelopmentVersion=$$(cat core/core-util/target/classes/ai/wanaku/core/util/version.txt)
 
 # OLM bundle targets (see docs/operate/operator-olm.md): olm-bundle, olm-validate, olm-bundle-image,
 # olm-minikube-up, olm-minikube-smoke, olm-minikube-down, olm-crc-up, olm-crc-smoke, olm-crc-down
