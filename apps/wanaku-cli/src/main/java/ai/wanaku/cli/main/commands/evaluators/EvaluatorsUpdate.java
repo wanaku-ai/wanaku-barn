@@ -73,6 +73,10 @@ public class EvaluatorsUpdate extends BaseCommand {
             WanakuResponse<EvaluatorRevision> response =
                     evaluatorsService.update(new EvaluatorsUpdateRequest(evaluators, expectedRevision));
             EvaluatorRevision revision = response.data();
+            if (revision == null) {
+                printer.printWarningMessage("Update returned no revision data.");
+                return EXIT_ERROR;
+            }
             printer.printSuccessMessage(String.format(
                     "Evaluator configuration updated: revision %d is active",
                     revision.getRevision().getId()));

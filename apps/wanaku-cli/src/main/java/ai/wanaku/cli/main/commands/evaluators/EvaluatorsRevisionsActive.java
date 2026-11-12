@@ -33,7 +33,12 @@ public class EvaluatorsRevisionsActive extends BaseCommand {
 
         try {
             WanakuResponse<EvaluatorRevision> response = evaluatorsService.activeRevision();
-            EvaluatorRevisionPrinter.print(printer, response.data());
+            EvaluatorRevision revision = response.data();
+            if (revision == null) {
+                printer.printInfoMessage("No active evaluator revision.");
+                return EXIT_OK;
+            }
+            EvaluatorRevisionPrinter.print(printer, revision);
             return EXIT_OK;
         } catch (WebApplicationException ex) {
             commonResponseErrorHandler(ex.getResponse());

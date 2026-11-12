@@ -36,7 +36,12 @@ public class EvaluatorsRevisionsGet extends BaseCommand {
 
         try {
             WanakuResponse<EvaluatorRevision> response = evaluatorsService.getRevision(id);
-            EvaluatorRevisionPrinter.print(printer, response.data());
+            EvaluatorRevision revision = response.data();
+            if (revision == null) {
+                printer.printWarningMessage(String.format("Revision %d not found.", id));
+                return EXIT_ERROR;
+            }
+            EvaluatorRevisionPrinter.print(printer, revision);
             return EXIT_OK;
         } catch (WebApplicationException ex) {
             commonResponseErrorHandler(ex.getResponse());

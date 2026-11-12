@@ -84,7 +84,12 @@ Note: If omitted, all namespaces are listed. Label matching is case-sensitive.
 
         try {
             WanakuResponse<List<Namespace>> response = namespacesService.list(labelExpression);
-            List<NamespaceRow> list = response.data().stream().map(this::toRow).collect(Collectors.toList());
+            List<Namespace> namespaces = response.data();
+            if (namespaces == null || namespaces.isEmpty()) {
+                printer.printInfoMessage("No namespaces found.");
+                return EXIT_OK;
+            }
+            List<NamespaceRow> list = namespaces.stream().map(this::toRow).collect(Collectors.toList());
 
             printer.printTable(list, "name", "address", "labels");
         } catch (WebApplicationException ex) {

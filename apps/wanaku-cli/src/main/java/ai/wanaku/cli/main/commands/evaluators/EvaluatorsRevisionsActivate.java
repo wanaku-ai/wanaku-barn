@@ -47,6 +47,10 @@ public class EvaluatorsRevisionsActivate extends BaseCommand {
         try {
             WanakuResponse<EvaluatorRevision> response = evaluatorsService.activateRevision(id, request);
             EvaluatorRevision revision = response.data();
+            if (revision == null) {
+                printer.printWarningMessage("Revision not found.");
+                return EXIT_ERROR;
+            }
             printer.printSuccessMessage(String.format(
                     "Activated the configuration of revision %d as revision %d",
                     id, revision.getRevision().getId()));

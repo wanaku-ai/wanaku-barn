@@ -2,7 +2,7 @@ package ai.wanaku.cli.main.support;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
-import ai.wanaku.cli.main.support.security.InsecureSSLHelper;
+import ai.wanaku.core.util.InsecureSSLHelper;
 
 /**
  * Factory methods for {@link java.net.http.HttpClient}.
