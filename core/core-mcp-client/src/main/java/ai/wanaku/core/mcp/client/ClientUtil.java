@@ -1,10 +1,12 @@
 package ai.wanaku.core.mcp.client;
 
+import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.Map;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.Context;
+import ai.wanaku.core.util.InsecureSSLHelper;
 import dev.langchain4j.mcp.client.DefaultMcpClient;
 import dev.langchain4j.mcp.client.McpClient;
 import dev.langchain4j.mcp.client.McpHeadersSupplier;
@@ -38,29 +40,52 @@ public class ClientUtil {
      * @return the initialized MCP client
      */
     public static McpClient createClient(String address, String token, String protocolVersion) {
+        return createClient(address, token, protocolVersion, false);
+    }
+
+    /**
+     * Creates a client with an optional protocol version and insecure TLS option.
+     *
+     * @param address the Streamable HTTP endpoint
+     * @param token the bearer token, or null for unauthenticated calls
+     * @param protocolVersion the MCP version, or null for automatic detection
+     * @param insecure when {@code true}, disables SSL certificate verification (development only)
+     * @return the initialized MCP client
+     */
+    public static McpClient createClient(String address, String token, String protocolVersion, boolean insecure) {
         String normalizedToken = token != null ? token.trim() : null;
         McpHeadersSupplier tokenHeaders = (normalizedToken != null && !normalizedToken.isEmpty())
                 ? callContext -> Map.of("Authorization", "Bearer " + normalizedToken)
                 : null;
-        return createClient(address, tokenHeaders, protocolVersion);
+        return createClient(address, tokenHeaders, protocolVersion, insecure);
     }
 
     public static McpClient createClient(String address, McpHeadersSupplier headersSupplier) {
-        return createClient(address, headersSupplier, null);
+        return createClient(address, headersSupplier, null, false);
     }
 
-    private static McpClient createClient(String address, McpHeadersSupplier headersSupplier, String protocolVersion) {
+    private static McpClient createClient(
+            String address, McpHeadersSupplier headersSupplier, String protocolVersion, boolean insecure) {
         if (isLegacySseAddress(address)) {
             throw new IllegalArgumentException("Legacy SSE MCP endpoints are no longer supported: " + address
                     + ". Use the Streamable HTTP endpoint instead (for example, replace '/mcp/sse' with '/mcp/').");
         }
 
-        McpTransport transport = new StreamableHttpMcpTransport.Builder()
+        StreamableHttpMcpTransport.Builder transportBuilder = new StreamableHttpMcpTransport.Builder()
                 .url(address)
                 .logRequests(true)
                 .logResponses(true)
-                .customHeaders(combineHeaders(headersSupplier))
-                .build();
+                .customHeaders(combineHeaders(headersSupplier));
+
+        if (insecure) {
+            try {
+                transportBuilder.sslContext(InsecureSSLHelper.createInsecureSSLContext());
+            } catch (GeneralSecurityException e) {
+                throw new RuntimeException("Failed to create insecure SSL context", e);
+            }
+        }
+
+        McpTransport transport = transportBuilder.build();
 
         return new DefaultMcpClient.Builder()
                 .transport(transport)

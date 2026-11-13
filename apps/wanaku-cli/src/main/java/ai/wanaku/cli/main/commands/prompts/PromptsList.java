@@ -30,10 +30,14 @@ public class PromptsList extends BaseCommand {
 
     @Override
     public Integer doCall(Terminal terminal, WanakuPrinter printer) throws Exception {
-        promptsService = initAuthenticatedService(PromptsService.class, host);
+        promptsService = initAuthenticatedServiceIfNeeded(promptsService, PromptsService.class, host);
         try {
             WanakuResponse<List<PromptReference>> response = promptsService.list();
             List<PromptReference> list = response.data();
+            if (list == null || list.isEmpty()) {
+                printer.printInfoMessage("No prompts found.");
+                return EXIT_OK;
+            }
             list.stream().filter(p -> p.getNamespace() == null).forEach(p -> p.setNamespace("default"));
             printer.printTable(list, "name", "namespace", "description");
         } catch (WebApplicationException ex) {

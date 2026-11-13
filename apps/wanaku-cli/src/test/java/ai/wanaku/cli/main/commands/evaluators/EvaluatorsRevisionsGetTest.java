@@ -76,4 +76,17 @@ public class EvaluatorsRevisionsGetTest {
         assertEquals(0, result);
         verify(printer).printInfoMessage("No evaluators configured.");
     }
+
+    @Test
+    @DisplayName("Should return error when response data is null")
+    void shouldHandleNullResponseData() throws Exception {
+        when(evaluatorsService.getRevision(99)).thenReturn(new WanakuResponse<>(null));
+
+        command.id = 99;
+        WanakuPrinter printer = mock(WanakuPrinter.class);
+        Integer result = command.doCall(null, printer);
+
+        assertEquals(1, result);
+        verify(printer).printWarningMessage("Revision 99 not found.");
+    }
 }

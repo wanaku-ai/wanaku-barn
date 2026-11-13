@@ -105,6 +105,17 @@ class ServiceValidateTest {
     }
 
     @Test
+    void handlesNullResponseData() throws Exception {
+        Path dir = catalogDir();
+        when(catalogService.validate(any())).thenReturn(new WanakuResponse<>(null));
+
+        ServiceValidate cmd = command(dir);
+        assertEquals(BaseCommand.EXIT_ERROR, cmd.doCall(terminal, printer));
+
+        verify(printer).printWarningMessage("Validation returned no result.");
+    }
+
+    @Test
     void isRegisteredUnderService() {
         assertTrue(new CommandLine(new Service()).getSubcommands().containsKey("validate"));
     }

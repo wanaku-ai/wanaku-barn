@@ -72,11 +72,16 @@ public class DataStoresAdd extends BaseCommand {
         dataStore.setData(base64Data);
 
         // Call API
-        dataStoresService = initAuthenticatedService(DataStoresService.class, barn.baseUri());
+        dataStoresService =
+                initAuthenticatedServiceIfNeeded(dataStoresService, DataStoresService.class, barn.baseUri());
 
         try {
             WanakuResponse<DataStoreRecord> response = dataStoresService.add(dataStore);
             DataStore created = response.data();
+            if (created == null) {
+                printer.printWarningMessage("Data store was not created.");
+                return EXIT_ERROR;
+            }
 
             printer.printSuccessMessage(String.format(
                     "Successfully added data store '%s' with ID: %s", created.getName(), created.getId()));

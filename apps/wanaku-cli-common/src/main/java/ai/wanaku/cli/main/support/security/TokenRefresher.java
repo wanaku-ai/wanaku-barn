@@ -5,6 +5,7 @@ import java.net.URI;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ai.wanaku.core.util.InsecureSSLHelper;
 import ai.wanaku.core.util.StringHelper;
 import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.AuthorizationGrant;

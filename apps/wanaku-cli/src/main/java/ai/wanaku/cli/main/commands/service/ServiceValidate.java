@@ -82,6 +82,11 @@ public class ServiceValidate extends BaseCommand {
             return EXIT_ERROR;
         }
 
+        if (result == null) {
+            printer.printWarningMessage("Validation returned no result.");
+            return EXIT_ERROR;
+        }
+
         String kind = template ? "Service template" : "Service catalog";
         String name = result.name() != null ? result.name() : path;
 
