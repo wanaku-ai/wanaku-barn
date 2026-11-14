@@ -204,6 +204,15 @@
           }
         }
       }
+    },
+    "crds" : {
+      "type" : "object",
+      "properties" : {
+        "install" : {
+          "description" : "Install and upgrade the CRDs with the chart.",
+          "type" : "boolean"
+        }
+      }
     }
   },
   "title" : "Values",

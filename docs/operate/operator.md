@@ -78,12 +78,15 @@ helm install wanaku-operator ./apps/wanaku-operator/deploy/helm/wanaku-operator 
   --namespace wanaku
 ```
 
+The chart installs the CRDs, and `helm upgrade` updates them. `helm uninstall` does not remove them.
+
 > [!IMPORTANT]
-> Known limitation in 0.3.0: Helm installs the CRDs of the chart only when they do not exist in the cluster.
-> `helm upgrade` does not change the CRDs, and `helm uninstall` does not remove them.
-> Thus, a new install or an upgrade keeps the CRDs of the first install.
-> Before you install or upgrade the operator on a cluster that has Wanaku CRDs, apply the CRDs of the chart.
-> See [Upgrade the CRDs](#upgrade-the-crds) and [wanaku-barn#273](https://github.com/wanaku-ai/wanaku-barn/issues/273).
+> If the cluster has Wanaku CRDs from the 0.3.0 chart or earlier, do the one-time step in
+> [Adopt the CRDs of an earlier chart](#adopt-the-crds-of-an-earlier-chart) before you install or upgrade.
+
+The CRDs are cluster-scoped, and only one Helm release can own them. To install a second release of the
+operator in a different namespace of the same cluster, add `--set crds.install=false` to that release.
+Upgrade the release that owns the CRDs first.
 
 By default, the operator watches only the namespace where it is installed
 (`JOSDK_WATCH_CURRENT`). To watch all namespaces, override the controller environment
@@ -318,11 +321,11 @@ If `kubectl wait --for=condition=Ready` times out, do these steps:
 
 An empty `status` usually means that the installed CRD and the operator image come from different releases.
 The API server rejects a status update that contains fields that the CRD schema does not declare.
-Helm does not upgrade the CRDs in the `crds/` directory of a chart.
-After an operator upgrade, apply the CRDs manually and restart the operator:
+The chart updates the CRDs on `helm install` and `helm upgrade`, unless the release sets `crds.install=false`.
+Upgrade the release that owns the CRDs, then restart the operator:
 
 ```shell
-kubectl apply -f apps/wanaku-operator/deploy/helm/wanaku-operator/crds/
+helm upgrade wanaku-operator ./apps/wanaku-operator/deploy/helm/wanaku-operator --namespace wanaku
 kubectl rollout restart deployment/wanaku-operator -n wanaku
 ```
 
@@ -378,7 +381,8 @@ helm uninstall wanaku-operator -n wanaku
 ```
 
 > [!WARNING]
-> Uninstalling the operator does **not** delete the CRDs or existing custom resources. To fully
+> Uninstalling the operator does **not** delete the CRDs or existing custom resources
+> (the CRDs have the `helm.sh/resource-policy: keep` annotation). To fully
 > clean up, delete the custom resources and the CRDs first:
 
 ```shell
@@ -392,26 +396,44 @@ kubectl delete crd wanakurouters.wanaku.ai wanakuservicecatalogs.wanaku.ai \
 
 ### Upgrade the CRDs
 
-Helm does not update CRDs that exist in the cluster. This is a known limitation of the 0.3.0 chart
-([wanaku-barn#273](https://github.com/wanaku-ai/wanaku-barn/issues/273)).
-Do these steps before each `helm install` or `helm upgrade` on a cluster that has Wanaku CRDs:
+`helm upgrade` updates the CRDs together with the operator:
 
-1. Apply the CRDs of the new chart:
+```shell
+helm upgrade wanaku-operator ./apps/wanaku-operator/deploy/helm/wanaku-operator --namespace wanaku
+```
 
-   ```shell
-   kubectl apply -f apps/wanaku-operator/deploy/helm/wanaku-operator/crds/
-   ```
+A release that sets `crds.install=false` does not change the CRDs.
 
-2. Install or upgrade the operator with Helm.
+### Adopt the CRDs of an earlier chart
 
-3. If the operator was running during step 1, restart it:
+The 0.3.0 chart and earlier charts installed the CRDs from the `crds/` directory, without Helm ownership metadata.
+On a cluster that has these CRDs, `helm install` and `helm upgrade` of the current chart fail with
+`invalid ownership metadata`. Do this step one time, before the install or the upgrade.
+Use the release name and the namespace of your operator release:
 
-   ```shell
-   kubectl rollout restart deployment/wanaku-operator -n wanaku
-   ```
+```shell
+for crd in wanakurouters wanakuservicecatalogs wanakusemanticrouters wanakuintegrations; do
+  kubectl label crd "${crd}.wanaku.ai" app.kubernetes.io/managed-by=Helm --overwrite
+  kubectl annotate crd "${crd}.wanaku.ai" --overwrite \
+    meta.helm.sh/release-name=wanaku-operator \
+    meta.helm.sh/release-namespace=wanaku
+done
+```
 
-If you do not apply the CRDs, the API server rejects the status updates of the new operator.
-The `status` of the custom resources stays empty, and `kubectl wait --for=condition=Ready` times out.
+Skip a CRD that does not exist in the cluster. Helm creates it.
+
+If you applied the CRDs with `kubectl apply` (the workaround for the 0.3.0 chart), Helm 4 stops with
+`conflict with "kubectl-client-side-apply"`. Add `--force-conflicts` to the first `helm install` or
+`helm upgrade`, so that Helm takes the ownership of the CRD fields. If a `helm install` failed with
+this conflict, the release exists in the failed state. Use `helm upgrade --install` for the next attempt:
+
+```shell
+helm upgrade --install wanaku-operator ./apps/wanaku-operator/deploy/helm/wanaku-operator \
+  --namespace wanaku --force-conflicts
+```
+
+The same step is necessary when you install the operator again with a different release name or in a different
+namespace: the CRDs that `helm uninstall` kept still belong to the earlier release.
 
 ### Upgrade from the PoC naming
 
