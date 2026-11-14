@@ -76,7 +76,7 @@ kubectl wait wanakurouter/wanaku-dev -n wanaku --for=condition=Ready --timeout=1
 ```
 
 For authenticated deployments, configure `spec.auth.enabled`, `issuerUrl`, `clientId`,
-and `secretName` for oauth2-proxy. See the current [router CRD schema](https://github.com/wanaku-ai/wanaku-barn/blob/main/apps/wanaku-operator/deploy/helm/wanaku-operator/crds/wanakurouters.wanaku.ai-v1.yml)
+and `secretName` for oauth2-proxy. See the current [WanakuRouter reference](https://github.com/wanaku-ai/wanaku-barn/blob/main/docs/reference/operator-crds.md)
 for supported fields.
 
 ## Router + service catalog

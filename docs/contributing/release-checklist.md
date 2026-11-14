@@ -78,7 +78,9 @@ gh workflow run release -R wanaku-ai/wanaku-capabilities-java-sdk \
 - [ ] Build the operator module: the Helm chart is generated in
   `apps/wanaku-operator/target/helm/kubernetes/wanaku-operator/`
 - [ ] Copy the generated CRDs from `apps/wanaku-operator/target/kubernetes/` to
-  `apps/wanaku-operator/deploy/helm/wanaku-operator/crds/`
+  `apps/wanaku-operator/deploy/helm/wanaku-operator/files/crds/`
+  (the `HelmRefresh` Maven profile does this copy). Do not use the `crds/` directory: Helm never
+  upgrades the CRDs in it
 - [ ] Update `apps/wanaku-operator/deploy/helm/wanaku-operator/Chart.yaml` version
   to match the release version (remove `-SNAPSHOT`)
 - [ ] Update `app.kubernetes.io/version` labels in **all** Helm templates -- these are
@@ -317,7 +319,7 @@ version branches. The versions are **hardcoded in the Makefile** and must be upd
 
 | Problem | Cause | Prevention |
 |---------|-------|------------|
-| Helm chart has stale CRDs | CRDs are auto-generated in `target/kubernetes/` but not copied to `deploy/helm/.../crds/` | Always rebuild operator and copy CRDs before release |
+| Helm chart has stale CRDs | CRDs are auto-generated in `target/kubernetes/` but not copied to `deploy/helm/.../files/crds/` | Always rebuild operator and copy CRDs before release |
 | Helm `Chart.yaml` still shows SNAPSHOT | Version is not auto-updated by Maven release plugin | Manually update before triggering release |
 | `jbang-catalog.json` has wrong version | `sed` replacement uses `previousDevelopmentVersion` which must match exactly | Double-check the previous version parameter |
 | Container manifests missing | `release-artifacts` workflow failed on one platform | Check all matrix jobs; re-run failed platform |
