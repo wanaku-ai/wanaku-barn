@@ -83,7 +83,14 @@ class WanakuIntegrationReconcilerTest {
                 .containsEntry("MCP_PORT", "9090")
                 .containsEntry("WANAKU_REGISTER", "true")
                 .containsEntry("WANAKU_URL", "http://server-wanaku-dev:8080")
-                .containsEntry("MCP_ADDRESS", "http://orders-cic.test.svc:9090/mcp");
+                .containsEntry("MCP_ADDRESS", "http://$(POD_IP):9090/mcp");
+        // The runtime registers the pod IP. POD_IP must come first, else Kubernetes does not expand $(POD_IP).
+        assertThat(container.getEnv().stream().map(EnvVar::getName).toList())
+                .containsSubsequence("POD_IP", "MCP_ADDRESS");
+        assertThat(container.getEnv())
+                .anyMatch(e -> "POD_IP".equals(e.getName())
+                        && "v1".equals(e.getValueFrom().getFieldRef().getApiVersion())
+                        && "status.podIP".equals(e.getValueFrom().getFieldRef().getFieldPath()));
         assertThat(container.getReadinessProbe().getHttpGet().getPath()).isEqualTo("/observe/health/ready");
         assertThat(client.services()
                         .inNamespace(NAMESPACE)

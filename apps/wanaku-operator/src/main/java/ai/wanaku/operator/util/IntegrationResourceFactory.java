@@ -61,7 +61,7 @@ public final class IntegrationResourceFactory {
         return mcp != null && mcp.getPort() != null ? mcp.getPort() : DEFAULT_MCP_PORT;
     }
 
-    /** The address the router uses to reach the integration MCP server. */
+    /** The Service address of the integration MCP server. The runtime registers the forward with the pod IP. */
     public static String mcpAddress(WanakuIntegration resource) {
         return "http://%s.%s.svc:%d/mcp"
                 .formatted(workloadName(resource), resource.getMetadata().getNamespace(), mcpPort(resource));
@@ -158,7 +158,10 @@ public final class IntegrationResourceFactory {
             env.add(value("WANAKU_REGISTER", "true"));
             env.add(value("WANAKU_URL", RuntimeWorkloads.managementUrl(router)));
             env.add(value("WANAKU_NAMESPACE", forwardNamespace(resource)));
-            env.add(value("MCP_ADDRESS", mcpAddress(resource)));
+            // Register the pod IP, not the Service. The Service publishes not-ready addresses, so during a rolling
+            // update it has two pods and Wanaku could send one discovery session to both of them.
+            env.add(RuntimeWorkloads.podIp());
+            env.add(value("MCP_ADDRESS", "http://$(POD_IP):%d/mcp".formatted(mcpPort(resource))));
             final WanakuIntegrationSpec.Registration registration = spec.getRegistration();
             // The capability reads the token from the environment variable that WANAKU_TOKEN_ENV names
             if (registration != null
