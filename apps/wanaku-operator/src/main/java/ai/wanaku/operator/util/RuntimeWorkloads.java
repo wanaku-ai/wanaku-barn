@@ -181,6 +181,23 @@ public final class RuntimeWorkloads {
         return new EnvVarBuilder().withName(name).withValue(value).build();
     }
 
+    /**
+     * The {@code POD_IP} variable with the IP address of the pod. Add it before a variable that uses
+     * {@code $(POD_IP)}.
+     */
+    public static EnvVar podIp() {
+        return new EnvVarBuilder()
+                .withName("POD_IP")
+                .withNewValueFrom()
+                .withNewFieldRef()
+                // Set the API server default, else the Deployment never matches and the operator updates it each pass
+                .withApiVersion("v1")
+                .withFieldPath("status.podIP")
+                .endFieldRef()
+                .endValueFrom()
+                .build();
+    }
+
     /** The router management API URL inside the cluster. */
     public static String managementUrl(String routerName) {
         return "http://server-%s:8080".formatted(routerName);

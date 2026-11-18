@@ -333,6 +333,8 @@ When you delete the resource, Kubernetes stops the runtime. The runtime removes 
 Set exactly one routes source. `datastore://` references and service catalogs need Wanaku Barn on the router (`spec.barn.enabled: true`).
 
 The operator creates the `<name>-cic` Deployment and the `<name>-cic` Service. They follow the same rules as the semantic router workload: one replica, a rolling update that is safe with the ownership label (`cic.instance`), and a Service that publishes the addresses of pods that are not ready.
+The runtime registers the forward with the pod IP (`MCP_ADDRESS=http://$(POD_IP):<port>/mcp`), not with the Service address. During a rolling update, the Service has two pods. The MCP session of the router discovery is valid on one pod only, so discovery through the Service can fail with `Session expired`. `status.mcpAddress` shows the Service address.
+
 The probes use the Camel health endpoints on the MCP port (`/observe/health/ready` and `/observe/health/live`). When registration is enabled, the pod is ready only after the runtime registered the forward.
 
 The status uses the same conditions as `WanakuSemanticRouter`: `Reconciled`, `Available`, `Registered` (only when registration is enabled) and `Ready`.
