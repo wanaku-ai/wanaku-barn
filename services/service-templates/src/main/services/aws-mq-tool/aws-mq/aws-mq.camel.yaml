@@ -1,0 +1,27 @@
+- beans:
+    - name: amazonMqConnectionFactory
+      type: org.apache.activemq.ActiveMQConnectionFactory
+      properties:
+        brokerURL: "{{aws.mq.broker.url}}"
+        userName: "{{aws.mq.username}}"
+        password: "{{aws.mq.password}}"
+
+- route:
+    id: aws-mq-request-reply
+    from:
+      uri: ai-tool:send-message-to-aws-mq
+      parameters:
+        tags: wanaku
+        description: "{{tool.description}}"
+        parameter.message: string
+        parameter.message.description: "The message to send to Amazon MQ"
+      steps:
+        - log: "Sending Amazon MQ request: ${header.message}"
+        - to:
+            uri: "activemq:queue:{{aws.mq.request.queue}}"
+            parameters:
+              exchangePattern: InOut
+              replyTo: "{{aws.mq.reply.queue}}"
+              requestTimeout: "{{aws.mq.reply.timeout-ms}}"
+              connectionFactory: "#amazonMqConnectionFactory"
+        - log: "Received Amazon MQ reply: ${body}"
