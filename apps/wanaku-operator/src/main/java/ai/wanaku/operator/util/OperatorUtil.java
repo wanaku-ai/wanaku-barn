@@ -36,6 +36,11 @@ public final class OperatorUtil {
     public static final String MANAGED_BY_LABEL = "app.kubernetes.io/managed-by";
 
     public static final String MANAGED_BY_VALUE = "wanaku-operator";
+
+    /** Label set on every workload and pod the operator manages, so one selector finds all of them. */
+    public static final String PART_OF_LABEL = "app.kubernetes.io/part-of";
+
+    public static final String PART_OF_VALUE = "wanaku";
     public static final String DESIRED_HASH_ANNOTATION = "wanaku.ai/desired-hash";
 
     public static final String DEFAULT_PULL_POLICY = "IfNotPresent";

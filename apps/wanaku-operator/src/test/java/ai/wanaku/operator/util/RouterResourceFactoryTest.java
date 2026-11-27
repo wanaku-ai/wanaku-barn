@@ -146,7 +146,13 @@ class RouterResourceFactoryTest {
         assertEquals("barn-test-router", service.getMetadata().getName());
         assertEquals(
                 8180, service.getSpec().getPorts().getFirst().getTargetPort().getIntVal());
-        assertEquals(service.getSpec().getSelector(), pod.getMetadata().getLabels());
+        assertTrue(pod.getMetadata()
+                .getLabels()
+                .entrySet()
+                .containsAll(service.getSpec().getSelector().entrySet()));
+        assertEquals("wanaku", pod.getMetadata().getLabels().get(OperatorUtil.PART_OF_LABEL));
+        assertEquals("wanaku", deployment.getMetadata().getLabels().get(OperatorUtil.PART_OF_LABEL));
+        assertEquals("wanaku", service.getMetadata().getLabels().get(OperatorUtil.PART_OF_LABEL));
         assertEquals(
                 service.getSpec().getSelector(),
                 deployment.getSpec().getSelector().getMatchLabels());
@@ -270,7 +276,13 @@ class RouterResourceFactoryTest {
         assertEquals(
                 deployment.getSpec().getSelector().getMatchLabels(),
                 service.getSpec().getSelector());
-        assertEquals(service.getSpec().getSelector(), pod.getMetadata().getLabels());
+        assertTrue(pod.getMetadata()
+                .getLabels()
+                .entrySet()
+                .containsAll(service.getSpec().getSelector().entrySet()));
+        assertEquals("wanaku", pod.getMetadata().getLabels().get(OperatorUtil.PART_OF_LABEL));
+        assertEquals("wanaku", deployment.getMetadata().getLabels().get(OperatorUtil.PART_OF_LABEL));
+        assertEquals("wanaku", service.getMetadata().getLabels().get(OperatorUtil.PART_OF_LABEL));
         assertEquals("test-router-server-data", pvc.getMetadata().getName());
         assertEquals(
                 pvc.getMetadata().getName(),

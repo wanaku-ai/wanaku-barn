@@ -6,6 +6,7 @@ metadata:
     app.quarkus.io/quarkus-version: 3.33.4
   labels:
     app.kubernetes.io/name: wanaku-operator
+    app.kubernetes.io/part-of: wanaku
     app.kubernetes.io/managed-by: quarkus
   name: wanaku-operator
 spec:
@@ -20,6 +21,7 @@ spec:
       labels:
         app.kubernetes.io/managed-by: quarkus
         app.kubernetes.io/name: wanaku-operator
+        app.kubernetes.io/part-of: wanaku
     spec:
       containers:
         - env:
