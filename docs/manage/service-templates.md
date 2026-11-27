@@ -369,6 +369,21 @@ A template for creating an AWS SQS-backed MCP tool with manual request/reply cor
 
 The request route sets a `wanakuCorrelationId` header, which the SQS component transfers as a message attribute. The service consuming the request queue must copy the `wanakuCorrelationId` message attribute from the request to its reply so the response route can match the reply to the original request.
 
+### `aws-mq-tool`
+
+A template for a request and reply tool on [Amazon MQ](https://aws.amazon.com/amazon-mq/) for ActiveMQ. The tool sends a message to a request queue and waits for the reply on a reply queue. The template connects to the OpenWire endpoint of the broker with the [Camel ActiveMQ component](https://camel.apache.org/components/next/activemq-component.html).
+
+**Parameters:**
+
+- `aws.mq.broker.url`: The OpenWire endpoint of the broker (e.g., `ssl://b-1234.mq.us-east-1.amazonaws.com:61617`)
+- `aws.mq.username` and `aws.mq.password`: The broker credentials
+- `aws.mq.request.queue`: The queue that receives the request
+- `aws.mq.reply.queue`: The queue that receives the reply
+- `aws.mq.reply.timeout-ms`: How long to wait for a reply before failing, in milliseconds
+- `tool.description`: The tool description that AI agents see
+
+The service that consumes the request queue must send its reply to the queue in the `JMSReplyTo` header of the request. The reply must have the same `JMSCorrelationID` as the request.
+
 ### `github-pullrequest-source-tool`
 
 A template for creating a GitHub Pull Request tool service. This template allows agents to fetch pull request information on demand from a specified repository.
