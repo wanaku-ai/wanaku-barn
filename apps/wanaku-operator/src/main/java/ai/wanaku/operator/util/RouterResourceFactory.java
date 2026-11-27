@@ -977,7 +977,17 @@ public final class RouterResourceFactory {
             labels.putAll(desired.getMetadata().getLabels());
         }
         labels.put(OperatorUtil.MANAGED_BY_LABEL, OperatorUtil.MANAGED_BY_VALUE);
+        labels.put(OperatorUtil.PART_OF_LABEL, OperatorUtil.PART_OF_VALUE);
         desired.getMetadata().setLabels(labels);
+        // Pod labels only: the selectors stay as they are, because a Deployment selector is immutable
+        if (desired instanceof Deployment deployment) {
+            deployment
+                    .getSpec()
+                    .getTemplate()
+                    .getMetadata()
+                    .getLabels()
+                    .put(OperatorUtil.PART_OF_LABEL, OperatorUtil.PART_OF_VALUE);
+        }
         OperatorUtil.stampDesiredHash(desired, spec);
     }
 

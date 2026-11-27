@@ -117,6 +117,12 @@ You should see the operator pod running. Check its logs to confirm startup:
 kubectl logs -n wanaku -l app.kubernetes.io/name=wanaku-operator
 ```
 
+The operator pod and every pod that the operator creates have the label `app.kubernetes.io/part-of=wanaku`. Use this label to list all the Wanaku pods:
+
+```shell
+kubectl get pods -n wanaku -l app.kubernetes.io/part-of=wanaku
+```
+
 For the fields of each resource, see [Wanaku Operator custom resources](../reference/operator-crds.md).
 
 ## Deployment Examples
