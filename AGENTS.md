@@ -83,7 +83,7 @@ make olm-bundle olm-validate   # see docs/operate/operator-olm.md
 - CRDs: `WanakuRouter`, `WanakuServiceCatalog`, `WanakuSemanticRouter`, `WanakuIntegration` (all `wanaku.ai/v1alpha1`). The `WanakuCapability`, `WanakuCamelRoute` and `WanakuCamelCodeExecutionEngine` CRDs were removed — deploy capabilities as regular Deployments and register them with `wanaku forwards add`
 - Helm chart: `apps/wanaku-operator/deploy/helm/wanaku-operator/`
 - When adding new CRDs, RBAC rules must be added to the Helm chart (see `docs/contributing/index.md`)
-- CRD manifests are auto-generated during build in `target/kubernetes/`, must be copied to `crds/`
+- CRD manifests are auto-generated during build in `target/kubernetes/`, must be copied to the chart's `files/crds/` (rendered by `templates/crds.yaml`, so `helm upgrade` updates them)
 - OLM bundle: generated in `apps/wanaku-operator/target/bundle/` by `make olm-bundle`; CSV metadata lives in `WanakuBundleMetadata`, operand images in `apps/wanaku-operator/olm/related-images.txt`; see `docs/operate/operator-olm.md`
 - Router internal URL pattern: `http://barn-{routerRef}:8080`
 

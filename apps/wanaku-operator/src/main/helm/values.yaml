@@ -8,3 +8,5 @@ app:
     capabilities:
       drop:
         - ALL
+crds:
+  install: true

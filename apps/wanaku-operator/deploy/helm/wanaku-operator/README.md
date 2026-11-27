@@ -41,6 +41,7 @@ The following table lists the configurable parameters and their default values.
 | `app.startupProbe.periodSeconds` | The period in which the action should be called. | 10 |
 | `app.startupProbe.successThreshold` | The success threshold to use. | 1 |
 | `app.startupProbe.timeoutSeconds` | The amount of time to wait for each action. | 10 |
+| `crds.install` | Install and upgrade the CRDs with the chart. | true |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 Alternatively, a YAML file that specifies the values for the above parameters can be provided while installing the chart. For example,
